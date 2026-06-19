@@ -122,7 +122,7 @@ export interface ListMinersOutput {
   /**
    * Array of items
    */
-  data: ListMinersOutputMiner[]
+  data: Miner[]
   /**
    * Pagination metadata
    */
@@ -153,7 +153,7 @@ export interface ListMinersOutput {
    */
   error: null
 }
-export interface ListMinersOutputMiner {
+export interface Miner {
   /**
    * Miner identifier
    */

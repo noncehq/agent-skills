@@ -42,7 +42,7 @@ export interface CreateTaskBatchMinerAssetDeleteInput {
 /**
  * Represents an entity that performs actions in the system (user, API key, or system)
  */
-export type CreateTaskBatchMinerAssetDeleteOutputActor = {
+export type Actor = {
   [k: string]: unknown
 } | null
 
@@ -54,14 +54,14 @@ export interface CreateTaskBatchMinerAssetDeleteOutput {
   /**
    * Array of items
    */
-  data: CreateTaskBatchMinerAssetDeleteOutputMinerTaskBatch[]
+  data: MinerTaskBatch[]
   /**
    * Error object (null on success)
    */
   error: null
-  meta: CreateTaskBatchMinerAssetDeleteOutputCreateTaskBatchMeta
+  meta: CreateTaskBatchMeta
 }
-export interface CreateTaskBatchMinerAssetDeleteOutputMinerTaskBatch {
+export interface MinerTaskBatch {
   /**
    * Miner task batch ID
    */
@@ -93,13 +93,13 @@ export interface CreateTaskBatchMinerAssetDeleteOutputMinerTaskBatch {
   task_params: {
     [k: string]: unknown
   } | null
-  created_by: CreateTaskBatchMinerAssetDeleteOutputActor
+  created_by: Actor
   /**
    * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
    */
   created_at: string
 }
-export interface CreateTaskBatchMinerAssetDeleteOutputCreateTaskBatchMeta {
+export interface CreateTaskBatchMeta {
   summary: {
     created_count: number
     skipped_count: number

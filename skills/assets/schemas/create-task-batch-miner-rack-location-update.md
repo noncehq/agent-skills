@@ -46,7 +46,7 @@ export interface CreateTaskBatchMinerRackLocationUpdateInput {
 /**
  * Represents an entity that performs actions in the system (user, API key, or system)
  */
-export type CreateTaskBatchMinerRackLocationUpdateOutputActor = {
+export type Actor = {
   [k: string]: unknown
 } | null
 
@@ -58,14 +58,14 @@ export interface CreateTaskBatchMinerRackLocationUpdateOutput {
   /**
    * Array of items
    */
-  data: CreateTaskBatchMinerRackLocationUpdateOutputMinerTaskBatch[]
+  data: MinerTaskBatch[]
   /**
    * Error object (null on success)
    */
   error: null
-  meta: CreateTaskBatchMinerRackLocationUpdateOutputCreateTaskBatchMeta
+  meta: CreateTaskBatchMeta
 }
-export interface CreateTaskBatchMinerRackLocationUpdateOutputMinerTaskBatch {
+export interface MinerTaskBatch {
   /**
    * Miner task batch ID
    */
@@ -97,13 +97,13 @@ export interface CreateTaskBatchMinerRackLocationUpdateOutputMinerTaskBatch {
   task_params: {
     [k: string]: unknown
   } | null
-  created_by: CreateTaskBatchMinerRackLocationUpdateOutputActor
+  created_by: Actor
   /**
    * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
    */
   created_at: string
 }
-export interface CreateTaskBatchMinerRackLocationUpdateOutputCreateTaskBatchMeta {
+export interface CreateTaskBatchMeta {
   summary: {
     created_count: number
     skipped_count: number

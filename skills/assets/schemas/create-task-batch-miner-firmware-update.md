@@ -42,7 +42,7 @@ export interface CreateTaskBatchMinerFirmwareUpdateInput {
 /**
  * Represents an entity that performs actions in the system (user, API key, or system)
  */
-export type CreateTaskBatchMinerFirmwareUpdateOutputActor = {
+export type Actor = {
   [k: string]: unknown
 } | null
 
@@ -54,14 +54,14 @@ export interface CreateTaskBatchMinerFirmwareUpdateOutput {
   /**
    * Array of items
    */
-  data: CreateTaskBatchMinerFirmwareUpdateOutputMinerTaskBatch[]
+  data: MinerTaskBatch[]
   /**
    * Error object (null on success)
    */
   error: null
-  meta: CreateTaskBatchMinerFirmwareUpdateOutputCreateTaskBatchMeta
+  meta: CreateTaskBatchMeta
 }
-export interface CreateTaskBatchMinerFirmwareUpdateOutputMinerTaskBatch {
+export interface MinerTaskBatch {
   /**
    * Miner task batch ID
    */
@@ -93,13 +93,13 @@ export interface CreateTaskBatchMinerFirmwareUpdateOutputMinerTaskBatch {
   task_params: {
     [k: string]: unknown
   } | null
-  created_by: CreateTaskBatchMinerFirmwareUpdateOutputActor
+  created_by: Actor
   /**
    * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
    */
   created_at: string
 }
-export interface CreateTaskBatchMinerFirmwareUpdateOutputCreateTaskBatchMeta {
+export interface CreateTaskBatchMeta {
   summary: {
     created_count: number
     skipped_count: number

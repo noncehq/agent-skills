@@ -32,6 +32,8 @@ const typeScriptFences = (markdown: string): string[] => {
 const semicolonLines = (source: string): string[] =>
   source.split("\n").filter((line) => line.trimEnd().endsWith(";"));
 
+const occurrences = (source: string, needle: string): number => source.split(needle).length - 1;
+
 describe("SDK generator helpers", () => {
   it("normalizes MCP tool names into SDK method names", () => {
     expect(methodNameForTool("CreateTaskBatch_MinerPower_modeUpdate")).toBe(
@@ -219,5 +221,70 @@ describe("SDK generator helpers", () => {
     expect(wsFile).toContain("# listWorkspaces");
     expect(wsFile).toContain("workspace_slug: string");
     expect(wsFile).toContain("export interface ListWorkspacesOutput");
+  });
+
+  it("reuses matching shared nested interfaces and rejects name conflicts", async () => {
+    const inputSchema = {
+      properties: {},
+      type: "object" as const,
+    };
+    const outputSchema = {
+      properties: {
+        data: {
+          items: {
+            properties: {
+              id: { type: "string" },
+            },
+            required: ["id"],
+            title: "SharedItem",
+            type: "object",
+          },
+          type: "array",
+        },
+      },
+      required: ["data"],
+      type: "object" as const,
+    };
+
+    const artifacts = await generateArtifacts({
+      mcpEndpoint: "https://mcp.nonce.app/mcp",
+      tools: [
+        { inputSchema, name: "ListAlpha", outputSchema },
+        { inputSchema, name: "ListBeta", outputSchema },
+      ],
+    });
+
+    expect(occurrences(artifacts.signatures, "export interface SharedItem")).toBe(1);
+    expect(artifacts.signatures).toContain("data: SharedItem[]");
+
+    await expect(
+      generateArtifacts({
+        mcpEndpoint: "https://mcp.nonce.app/mcp",
+        tools: [
+          { inputSchema, name: "ListAlpha", outputSchema },
+          {
+            inputSchema,
+            name: "ListBeta",
+            outputSchema: {
+              properties: {
+                data: {
+                  items: {
+                    properties: {
+                      name: { type: "string" },
+                    },
+                    required: ["name"],
+                    title: "SharedItem",
+                    type: "object",
+                  },
+                  type: "array",
+                },
+              },
+              required: ["data"],
+              type: "object",
+            },
+          },
+        ],
+      }),
+    ).rejects.toThrow("Generated TypeScript declaration name conflict: SharedItem");
   });
 });

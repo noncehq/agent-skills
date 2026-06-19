@@ -63,7 +63,7 @@ export interface GetMinerTasksInput {
 /**
  * Represents an entity that performs actions in the system (user, API key, or system)
  */
-export type GetMinerTasksOutputActor = {
+export type Actor = {
   [k: string]: unknown
 } | null
 
@@ -75,7 +75,7 @@ export interface GetMinerTasksOutput {
   /**
    * Array of items
    */
-  data: GetMinerTasksOutputMinerTask[]
+  data: MinerTask[]
   /**
    * Pagination metadata
    */
@@ -109,7 +109,7 @@ export interface GetMinerTasksOutput {
 /**
  * A task execution record for a single miner
  */
-export interface GetMinerTasksOutputMinerTask {
+export interface MinerTask {
   /**
    * Miner task ID
    */
@@ -157,7 +157,7 @@ export interface GetMinerTasksOutputMinerTask {
   result: {
     [k: string]: unknown
   } | null
-  created_by: GetMinerTasksOutputActor
+  created_by: Actor
   /**
    * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
    */

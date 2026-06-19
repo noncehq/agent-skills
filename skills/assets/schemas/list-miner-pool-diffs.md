@@ -40,13 +40,13 @@ export interface ListMinerPoolDiffsInput {
 /**
  * Complete miner history record before the change
  */
-export type ListMinerPoolDiffsOutputMinerHistoryRecord = {
+export type MinerHistoryRecord = {
   [k: string]: unknown
 } | null
 /**
  * Complete miner history record after the change
  */
-export type ListMinerPoolDiffsOutputMinerHistoryRecord1 = {
+export type MinerHistoryRecord1 = {
   [k: string]: unknown
 } | null
 
@@ -58,19 +58,19 @@ export interface ListMinerPoolDiffsOutput {
   /**
    * Array of items
    */
-  data: ListMinerPoolDiffsOutputMinerPoolDiff[]
+  data: MinerPoolDiff[]
   /**
    * Error object (null on success)
    */
   error: null
 }
-export interface ListMinerPoolDiffsOutputMinerPoolDiff {
+export interface MinerPoolDiff {
   /**
    * Miner identifier
    */
   miner_id: string
-  before_record: ListMinerPoolDiffsOutputMinerHistoryRecord
-  after_record: ListMinerPoolDiffsOutputMinerHistoryRecord1
+  before_record: MinerHistoryRecord
+  after_record: MinerHistoryRecord1
   /**
    * Summary of changes between the two time points
    */

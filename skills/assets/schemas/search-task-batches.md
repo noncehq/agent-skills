@@ -93,7 +93,7 @@ export interface SearchTaskBatchesInput {
 /**
  * Represents an entity that performs actions in the system (user, API key, or system)
  */
-export type SearchTaskBatchesOutputActor = {
+export type Actor = {
   [k: string]: unknown
 } | null
 
@@ -105,7 +105,7 @@ export interface SearchTaskBatchesOutput {
   /**
    * Array of items
    */
-  data: SearchTaskBatchesOutputTaskBatchSummary[]
+  data: TaskBatchSummary[]
   /**
    * Pagination metadata
    */
@@ -136,7 +136,7 @@ export interface SearchTaskBatchesOutput {
    */
   error: null
 }
-export interface SearchTaskBatchesOutputTaskBatchSummary {
+export interface TaskBatchSummary {
   /**
    * Miner task batch ID
    */
@@ -186,7 +186,7 @@ export interface SearchTaskBatchesOutputTaskBatchSummary {
   metadata?: {
     [k: string]: unknown
   } | null
-  created_by: SearchTaskBatchesOutputActor
+  created_by: Actor
   /**
    * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
    */

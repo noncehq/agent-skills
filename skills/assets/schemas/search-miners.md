@@ -89,7 +89,7 @@ export interface SearchMinersOutput {
   /**
    * Array of items
    */
-  data: SearchMinersOutputMiner[]
+  data: Miner[]
   /**
    * Pagination metadata
    */
@@ -120,7 +120,7 @@ export interface SearchMinersOutput {
    */
   error: null
 }
-export interface SearchMinersOutputMiner {
+export interface Miner {
   /**
    * Miner identifier
    */

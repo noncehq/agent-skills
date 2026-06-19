@@ -245,10 +245,7 @@ export const schemaToTypeScriptDeclaration = async (
   return {
     declaration: await compileJsonSchema(schemaForDeclaration(schema), name, {
       ...typeScriptDeclarationOptions,
-      customName: (nestedSchema) => {
-        const nestedName = schemaTitleName(nestedSchema.title);
-        return nestedName ? `${name}${nestedName}` : undefined;
-      },
+      customName: (nestedSchema) => schemaTitleName(nestedSchema.title),
     }),
     typeName: name,
   };

@@ -46,7 +46,7 @@ export interface CreateTaskBatchMinerPoolLockInput {
 /**
  * Represents an entity that performs actions in the system (user, API key, or system)
  */
-export type CreateTaskBatchMinerPoolLockOutputActor = {
+export type Actor = {
   [k: string]: unknown
 } | null
 
@@ -58,14 +58,14 @@ export interface CreateTaskBatchMinerPoolLockOutput {
   /**
    * Array of items
    */
-  data: CreateTaskBatchMinerPoolLockOutputMinerTaskBatch[]
+  data: MinerTaskBatch[]
   /**
    * Error object (null on success)
    */
   error: null
-  meta: CreateTaskBatchMinerPoolLockOutputCreateTaskBatchMeta
+  meta: CreateTaskBatchMeta
 }
-export interface CreateTaskBatchMinerPoolLockOutputMinerTaskBatch {
+export interface MinerTaskBatch {
   /**
    * Miner task batch ID
    */
@@ -97,13 +97,13 @@ export interface CreateTaskBatchMinerPoolLockOutputMinerTaskBatch {
   task_params: {
     [k: string]: unknown
   } | null
-  created_by: CreateTaskBatchMinerPoolLockOutputActor
+  created_by: Actor
   /**
    * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
    */
   created_at: string
 }
-export interface CreateTaskBatchMinerPoolLockOutputCreateTaskBatchMeta {
+export interface CreateTaskBatchMeta {
   summary: {
     created_count: number
     skipped_count: number

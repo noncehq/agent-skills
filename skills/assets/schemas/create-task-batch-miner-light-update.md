@@ -42,7 +42,7 @@ export interface CreateTaskBatchMinerLightUpdateInput {
 /**
  * Represents an entity that performs actions in the system (user, API key, or system)
  */
-export type CreateTaskBatchMinerLightUpdateOutputActor = {
+export type Actor = {
   [k: string]: unknown
 } | null
 
@@ -54,14 +54,14 @@ export interface CreateTaskBatchMinerLightUpdateOutput {
   /**
    * Array of items
    */
-  data: CreateTaskBatchMinerLightUpdateOutputMinerTaskBatch[]
+  data: MinerTaskBatch[]
   /**
    * Error object (null on success)
    */
   error: null
-  meta: CreateTaskBatchMinerLightUpdateOutputCreateTaskBatchMeta
+  meta: CreateTaskBatchMeta
 }
-export interface CreateTaskBatchMinerLightUpdateOutputMinerTaskBatch {
+export interface MinerTaskBatch {
   /**
    * Miner task batch ID
    */
@@ -93,13 +93,13 @@ export interface CreateTaskBatchMinerLightUpdateOutputMinerTaskBatch {
   task_params: {
     [k: string]: unknown
   } | null
-  created_by: CreateTaskBatchMinerLightUpdateOutputActor
+  created_by: Actor
   /**
    * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
    */
   created_at: string
 }
-export interface CreateTaskBatchMinerLightUpdateOutputCreateTaskBatchMeta {
+export interface CreateTaskBatchMeta {
   summary: {
     created_count: number
     skipped_count: number

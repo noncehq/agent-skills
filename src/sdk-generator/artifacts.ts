@@ -1,4 +1,5 @@
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
+import ts from "typescript";
 
 import type { OpenApiIndex, OpenApiOperationInfo } from "./openapi.js";
 import {
@@ -13,6 +14,12 @@ import {
 
 type SchemaSource = "mcp" | "mcp+openapi" | "openapi" | "observed-mcp" | "unknown";
 type OpenApiMatch = "exact" | "create-task-batch-family" | "none";
+
+interface TypeScriptDeclaration {
+  kind: "interface" | "type";
+  name: string;
+  text: string;
+}
 
 export interface GeneratedTool {
   annotations?: Tool["annotations"];
@@ -181,8 +188,59 @@ const requiredInputSummary = (tool: GeneratedTool): string | undefined => {
   return `required: ${required.join(", ")}`;
 };
 
+const splitTypeScriptDeclarations = (source: string): TypeScriptDeclaration[] => {
+  const sourceFile = ts.createSourceFile(
+    "generated-nonce-schema.d.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const declarations: TypeScriptDeclaration[] = [];
+
+  for (const statement of sourceFile.statements) {
+    if (ts.isInterfaceDeclaration(statement) || ts.isTypeAliasDeclaration(statement)) {
+      declarations.push({
+        kind: ts.isInterfaceDeclaration(statement) ? "interface" : "type",
+        name: statement.name.text,
+        text: statement.getFullText(sourceFile).trim(),
+      });
+      continue;
+    }
+
+    const text = statement.getText(sourceFile).trim();
+    if (text.length > 0) {
+      throw new Error(`Unsupported generated TypeScript declaration: ${text}`);
+    }
+  }
+
+  return declarations;
+};
+
+const dedupeTypeScriptDeclarations = (sources: string[]): string[] => {
+  const declarations: string[] = [];
+  const seen = new Map<string, TypeScriptDeclaration>();
+
+  for (const source of sources) {
+    for (const declaration of splitTypeScriptDeclarations(source)) {
+      const existing = seen.get(declaration.name);
+      if (!existing) {
+        seen.set(declaration.name, declaration);
+        declarations.push(declaration.text);
+        continue;
+      }
+
+      if (existing.kind === declaration.kind && existing.text === declaration.text) continue;
+
+      throw new Error(`Generated TypeScript declaration name conflict: ${declaration.name}`);
+    }
+  }
+
+  return declarations;
+};
+
 const renderSignatures = async (tools: GeneratedTool[]): Promise<string> => {
-  const declarations = (
+  const declarationSources = (
     await Promise.all(
       tools.map(async (tool) => [
         (await schemaToTypeScriptDeclaration(`${tool.typeBase}Input`, tool.inputSchema))
@@ -192,6 +250,7 @@ const renderSignatures = async (tools: GeneratedTool[]): Promise<string> => {
       ]),
     )
   ).flat();
+  const declarations = dedupeTypeScriptDeclarations(declarationSources);
 
   const definitions = tools.map((tool) => ({
     destructive: tool.destructive,

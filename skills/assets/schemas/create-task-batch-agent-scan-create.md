@@ -51,7 +51,7 @@ export interface CreateTaskBatchAgentScanCreateInput {
 /**
  * Represents an entity that performs actions in the system (user, API key, or system)
  */
-export type CreateTaskBatchAgentScanCreateOutputActor = {
+export type Actor = {
   [k: string]: unknown
 } | null
 
@@ -63,14 +63,14 @@ export interface CreateTaskBatchAgentScanCreateOutput {
   /**
    * Array of items
    */
-  data: CreateTaskBatchAgentScanCreateOutputMinerTaskBatch[]
+  data: MinerTaskBatch[]
   /**
    * Error object (null on success)
    */
   error: null
-  meta: CreateTaskBatchAgentScanCreateOutputCreateTaskBatchMeta
+  meta: CreateTaskBatchMeta
 }
-export interface CreateTaskBatchAgentScanCreateOutputMinerTaskBatch {
+export interface MinerTaskBatch {
   /**
    * Miner task batch ID
    */
@@ -102,13 +102,13 @@ export interface CreateTaskBatchAgentScanCreateOutputMinerTaskBatch {
   task_params: {
     [k: string]: unknown
   } | null
-  created_by: CreateTaskBatchAgentScanCreateOutputActor
+  created_by: Actor
   /**
    * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
    */
   created_at: string
 }
-export interface CreateTaskBatchAgentScanCreateOutputCreateTaskBatchMeta {
+export interface CreateTaskBatchMeta {
   summary: {
     created_count: number
     skipped_count: number

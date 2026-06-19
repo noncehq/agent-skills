@@ -42,7 +42,7 @@ export interface CreateTaskBatchMinerSystemRebootInput {
 /**
  * Represents an entity that performs actions in the system (user, API key, or system)
  */
-export type CreateTaskBatchMinerSystemRebootOutputActor = {
+export type Actor = {
   [k: string]: unknown
 } | null
 
@@ -54,14 +54,14 @@ export interface CreateTaskBatchMinerSystemRebootOutput {
   /**
    * Array of items
    */
-  data: CreateTaskBatchMinerSystemRebootOutputMinerTaskBatch[]
+  data: MinerTaskBatch[]
   /**
    * Error object (null on success)
    */
   error: null
-  meta: CreateTaskBatchMinerSystemRebootOutputCreateTaskBatchMeta
+  meta: CreateTaskBatchMeta
 }
-export interface CreateTaskBatchMinerSystemRebootOutputMinerTaskBatch {
+export interface MinerTaskBatch {
   /**
    * Miner task batch ID
    */
@@ -93,13 +93,13 @@ export interface CreateTaskBatchMinerSystemRebootOutputMinerTaskBatch {
   task_params: {
     [k: string]: unknown
   } | null
-  created_by: CreateTaskBatchMinerSystemRebootOutputActor
+  created_by: Actor
   /**
    * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
    */
   created_at: string
 }
-export interface CreateTaskBatchMinerSystemRebootOutputCreateTaskBatchMeta {
+export interface CreateTaskBatchMeta {
   summary: {
     created_count: number
     skipped_count: number

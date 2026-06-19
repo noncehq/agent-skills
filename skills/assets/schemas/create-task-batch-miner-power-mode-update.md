@@ -62,7 +62,7 @@ export interface CreateTaskBatchMinerPowerModeUpdateInput {
 /**
  * Represents an entity that performs actions in the system (user, API key, or system)
  */
-export type CreateTaskBatchMinerPowerModeUpdateOutputActor = {
+export type Actor = {
   [k: string]: unknown
 } | null
 
@@ -74,14 +74,14 @@ export interface CreateTaskBatchMinerPowerModeUpdateOutput {
   /**
    * Array of items
    */
-  data: CreateTaskBatchMinerPowerModeUpdateOutputMinerTaskBatch[]
+  data: MinerTaskBatch[]
   /**
    * Error object (null on success)
    */
   error: null
-  meta: CreateTaskBatchMinerPowerModeUpdateOutputCreateTaskBatchMeta
+  meta: CreateTaskBatchMeta
 }
-export interface CreateTaskBatchMinerPowerModeUpdateOutputMinerTaskBatch {
+export interface MinerTaskBatch {
   /**
    * Miner task batch ID
    */
@@ -113,13 +113,13 @@ export interface CreateTaskBatchMinerPowerModeUpdateOutputMinerTaskBatch {
   task_params: {
     [k: string]: unknown
   } | null
-  created_by: CreateTaskBatchMinerPowerModeUpdateOutputActor
+  created_by: Actor
   /**
    * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
    */
   created_at: string
 }
-export interface CreateTaskBatchMinerPowerModeUpdateOutputCreateTaskBatchMeta {
+export interface CreateTaskBatchMeta {
   summary: {
     created_count: number
     skipped_count: number
