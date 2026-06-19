@@ -3,6 +3,7 @@ import { homedir, platform } from "node:os";
 import { dirname, join } from "node:path";
 
 import { OAUTH_SERVICE_NAME } from "./constants.js";
+import { restrictFileToCurrentUser } from "./credential-store.js";
 import { normalizeProfile } from "./profile.js";
 
 export interface StateStore {
@@ -53,6 +54,9 @@ export class FileStateStore implements StateStore {
     const file = statePath(this.baseDir, this.profile, key);
     await mkdir(dirname(file), { recursive: true, mode: 0o700 });
     await writeFile(file, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
+    if (platform() === "win32") {
+      await restrictFileToCurrentUser(file);
+    }
   }
 }
 

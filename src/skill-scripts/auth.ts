@@ -144,6 +144,9 @@ const assertState = async (
   if (expectedState && receivedState && expectedState !== receivedState) {
     throw new Error("OAuth callback state does not match the pending login state");
   }
+  if (expectedState && !receivedState) {
+    console.error("Warning: OAuth callback did not include a state parameter (CSRF check skipped)");
+  }
 };
 
 interface TokenWaitBaseline {

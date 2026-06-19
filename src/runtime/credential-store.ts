@@ -15,24 +15,34 @@ export interface CredentialStore {
   set(key: string, value: string): Promise<void>;
 }
 
+const SUBPROCESS_TIMEOUT_MS = 30_000;
+
 const run = async (
   command: string,
   args: string[],
 ): Promise<{ code: number; stdout: string; stderr: string }> =>
   new Promise((resolve, reject) => {
     const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error(`${command} timed out after ${SUBPROCESS_TIMEOUT_MS}ms`));
+    }, SUBPROCESS_TIMEOUT_MS);
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
     child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
     child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
-    child.on("error", reject);
-    child.on("close", (code) =>
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      reject(error);
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
       resolve({
         code: code ?? 1,
         stdout: Buffer.concat(stdout).toString("utf8"),
         stderr: Buffer.concat(stderr).toString("utf8"),
-      }),
-    );
+      });
+    });
   });
 
 const credentialPath = (
@@ -46,7 +56,7 @@ const credentialPath = (
   return join(baseDir, safeProfile, "credentials", `${safeKey}.${extension}`);
 };
 
-const restrictWindowsFileToCurrentUser = async (file: string): Promise<void> => {
+export const restrictFileToCurrentUser = async (file: string): Promise<void> => {
   const username = userInfo().username;
   if (!username) return;
   const result = await run("icacls", [file, "/inheritance:r", "/grant:r", `${username}:F`]);
@@ -85,7 +95,7 @@ export class FileCredentialStore implements CredentialStore {
     await mkdir(dirname(file), { recursive: true, mode: 0o700 });
     await writeFile(file, value, { mode: 0o600 });
     if (platform() === "win32") {
-      await restrictWindowsFileToCurrentUser(file);
+      await restrictFileToCurrentUser(file);
     }
   }
 }

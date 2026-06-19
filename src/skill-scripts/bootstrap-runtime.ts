@@ -24,24 +24,38 @@ const resolveVpCommand = (): string => {
   return existsSync(managedVp) ? managedVp : "vp";
 };
 
+const SUBPROCESS_TIMEOUT_MS = 30_000;
+
 const run = async (
   command: string,
   args: string[],
 ): Promise<{ code: number; stdout: string; stderr: string }> =>
   new Promise((resolve) => {
     const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
+    const timer = setTimeout(() => {
+      child.kill();
+      resolve({
+        code: 124,
+        stdout: "",
+        stderr: `${command} timed out after ${SUBPROCESS_TIMEOUT_MS}ms`,
+      });
+    }, SUBPROCESS_TIMEOUT_MS);
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
     child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
     child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
-    child.on("error", (error) => resolve({ code: 127, stdout: "", stderr: error.message }));
-    child.on("close", (code) =>
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      resolve({ code: 127, stdout: "", stderr: error.message });
+    });
+    child.on("close", (code) => {
+      clearTimeout(timer);
       resolve({
         code: code ?? 1,
         stdout: Buffer.concat(stdout).toString("utf8"),
         stderr: Buffer.concat(stderr).toString("utf8"),
-      }),
-    );
+      });
+    });
   });
 
 const main = async (): Promise<void> => {
