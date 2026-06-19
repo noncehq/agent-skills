@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { Socket } from "node:net";
+import { platform as currentPlatform } from "node:os";
 
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -28,6 +29,11 @@ interface SharedAuthOptions {
   profile?: string;
 }
 
+interface BrowserLaunchEnvironment {
+  env?: Record<string, string | undefined>;
+  platform?: NodeJS.Platform;
+}
+
 const createProviderFromOptions = (
   options: SharedAuthOptions & { open?: boolean; port?: string },
 ): LocalNonceOAuthProvider => {
@@ -40,7 +46,28 @@ const createProviderFromOptions = (
   });
 };
 
-export const shouldOpenBrowser = (options: { open?: boolean }): boolean => options.open !== false;
+export const isClearlyHeadlessLinux = (environment: BrowserLaunchEnvironment = {}): boolean => {
+  const env = environment.env ?? process.env;
+  const os = environment.platform ?? currentPlatform();
+  if (os !== "linux") return false;
+  return !(
+    env.BROWSER ||
+    env.DISPLAY ||
+    env.MIR_SOCKET ||
+    env.WAYLAND_DISPLAY ||
+    env.WSL_DISTRO_NAME ||
+    env.WSL_INTEROP
+  );
+};
+
+export const shouldOpenBrowser = (
+  options: { open?: boolean },
+  environment: BrowserLaunchEnvironment = {},
+): boolean => {
+  if (options.open === false) return false;
+  if (options.open === true) return true;
+  return !isClearlyHeadlessLinux(environment);
+};
 
 export const parseCallback = (value: string): { code: string; state?: string } => {
   if (!value.includes("://")) return { code: value };

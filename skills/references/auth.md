@@ -7,7 +7,8 @@ Use the local auth runner for Nonce authentication.
 - Complete the path setup in `references/workflow.md` first, and keep the printed `NONCE_SKILL_HOME` or `$NonceSkillHome` value visible for later commands.
 - Credentials are saved as local profile files.
 - Check status with `node scripts/auth.mjs status`.
-- Start browser login with `node scripts/auth.mjs login`; it exits after the local callback completes.
+- Start browser login with `node scripts/auth.mjs login`; it exits after the local callback completes. By default it tries to open a browser.
+- In clearly headless Linux environments, or if browser launch fails, `login` prints an `authorizationUrl` JSON object and waits for the callback flow.
 - For manual browser launch, run `node scripts/auth.mjs login --no-open`, open the printed authorization URL, and let the redirect reach the local callback server.
 - If the redirect cannot reach the local callback server, keep `login --no-open` running and complete the exchange from another terminal with `node scripts/auth.mjs callback "<callback-url-or-code>"`. Quote pasted callback URLs because they can contain shell metacharacters such as `&`. The login process exits after it detects the saved token.
 - Verify the saved token with `node scripts/auth.mjs verify`; this initializes the local connection and lists available methods, but does not call any business method.

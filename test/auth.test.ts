@@ -3,9 +3,11 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, it } from "vite-plus/test";
 
 import { createCredentialStore } from "../src/runtime/credential-store.js";
+import { redirectToAuthorizationUrl } from "../src/runtime/oauth-provider.js";
 import { normalizeProfile } from "../src/runtime/profile.js";
 import {
   hasCurrentLoginTokens,
+  isClearlyHeadlessLinux,
   parseCallback,
   shouldOpenBrowser,
 } from "../src/skill-scripts/auth.js";
@@ -23,10 +25,53 @@ describe("auth helpers", () => {
     expect(() => normalizeProfile("../secret")).toThrow("Profile may only contain");
   });
 
-  it("maps Commander negative --no-open option to disabled browser launch", () => {
+  it("uses browser login unless disabled or the Linux environment is clearly headless", () => {
     expect(shouldOpenBrowser({ open: false })).toBe(false);
-    expect(shouldOpenBrowser({ open: true })).toBe(true);
-    expect(shouldOpenBrowser({})).toBe(true);
+    expect(shouldOpenBrowser({ open: true }, { env: {}, platform: "linux" })).toBe(true);
+    expect(shouldOpenBrowser({}, { env: {}, platform: "darwin" })).toBe(true);
+    expect(shouldOpenBrowser({}, { env: { DISPLAY: ":0" }, platform: "linux" })).toBe(true);
+    expect(shouldOpenBrowser({}, { env: { BROWSER: "xdg-open" }, platform: "linux" })).toBe(true);
+    expect(
+      shouldOpenBrowser({}, { env: { WSL_INTEROP: "/run/WSL/1_interop" }, platform: "linux" }),
+    ).toBe(true);
+    expect(shouldOpenBrowser({}, { env: {}, platform: "linux" })).toBe(false);
+    expect(isClearlyHeadlessLinux({ env: {}, platform: "linux" })).toBe(true);
+  });
+
+  it("prints the authorization URL when browser launch is skipped or fails", async () => {
+    const skippedLogs: string[] = [];
+    const failedLogs: string[] = [];
+    const warnings: string[] = [];
+    const authorizationUrl = new URL("https://example.test/oauth");
+
+    await redirectToAuthorizationUrl(authorizationUrl, {
+      log: (message) => skippedLogs.push(message),
+      openAuthorizationUrl: async () => {
+        throw new Error("should not open");
+      },
+      openBrowser: false,
+      warn: (message) => warnings.push(message),
+    });
+    await redirectToAuthorizationUrl(authorizationUrl, {
+      log: (message) => failedLogs.push(message),
+      openAuthorizationUrl: async () => {
+        throw new Error("no browser");
+      },
+      openBrowser: true,
+      warn: (message) => warnings.push(message),
+    });
+
+    expect(JSON.parse(skippedLogs[0] ?? "{}")).toMatchObject({
+      authorizationUrl: "https://example.test/oauth",
+      browserOpen: "skipped",
+    });
+    expect(JSON.parse(failedLogs[0] ?? "{}")).toMatchObject({
+      authorizationUrl: "https://example.test/oauth",
+      browserOpen: "failed",
+      reason: "no browser",
+    });
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain("failed to open browser");
   });
 
   it("only treats tokens saved for the current login as manual callback success", () => {
