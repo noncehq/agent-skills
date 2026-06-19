@@ -1,6 +1,6 @@
 # Tool Signatures
 
-Generated from Nonce MCP `tools/list`; OpenAPI only fills missing schema metadata.
+Generated from Nonce MCP `tools/list`; OpenAPI and observed read-only MCP outputs only fill missing schema metadata.
 
 - MCP endpoint: `https://mcp.nonce.app/mcp`
 - OpenAPI supplement: https://docs.nonce.app/api-reference/openapi.json
@@ -45,4 +45,4 @@ try {
 - `searchTaskBatches(input: SearchTaskBatchesInput, options?: ReadonlyCallOptions): Promise<SearchTaskBatchesOutput>` - SearchTaskBatches (read-only, input: mcp+openapi, output: mcp+openapi, openapi: SearchTaskBatches)
 - `getTaskBatch(input: GetTaskBatchInput, options?: ReadonlyCallOptions): Promise<GetTaskBatchOutput>` - GetTaskBatch (read-only, input: mcp, output: mcp, openapi: GetTaskBatch)
 - `getTaskBatchTasks(input: GetTaskBatchTasksInput, options?: ReadonlyCallOptions): Promise<GetTaskBatchTasksOutput>` - GetTaskBatchTasks (read-only, input: mcp, output: mcp)
-- `listWorkspaces(input?: ListWorkspacesInput, options?: ReadonlyCallOptions): Promise<ListWorkspacesOutput>` - ListWorkspaces (read-only, input: mcp, output: unknown)
+- `listWorkspaces(input?: ListWorkspacesInput, options?: ReadonlyCallOptions): Promise<ListWorkspacesOutput>` - ListWorkspaces (read-only, input: mcp, output: observed-mcp)

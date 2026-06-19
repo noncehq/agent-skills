@@ -9,7 +9,7 @@
     "version": "0.2.0",
     "description": "MCP server for the Nonce mining management API (API spec v1.0.0)"
   },
-  "sourcePriority": ["mcp-tools-list", "openapi-supplement"],
+  "sourcePriority": ["mcp-tools-list", "openapi-supplement", "observed-readonly-mcp-output"],
   "toolCount": 27,
   "tools": [
     {
@@ -557,7 +557,7 @@
       "inputSchemaSource": "mcp",
       "methodName": "listWorkspaces",
       "name": "ListWorkspaces",
-      "outputSchemaSource": "unknown",
+      "outputSchemaSource": "observed-mcp",
       "readOnly": true,
       "typeBase": "ListWorkspaces"
     }

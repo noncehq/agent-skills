@@ -5485,7 +5485,53 @@
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
       "inputSchemaSource": "mcp",
-      "outputSchemaSource": "unknown"
+      "output": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "success": {
+                "type": "boolean"
+              },
+              "data": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "workspace_id": {
+                      "type": "string"
+                    },
+                    "workspace_name": {
+                      "type": "string"
+                    },
+                    "workspace_slug": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["workspace_id", "workspace_name", "workspace_slug", "role"],
+                  "additionalProperties": false
+                }
+              },
+              "error": {
+                "type": "null"
+              }
+            },
+            "required": ["success", "data", "error"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["status", "data"],
+        "additionalProperties": false,
+        "description": "Observed output from read-only MCP tool ListWorkspaces."
+      },
+      "outputSchemaSource": "observed-mcp"
     }
   }
 }

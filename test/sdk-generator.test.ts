@@ -2,7 +2,11 @@ import { describe, expect, it } from "vite-plus/test";
 
 import { generateArtifacts } from "../nonce/scripts/sdk-generator/artifacts.js";
 import { buildOpenApiIndex, type OpenApiDocument } from "../nonce/scripts/sdk-generator/openapi.js";
-import { methodNameForTool, schemaToType } from "../nonce/scripts/sdk-generator/schema.js";
+import {
+  inferJsonSchemaFromValue,
+  methodNameForTool,
+  schemaToType,
+} from "../nonce/scripts/sdk-generator/schema.js";
 
 describe("SDK generator helpers", () => {
   it("normalizes MCP tool names into SDK method names", () => {
@@ -27,6 +31,29 @@ describe("SDK generator helpers", () => {
         type: "object",
       }),
     ).toContain("mode: string");
+  });
+
+  it("infers JSON Schema from observed ListWorkspaces output without preserving values", () => {
+    const schema = inferJsonSchemaFromValue({
+      data: {
+        data: [
+          {
+            role: "org:member",
+            workspace_id: "org_123",
+            workspace_name: "Demo",
+            workspace_slug: "demo",
+          },
+        ],
+        error: null,
+        success: true,
+      },
+      status: 200,
+    });
+
+    expect(schemaToType(schema)).toContain("workspace_id: string");
+    expect(schemaToType(schema)).toContain("error: null");
+    expect(JSON.stringify(schema)).not.toContain("org_123");
+    expect(JSON.stringify(schema)).not.toContain("Demo");
   });
 
   it("keeps MCP schemas primary and supplements missing output from OpenAPI", () => {
@@ -86,5 +113,42 @@ describe("SDK generator helpers", () => {
     expect(artifacts.tools[0]?.outputSchemaSource).toBe("openapi");
     expect(artifacts.signatures).toContain("listFarms(input: ListFarmsInput");
     expect(artifacts.signatures).toContain("export interface ListFarmsOutput");
+  });
+
+  it("uses observed read-only MCP output when MCP and OpenAPI output schemas are missing", () => {
+    const artifacts = generateArtifacts({
+      mcpEndpoint: "https://mcp.nonce.app/mcp",
+      observedOutputSchemas: {
+        ListWorkspaces: inferJsonSchemaFromValue({
+          data: {
+            data: [
+              {
+                role: "org:viewer",
+                workspace_id: "org_123",
+                workspace_name: "Demo",
+                workspace_slug: "demo",
+              },
+            ],
+            error: null,
+            success: true,
+          },
+          status: 200,
+        }),
+      },
+      tools: [
+        {
+          annotations: { readOnlyHint: true },
+          inputSchema: {
+            properties: {},
+            type: "object",
+          },
+          name: "ListWorkspaces",
+        },
+      ],
+    });
+
+    expect(artifacts.tools[0]?.outputSchemaSource).toBe("observed-mcp");
+    expect(artifacts.signatures).toContain("export interface ListWorkspacesOutput");
+    expect(artifacts.signatures).toContain("workspace_slug: string");
   });
 });

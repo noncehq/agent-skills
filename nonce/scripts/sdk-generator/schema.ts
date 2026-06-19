@@ -107,6 +107,83 @@ export const mergeSchemaMetadata = (
   return { schema: next, supplemented };
 };
 
+const schemaFingerprint = (schema: JsonSchema): string => JSON.stringify(schema);
+
+const mergeInferredObjectSchemas = (schemas: JsonSchema[]): JsonSchema => {
+  const propertySchemas = new Map<string, JsonSchema[]>();
+  let required = new Set<string>(
+    schemas.length > 0 && isRecord(schemas[0]?.properties)
+      ? Object.keys(schemas[0].properties)
+      : [],
+  );
+
+  for (const schema of schemas) {
+    const properties = asSchema(schema.properties) ?? {};
+    const propertyNames = new Set(Object.keys(properties));
+    required = new Set([...required].filter((name) => propertyNames.has(name)));
+    for (const [name, property] of Object.entries(properties)) {
+      const existing = propertySchemas.get(name) ?? [];
+      propertySchemas.set(name, [...existing, asSchema(property) ?? {}]);
+    }
+  }
+
+  return {
+    type: "object",
+    properties: Object.fromEntries(
+      [...propertySchemas.entries()].map(([name, propertySchemaList]) => [
+        name,
+        mergeInferredSchemas(propertySchemaList),
+      ]),
+    ),
+    required: [...required],
+    additionalProperties: false,
+  };
+};
+
+const mergeInferredSchemas = (schemas: JsonSchema[]): JsonSchema => {
+  if (schemas.length === 0) return {};
+
+  const objectSchemas = schemas.filter((schema) => schema.type === "object");
+  if (objectSchemas.length === schemas.length) return mergeInferredObjectSchemas(objectSchemas);
+
+  const arraySchemas = schemas.filter((schema) => schema.type === "array");
+  if (arraySchemas.length === schemas.length) {
+    return {
+      type: "array",
+      items: mergeInferredSchemas(arraySchemas.map((schema) => asSchema(schema.items) ?? {})),
+    };
+  }
+
+  const uniqueSchemas = unique(schemas.map(schemaFingerprint)).map(
+    (fingerprint) => JSON.parse(fingerprint) as JsonSchema,
+  );
+  return uniqueSchemas.length === 1 ? (uniqueSchemas[0] ?? {}) : { anyOf: uniqueSchemas };
+};
+
+export const inferJsonSchemaFromValue = (value: unknown): JsonSchema => {
+  if (value === null) return { type: "null" };
+  if (typeof value === "string") return { type: "string" };
+  if (typeof value === "number") return { type: Number.isInteger(value) ? "integer" : "number" };
+  if (typeof value === "boolean") return { type: "boolean" };
+  if (Array.isArray(value)) {
+    return {
+      type: "array",
+      items: mergeInferredSchemas(value.map(inferJsonSchemaFromValue)),
+    };
+  }
+  if (isRecord(value)) {
+    return {
+      type: "object",
+      properties: Object.fromEntries(
+        Object.entries(value).map(([name, nested]) => [name, inferJsonSchemaFromValue(nested)]),
+      ),
+      required: Object.keys(value),
+      additionalProperties: false,
+    };
+  }
+  return {};
+};
+
 const sanitizeComment = (value: unknown): string | undefined => {
   if (typeof value !== "string") return undefined;
   const text = value.replaceAll("*/", "* /").trim();
