@@ -35,7 +35,12 @@ describe("bootstrap runtime helpers", () => {
 
   it("recommends an external task directory when the installed skill root is not writable", () => {
     const diagnostics = buildSandboxWriteDiagnostics({
+      credentialDirProbe: {
+        path: "/state/nonce-skill/test-local/credentials",
+        writable: true,
+      },
       fallbackTaskDir: { path: "/tmp/nonce-skill-tasks", writable: true },
+      profile: "test-local",
       skillRoot: "/readonly/nonce",
       skillRootProbe: {
         error: "EACCES",
@@ -43,6 +48,7 @@ describe("bootstrap runtime helpers", () => {
         writable: false,
       },
       stateDirProbe: { path: "/state/nonce-skill", writable: true },
+      stateProfileDirProbe: { path: "/state/nonce-skill/test-local", writable: true },
       taskDirProbe: {
         error: "EROFS",
         path: "/readonly/nonce/.nonce-skill/tasks",
@@ -51,8 +57,11 @@ describe("bootstrap runtime helpers", () => {
     });
 
     expect(diagnostics).toMatchObject({
+      credentialDirWritable: true,
+      profile: "test-local",
       recommendedTaskDir: "/tmp/nonce-skill-tasks",
       skillRootWritable: false,
+      stateProfileDirWritable: true,
       stateDirWritable: true,
       taskDirWritable: false,
     });
@@ -69,6 +78,37 @@ describe("bootstrap runtime helpers", () => {
         }),
       ]),
     );
+  });
+
+  it("reports OAuth credential cache permission failures separately", () => {
+    const diagnostics = buildSandboxWriteDiagnostics({
+      credentialDirProbe: {
+        error: "EACCES",
+        path: "/state/nonce-skill/test-local/credentials",
+        writable: false,
+      },
+      fallbackTaskDir: { path: "/tmp/nonce-skill-tasks", writable: true },
+      profile: "test-local",
+      skillRoot: "/installed/nonce",
+      skillRootProbe: { path: "/installed/nonce/.nonce-skill/diagnostics", writable: true },
+      stateDirProbe: { path: "/state/nonce-skill", writable: true },
+      stateProfileDirProbe: { path: "/state/nonce-skill/test-local", writable: true },
+      taskDirProbe: { path: "/installed/nonce/.nonce-skill/tasks", writable: true },
+    });
+
+    expect(diagnostics).toMatchObject({
+      credentialDir: "/state/nonce-skill/test-local/credentials",
+      credentialDirWritable: false,
+      stateDirWritable: true,
+      stateProfileDirWritable: true,
+    });
+    expect(diagnostics.diagnostics).toEqual([
+      expect.objectContaining({
+        message: expect.stringContaining("OAuth credential cache"),
+        path: "/state/nonce-skill/test-local/credentials",
+        severity: "error",
+      }),
+    ]);
   });
 
   it("pins and installs the Vite+ managed Node LTS runtime", async () => {

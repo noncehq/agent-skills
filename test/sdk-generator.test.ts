@@ -154,6 +154,7 @@ describe("SDK generator helpers", () => {
     );
     expect(artifacts.referenceMarkdown).toContain("required: workspace_id");
     expect(artifacts.referenceMarkdown).toContain("Runtime calls must go through the local SDK");
+    expect(artifacts.referenceMarkdown).toContain("credentialDirWritable: false");
     expect(artifacts.referenceMarkdown).toContain("taskDirWritable: true");
     expect(artifacts.referenceMarkdown).toContain(
       "await import(process.env.NONCE_SKILL_RUNTIME_URL)",

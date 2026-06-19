@@ -45,15 +45,19 @@ const run = async (
     });
   });
 
+export const getCredentialDirectory = (baseDir: string, profile: string): string => {
+  const safeProfile = normalizeProfile(profile);
+  return join(baseDir, safeProfile, "credentials");
+};
+
 const credentialPath = (
   baseDir: string,
   profile: string,
   key: string,
   extension = "secret",
 ): string => {
-  const safeProfile = normalizeProfile(profile);
   const safeKey = key.replaceAll(/[^a-zA-Z0-9_.-]/g, "-");
-  return join(baseDir, safeProfile, "credentials", `${safeKey}.${extension}`);
+  return join(getCredentialDirectory(baseDir, profile), `${safeKey}.${extension}`);
 };
 
 export const restrictFileToCurrentUser = async (file: string): Promise<void> => {

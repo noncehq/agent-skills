@@ -37,10 +37,13 @@ Test-Path .\scripts\skill-runtime.mjs
    - macOS/Linux: `./scripts/bootstrap-runtime.sh`
    - Windows PowerShell: `powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap-runtime.ps1`
 3. The bootstrap script installs Vite+ if needed, enables managed Node mode, installs the skill-pinned LTS Node runtime, and runs `vp env doctor`.
-4. After bootstrap, inspect the runtime with `node scripts/bootstrap-runtime.mjs --json`. This command checks the runtime; it does not install missing pieces by itself.
+4. After bootstrap, inspect the runtime with `node scripts/bootstrap-runtime.mjs --json`. Pass `--profile "<name>"` when using a non-default auth profile. This command checks the runtime; it does not install missing pieces by itself.
 5. Proceed only when the runtime check reports a supported platform and `nodeVersionOk: true`. Treat a failed `vpEnvDoctorOk` or `vpManagedNodeVersionOk` as a repair recommendation, not a hard block when direct `node` is already version 22 or newer.
 6. Inspect write diagnostics before writing task files or authenticating:
-   - `stateDirWritable: false` means auth state or credential writes will fail. Set `XDG_STATE_HOME` to a writable directory on macOS/Linux, or `APPDATA` on Windows, then rerun the runtime check.
+   - `stateDirWritable: false` means the base auth state directory is not writable.
+   - `stateProfileDirWritable: false` means OAuth state files for the selected profile cannot be written.
+   - `credentialDirWritable: false` means OAuth token, client-registration, state, or PKCE verifier cache files for the selected profile cannot be written.
+   - For any auth write failure, set `XDG_STATE_HOME` to a writable directory on macOS/Linux, or `APPDATA` on Windows, then rerun the runtime check.
    - `taskDirWritable: false` means the default installed-skill task directory is not writable. Write task files under `recommendedTaskDir` or another writable directory.
 
 ## Task flow

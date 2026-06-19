@@ -8,8 +8,9 @@ import { fileURLToPath } from "node:url";
 
 import { Command } from "commander";
 
-import { DEFAULT_MCP_ENDPOINT } from "../runtime/index.js";
-import { getStateBaseDir } from "../runtime/state-store.js";
+import { getCredentialDirectory } from "../runtime/credential-store.js";
+import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE, normalizeProfile } from "../runtime/index.js";
+import { getStateBaseDir, getStateProfileDir } from "../runtime/state-store.js";
 import { getCliArgv } from "./argv.js";
 
 export const bootstrapCommandName = "nonce bootstrap-runtime";
@@ -43,21 +44,29 @@ export interface WriteDiagnostic {
 }
 
 export interface SandboxWriteDiagnostics {
+  credentialDir: string;
+  credentialDirWritable: boolean;
   diagnostics: WriteDiagnostic[];
+  profile: string;
   recommendedTaskDir?: string;
   skillRoot: string;
   skillRootWritable: boolean;
   stateDir: string;
   stateDirWritable: boolean;
+  stateProfileDir: string;
+  stateProfileDirWritable: boolean;
   taskDir: string;
   taskDirWritable: boolean;
 }
 
 export interface SandboxWriteProbeSet {
+  credentialDirProbe: WriteProbeResult;
   fallbackTaskDir: WriteProbeResult;
+  profile: string;
   skillRoot: string;
   skillRootProbe: WriteProbeResult;
   stateDirProbe: WriteProbeResult;
+  stateProfileDirProbe: WriteProbeResult;
   taskDirProbe: WriteProbeResult;
 }
 
@@ -91,10 +100,13 @@ const probeWritableDirectory = async (directory: string): Promise<WriteProbeResu
 const failureDetail = (probe: WriteProbeResult): string => (probe.error ? ` ${probe.error}` : "");
 
 export const buildSandboxWriteDiagnostics = ({
+  credentialDirProbe,
   fallbackTaskDir,
+  profile,
   skillRoot,
   skillRootProbe,
   stateDirProbe,
+  stateProfileDirProbe,
   taskDirProbe,
 }: SandboxWriteProbeSet): SandboxWriteDiagnostics => {
   const diagnostics: WriteDiagnostic[] = [];
@@ -111,10 +123,30 @@ export const buildSandboxWriteDiagnostics = ({
 
   if (!stateDirProbe.writable) {
     diagnostics.push({
-      message: `Cannot write Nonce state or credential files.${failureDetail(stateDirProbe)}`,
+      message: `Cannot write Nonce state base directory.${failureDetail(stateDirProbe)}`,
       path: stateDirProbe.path,
       remediation:
         "Set XDG_STATE_HOME to a writable directory before auth, or on Windows set APPDATA to a writable profile directory.",
+      severity: "error",
+    });
+  }
+
+  if (!stateProfileDirProbe.writable) {
+    diagnostics.push({
+      message: `Cannot write OAuth state files for profile ${profile}.${failureDetail(stateProfileDirProbe)}`,
+      path: stateProfileDirProbe.path,
+      remediation:
+        "Fix this profile directory's permissions or set XDG_STATE_HOME/APPDATA to a writable directory before auth.",
+      severity: "error",
+    });
+  }
+
+  if (!credentialDirProbe.writable) {
+    diagnostics.push({
+      message: `Cannot write OAuth credential cache for profile ${profile}.${failureDetail(credentialDirProbe)}`,
+      path: credentialDirProbe.path,
+      remediation:
+        "Fix this credentials directory's permissions or set XDG_STATE_HOME/APPDATA to a writable directory before auth.",
       severity: "error",
     });
   }
@@ -131,7 +163,10 @@ export const buildSandboxWriteDiagnostics = ({
   }
 
   return {
+    credentialDir: credentialDirProbe.path,
+    credentialDirWritable: credentialDirProbe.writable,
     diagnostics,
+    profile,
     recommendedTaskDir: taskDirProbe.writable
       ? taskDirProbe.path
       : fallbackTaskDir.writable
@@ -141,6 +176,8 @@ export const buildSandboxWriteDiagnostics = ({
     skillRootWritable: skillRootProbe.writable,
     stateDir: stateDirProbe.path,
     stateDirWritable: stateDirProbe.writable,
+    stateProfileDir: stateProfileDirProbe.path,
+    stateProfileDirWritable: stateProfileDirProbe.writable,
     taskDir: taskDirProbe.path,
     taskDirWritable: taskDirProbe.writable,
   };
@@ -148,8 +185,12 @@ export const buildSandboxWriteDiagnostics = ({
 
 export const createSandboxWriteDiagnostics = async (
   skillRoot = resolveInstalledSkillRoot(),
+  profile = DEFAULT_PROFILE,
 ): Promise<SandboxWriteDiagnostics> => {
+  const normalizedProfile = normalizeProfile(profile);
   const stateDir = getStateBaseDir();
+  const stateProfileDir = getStateProfileDir(stateDir, normalizedProfile);
+  const credentialDir = getCredentialDirectory(stateDir, normalizedProfile);
   const taskDir = join(skillRoot, ".nonce-skill", "tasks");
   const fallbackTaskDir = join(tmpdir(), "nonce-skill-tasks");
   const [skillRootProbe, stateDirProbe, taskDirProbe, fallbackTaskDirProbe] = await Promise.all([
@@ -158,12 +199,17 @@ export const createSandboxWriteDiagnostics = async (
     probeWritableDirectory(taskDir),
     probeWritableDirectory(fallbackTaskDir),
   ]);
+  const stateProfileDirProbe = await probeWritableDirectory(stateProfileDir);
+  const credentialDirProbe = await probeWritableDirectory(credentialDir);
 
   return buildSandboxWriteDiagnostics({
+    credentialDirProbe,
     fallbackTaskDir: fallbackTaskDirProbe,
+    profile: normalizedProfile,
     skillRoot,
     skillRootProbe,
     stateDirProbe,
+    stateProfileDirProbe,
     taskDirProbe,
   });
 };
@@ -213,10 +259,11 @@ const main = async (): Promise<void> => {
   const program = new Command()
     .name("nonce bootstrap-runtime")
     .description("Inspect the local runtime required by the Nonce skill")
+    .option("--profile <name>", "credential profile used for auth cache checks", DEFAULT_PROFILE)
     .option("--json", "print JSON output", false);
 
   program.parse(getCliArgv());
-  const options = program.opts<{ json: boolean }>();
+  const options = program.opts<{ json: boolean; profile: string }>();
   const os = platform();
   const supported = isSupportedPlatform(os);
   const vpCommand = resolveVpCommand();
@@ -229,10 +276,15 @@ const main = async (): Promise<void> => {
       ? (JSON.parse(envCurrent.stdout) as { node_path?: string; version?: string })
       : {};
   const vpManagedNodeVersionOk = envInfo.version === expectedNodeVersion;
-  const writeDiagnostics = await createSandboxWriteDiagnostics();
+  const writeDiagnostics = await createSandboxWriteDiagnostics(
+    resolveInstalledSkillRoot(),
+    options.profile,
+  );
 
   const result = {
     command: bootstrapCommandName,
+    credentialDir: writeDiagnostics.credentialDir,
+    credentialDirWritable: writeDiagnostics.credentialDirWritable,
     diagnostics: writeDiagnostics.diagnostics,
     endpoint: DEFAULT_MCP_ENDPOINT,
     minimumNodeMajorVersion: MINIMUM_NODE_MAJOR_VERSION,
@@ -240,12 +292,15 @@ const main = async (): Promise<void> => {
     nodePath: process.execPath,
     nodeVersionOk: isNodeVersionSupported(process.version),
     platform: os,
+    profile: writeDiagnostics.profile,
     recommendedRunner: "node",
     recommendedTaskDir: writeDiagnostics.recommendedTaskDir,
     skillRoot: writeDiagnostics.skillRoot,
     skillRootWritable: writeDiagnostics.skillRootWritable,
     stateDir: writeDiagnostics.stateDir,
     stateDirWritable: writeDiagnostics.stateDirWritable,
+    stateProfileDir: writeDiagnostics.stateProfileDir,
+    stateProfileDirWritable: writeDiagnostics.stateProfileDirWritable,
     supported,
     taskDir: writeDiagnostics.taskDir,
     taskDirWritable: writeDiagnostics.taskDirWritable,
@@ -282,7 +337,10 @@ const main = async (): Promise<void> => {
   console.log(`vp env current: ${result.vpEnvCurrentOk ? "ok" : "failed"}`);
   console.log(`vp env doctor: ${result.vpEnvDoctorOk ? "ok" : "failed"}`);
   console.log(`Recommended runner: ${result.recommendedRunner}`);
-  console.log(`State directory writable: ${result.stateDirWritable ? "yes" : "no"}`);
+  console.log(`Profile: ${result.profile}`);
+  console.log(`State base directory writable: ${result.stateDirWritable ? "yes" : "no"}`);
+  console.log(`OAuth state directory writable: ${result.stateProfileDirWritable ? "yes" : "no"}`);
+  console.log(`OAuth credential cache writable: ${result.credentialDirWritable ? "yes" : "no"}`);
   console.log(`Task directory writable: ${result.taskDirWritable ? "yes" : "no"}`);
   if (result.recommendedTaskDir) {
     console.log(`Recommended task directory: ${result.recommendedTaskDir}`);

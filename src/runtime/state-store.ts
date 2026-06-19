@@ -23,10 +23,12 @@ export const getStateBaseDir = (): string => {
   return join(env.XDG_STATE_HOME ?? join(homedir(), ".local", "state"), OAUTH_SERVICE_NAME);
 };
 
+export const getStateProfileDir = (baseDir: string, profile: string): string =>
+  join(baseDir, normalizeProfile(profile));
+
 const statePath = (baseDir: string, profile: string, key: string): string => {
-  const safeProfile = normalizeProfile(profile);
   const safeKey = key.replaceAll(/[^a-zA-Z0-9_.-]/g, "-");
-  return join(baseDir, safeProfile, `${safeKey}.json`);
+  return join(getStateProfileDir(baseDir, profile), `${safeKey}.json`);
 };
 
 export class FileStateStore implements StateStore {

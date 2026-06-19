@@ -346,6 +346,8 @@ const renderReferenceMarkdown = (
     "",
     "Do not call schema/reference endpoints for business operations. Runtime calls must go through the local SDK.",
     "",
+    "Before authenticating, run `node scripts/bootstrap-runtime.mjs --json` with `--profile` when needed. Treat `stateDirWritable: false`, `stateProfileDirWritable: false`, or `credentialDirWritable: false` as auth blockers because OAuth state and credential cache files cannot be written.",
+    "",
     "Task files can live under `<installed skill root>/.nonce-skill/tasks/` when the runtime check reports `taskDirWritable: true`, or under `recommendedTaskDir` / another writable directory when the installed skill root is read-only.",
     "",
     "Import the runtime SDK from the runner-provided `NONCE_SKILL_RUNTIME_URL` so task files do not depend on their filesystem location. Runner task code should receive profile and endpoint selection from runner flags rather than hardcoding them.",
