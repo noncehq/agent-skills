@@ -13,12 +13,10 @@ Use this skill to work with those resources through the local typed SDK/runner. 
 
 - If the local SDK/runner environment is missing or broken, initialize or repair it before authentication or business queries. Read `references/workflow.md` for the concrete commands.
 - If credentials are missing or expired, complete Nonce MCP OAuth before business queries. Read `references/auth.md` for status, login, callback, and logout flows.
-- Support macOS and Windows. If the current host is unsupported, report that limitation instead of improvising another runtime path.
+- Support macOS and Windows.
 
 ## Operating Rules
 
-- Use the local SDK/runner for Nonce MCP operations.
-- Do not call direct REST/OpenAPI endpoints for business operations. OpenAPI metadata is only a schema supplement for generated types.
 - Before writing task code, read `references/tool-signatures.md` for available typed methods and interfaces.
 - Missing IDs: discover them in order with `ListWorkspaces` -> `ListFarms` -> `ListMiners` as needed.
 - Reuse returned `workspace_id`, `farm_id`, `miner_id`, and task IDs. Never invent IDs.
