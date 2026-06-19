@@ -18,5 +18,5 @@ cd "$SKILL_DIR"
 
 vp env setup
 vp env on
-vp env install
+vp env install 24.17.0
 vp env doctor

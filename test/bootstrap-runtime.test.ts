@@ -2,7 +2,10 @@ import { readFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import { runtimeCheckExitCode } from "../src/skill-scripts/bootstrap-runtime.js";
+import {
+  EXPECTED_NODE_VERSION,
+  runtimeCheckExitCode,
+} from "../src/skill-scripts/bootstrap-runtime.js";
 
 describe("bootstrap runtime helpers", () => {
   it("fails closed when the platform or Vite+ runtime is unhealthy", () => {
@@ -21,25 +24,16 @@ describe("bootstrap runtime helpers", () => {
   });
 
   it("pins and installs the Vite+ managed Node LTS runtime", async () => {
-    const packageJson = JSON.parse(await readFile("nonce/package.json", "utf8")) as {
-      devEngines?: { runtime?: { name?: string; onFail?: string; version?: string } };
-    };
-    const macScript = await readFile("nonce/scripts/bootstrap-runtime.sh", "utf8");
-    const windowsScript = await readFile("nonce/scripts/bootstrap-runtime.ps1", "utf8");
+    const macScript = await readFile("skills/scripts/bootstrap-runtime.sh", "utf8");
+    const windowsScript = await readFile("skills/scripts/bootstrap-runtime.ps1", "utf8");
 
-    expect(packageJson.devEngines?.runtime).toEqual({
-      name: "node",
-      onFail: "download",
-      version: "24.17.0",
-    });
+    expect(EXPECTED_NODE_VERSION).toBe("24.17.0");
     for (const script of [macScript, windowsScript]) {
       expect(script).toContain("vp env setup");
       expect(script).toContain("vp env on");
-      expect(script).toContain("vp env install");
+      expect(script).toContain(`vp env install ${EXPECTED_NODE_VERSION}`);
       expect(script).toContain("vp env doctor");
       expect(script).not.toContain("vp install");
     }
-    expect(packageJson).not.toHaveProperty("dependencies");
-    expect(packageJson).not.toHaveProperty("scripts");
   });
 });

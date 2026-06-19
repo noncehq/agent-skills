@@ -8,14 +8,14 @@ const scriptEntries = {
   "skill-runtime": "src/runtime/index.ts",
 } as const;
 const assetOutputs = [
-  "nonce/assets/tool-signatures.ts",
-  "nonce/assets/tool-manifest.json",
-  "nonce/assets/tool-schemas.json",
+  "skills/assets/tool-signatures.ts",
+  "skills/assets/tool-manifest.json",
+  "skills/assets/tool-schemas.json",
 ];
-const generatedOutputs = [...assetOutputs, "nonce/scripts/**/*.mjs", "nonce/scripts/**/*.js"];
+const generatedOutputs = [...assetOutputs, "skills/scripts/**/*.mjs", "skills/scripts/**/*.js"];
 
 const createScriptPack = ([name, entry]: [string, string]): PackUserConfig => ({
-  clean: [`nonce/scripts/${name}.mjs`, `nonce/scripts/${name}.js`],
+  clean: [`skills/scripts/${name}.mjs`, `skills/scripts/${name}.js`],
   dts: false,
   deps: {
     onlyBundle: false,
@@ -27,7 +27,7 @@ const createScriptPack = ([name, entry]: [string, string]): PackUserConfig => ({
   format: "esm",
   minify: true,
   name: `nonce-${name}`,
-  outDir: "nonce/scripts",
+  outDir: "skills/scripts",
 });
 
 export default defineConfig({
@@ -62,6 +62,6 @@ export default defineConfig({
     "*": "vp check --fix",
   },
   test: {
-    include: ["test/**/*.test.ts", "src/**/*.test.ts", "nonce/**/*.test.ts"],
+    include: ["test/**/*.test.ts", "src/**/*.test.ts", "skills/**/*.test.ts"],
   },
 });

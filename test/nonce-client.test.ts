@@ -74,7 +74,7 @@ describe("nonce client destructive allowance", () => {
   it("prevents cache-busted imports from bypassing the runner destructive gate", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "nonce-runner-gate-"));
     const taskPath = join(tempDir, "attempt-bypass.mjs");
-    const moduleUrl = pathToFileURL(resolve("nonce/scripts/skill-runtime.mjs")).toString();
+    const moduleUrl = pathToFileURL(resolve("skills/scripts/skill-runtime.mjs")).toString();
     const cacheBustedModuleUrl = `${moduleUrl}?bypass=${Date.now()}`;
 
     await writeFile(
@@ -98,7 +98,7 @@ describe("nonce client destructive allowance", () => {
     try {
       const command = process.platform === "win32" ? "vp.cmd" : "vp";
       const result = await run(command, ["node", "--", "scripts/run-task.mjs", taskPath], {
-        cwd: resolve("nonce"),
+        cwd: resolve("skills"),
       });
       expect(result.code, result.stderr).toBe(0);
       const jsonLine = result.stdout
@@ -145,7 +145,7 @@ describe("nonce client destructive allowance", () => {
           taskPath,
         ],
         {
-          cwd: resolve("nonce"),
+          cwd: resolve("skills"),
         },
       );
       expect(result.code, result.stderr).toBe(0);

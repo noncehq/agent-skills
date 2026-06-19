@@ -125,7 +125,7 @@ const inspectMcp = async (
   const tokens = await provider.tokens();
   if (!tokens?.access_token && !tokens?.refresh_token) {
     throw new Error(
-      "Not authenticated. Run `vp node -- nonce/scripts/auth.mjs login` from the repository root first.",
+      "Not authenticated. Run `vp node -- skills/scripts/auth.mjs login` from the repository root first.",
     );
   }
 
@@ -163,9 +163,9 @@ const writeText = async (path: string, value: string): Promise<void> => {
 const generate = async (options: GenerateSdkOptions): Promise<void> => {
   const endpoint = options.endpoint ?? DEFAULT_MCP_ENDPOINT;
   const profile = normalizeProfile(options.profile ?? DEFAULT_PROFILE);
-  const outputDir = options.outputDir ?? "nonce/assets";
+  const outputDir = options.outputDir ?? "skills/assets";
   const openapiUrl = options.openapiUrl ?? DEFAULT_OPENAPI_URL;
-  const referenceOutput = options.referenceOutput ?? "nonce/references/tool-signatures.md";
+  const referenceOutput = options.referenceOutput ?? "skills/references/tool-signatures.md";
 
   const openApiDocument = await fetchOpenApiDocument(openapiUrl);
   const openApiIndex = buildOpenApiIndex(openApiDocument);
@@ -221,12 +221,12 @@ const main = async (): Promise<void> => {
     )
     .option("--endpoint <url>", "Nonce endpoint", DEFAULT_MCP_ENDPOINT)
     .option("--openapi-url <url>", "OpenAPI supplement URL", DEFAULT_OPENAPI_URL)
-    .option("--output-dir <path>", "generated runtime output directory", "nonce/assets")
+    .option("--output-dir <path>", "generated runtime output directory", "skills/assets")
     .option("--profile <name>", "credential profile", DEFAULT_PROFILE)
     .option(
       "--reference-output <path>",
       "generated Markdown signature reference",
-      "nonce/references/tool-signatures.md",
+      "skills/references/tool-signatures.md",
     )
     .option(
       "--skip-observed-outputs",

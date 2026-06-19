@@ -1,6 +1,5 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
 import { homedir, platform } from "node:os";
 import { join } from "node:path";
 
@@ -10,6 +9,7 @@ import { DEFAULT_MCP_ENDPOINT } from "../runtime/index.js";
 import { getCliArgv } from "./argv.js";
 
 export const bootstrapCommandName = "nonce bootstrap-runtime";
+export const EXPECTED_NODE_VERSION = "24.17.0";
 
 export const runtimeCheckExitCode = (result: {
   nodeVersionOk: boolean;
@@ -44,23 +44,6 @@ const run = async (
     );
   });
 
-interface SkillPackageJson {
-  devEngines?: {
-    runtime?: {
-      name?: string;
-      version?: string;
-    };
-  };
-}
-
-const readExpectedNodeVersion = async (): Promise<string | undefined> => {
-  const packageJson = JSON.parse(
-    await readFile(new URL("../package.json", import.meta.url), "utf8"),
-  ) as SkillPackageJson;
-  const runtime = packageJson.devEngines?.runtime;
-  return runtime?.name === "node" ? runtime.version : undefined;
-};
-
 const main = async (): Promise<void> => {
   const program = new Command()
     .name("nonce bootstrap-runtime")
@@ -72,7 +55,7 @@ const main = async (): Promise<void> => {
   const os = platform();
   const supported = os === "darwin" || os === "win32";
   const vpCommand = resolveVpCommand();
-  const expectedNodeVersion = await readExpectedNodeVersion();
+  const expectedNodeVersion = EXPECTED_NODE_VERSION;
   const vpVersion = await run(vpCommand, ["--version"]);
   const envCurrent = await run(vpCommand, ["env", "current", "--json"]);
   const envInfo =
