@@ -13,7 +13,7 @@ listMinerHistory(input: ListMinerHistoryInput, options?: ReadonlyCallOptions): P
 ## Input
 
 ```ts
-interface ListMinerHistoryInput {
+export interface ListMinerHistoryInput {
   workspace_id: string
   farm_id: string
   miner_id: string
@@ -38,7 +38,7 @@ interface ListMinerHistoryInput {
 ## Output
 
 ```ts
-interface ListMinerHistoryOutput {
+export interface ListMinerHistoryOutput {
   /**
    * Indicates if the request was successful
    */
@@ -66,7 +66,7 @@ interface ListMinerHistoryOutput {
     /**
      * Time-series data points within the requested range.
      */
-    snapshots: ({
+    snapshots: {
       /**
        * The period timestamp for this metric record
        */
@@ -87,7 +87,7 @@ interface ListMinerHistoryOutput {
        * Uptime in seconds
        */
       uptime: number | null
-    })[]
+    }[]
   }
   /**
    * Error object (null on success)

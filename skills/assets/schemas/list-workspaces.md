@@ -11,7 +11,7 @@ listWorkspaces(input?: ListWorkspacesInput, options?: ReadonlyCallOptions): Prom
 ## Input
 
 ```ts
-type ListWorkspacesInput = Record<string, unknown>
+export interface ListWorkspacesInput {}
 ```
 
 ## Output
@@ -20,7 +20,7 @@ type ListWorkspacesInput = Record<string, unknown>
 /**
  * Observed output from read-only MCP tool ListWorkspaces.
  */
-interface ListWorkspacesOutput {
+export interface ListWorkspacesOutput {
   status: number
   data: {
     success: boolean

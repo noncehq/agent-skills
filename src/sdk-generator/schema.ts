@@ -1,3 +1,9 @@
+import {
+  compile as compileJsonSchema,
+  type JSONSchema as TypeScriptJsonSchema,
+  type Options as JsonSchemaToTypeScriptOptions,
+} from "json-schema-to-typescript";
+
 export type JsonSchema = Record<string, unknown>;
 
 export interface SchemaMergeResult {
@@ -8,10 +14,6 @@ export interface SchemaMergeResult {
 export interface TypeScriptTypeResult {
   declaration: string;
   typeName: string;
-}
-
-export interface TypeScriptDeclarationOptions {
-  exported?: boolean;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -188,24 +190,6 @@ export const inferJsonSchemaFromValue = (value: unknown): JsonSchema => {
   return {};
 };
 
-const sanitizeComment = (value: unknown): string | undefined => {
-  if (typeof value !== "string") return undefined;
-  const text = value.replaceAll("*/", "* /").trim();
-  return text.length > 0 ? text : undefined;
-};
-
-const renderComment = (description: unknown, indent = ""): string => {
-  const text = sanitizeComment(description);
-  if (!text) return "";
-  const lines = text.split(/\r?\n/).map((line) => `${indent} * ${line.trim()}`);
-  return `${indent}/**\n${lines.join("\n")}\n${indent} */\n`;
-};
-
-const isIdentifier = (value: string): boolean => /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
-
-const propertyKey = (value: string): string =>
-  isIdentifier(value) ? value : JSON.stringify(value);
-
 const words = (value: string): string[] =>
   value
     .split(/[^A-Za-z0-9]+/)
@@ -228,161 +212,44 @@ export const typeBaseForTool = (toolName: string): string => {
   return base || "Tool";
 };
 
-const literalType = (value: unknown): string => {
-  if (value === null) return "null";
-  if (typeof value === "string") return JSON.stringify(value);
-  if (typeof value === "number" || typeof value === "boolean") return JSON.stringify(value);
-  return "unknown";
+const typeScriptDeclarationOptions: Partial<JsonSchemaToTypeScriptOptions> = {
+  additionalProperties: false,
+  bannerComment: "",
+  style: {
+    printWidth: 120,
+    semi: false,
+    singleQuote: false,
+    trailingComma: "none",
+  },
+  unknownAny: true,
 };
 
-const union = (types: string[]): string => {
-  let flattened = unique(types.filter(Boolean));
-  if (flattened.length === 0) return "unknown";
-  if (flattened.includes("unknown")) return "unknown";
-  if (flattened.includes("string")) {
-    flattened = flattened.filter((type) => !(type.startsWith('"') && type.endsWith('"')));
-  }
-  if (flattened.includes("number")) {
-    flattened = flattened.filter((type) => !/^-?\d+(\.\d+)?$/.test(type));
-  }
-  return flattened.length === 1 ? (flattened[0] ?? "unknown") : flattened.join(" | ");
+const schemaTitleName = (title: unknown): string | undefined => {
+  if (typeof title !== "string") return undefined;
+  const name = words(title)
+    .map((part) => capitalize(part.toLowerCase()))
+    .join("");
+  return name || undefined;
 };
 
-const parenthesizeUnion = (type: string): string => (type.includes(" | ") ? `(${type})` : type);
-
-const objectType = (schema: JsonSchema, indentLevel: number): string => {
-  const properties = asSchema(schema.properties);
-  if (properties && Object.keys(properties).length > 0) {
-    const required = new Set(
-      Array.isArray(schema.required)
-        ? schema.required.filter((value) => typeof value === "string")
-        : [],
-    );
-    const indent = "  ".repeat(indentLevel);
-    const childIndent = "  ".repeat(indentLevel + 1);
-    const lines = ["{"];
-    for (const [name, rawProperty] of Object.entries(properties)) {
-      const property = asSchema(rawProperty);
-      const type = property ? schemaToType(property, indentLevel + 1) : "unknown";
-      lines.push(
-        `${renderComment(property?.description, childIndent)}${childIndent}${propertyKey(name)}${required.has(name) ? "" : "?"}: ${type}`,
-      );
-    }
-    const additional = schema.additionalProperties;
-    if (isRecord(additional)) {
-      lines.push(`${childIndent}[key: string]: ${schemaToType(additional, indentLevel + 1)}`);
-    } else if (additional === true) {
-      lines.push(`${childIndent}[key: string]: unknown`);
-    }
-    lines.push(`${indent}}`);
-    return lines.join("\n");
-  }
-
-  const additional = schema.additionalProperties;
-  if (additional === false) return "Record<string, never>";
-  if (isRecord(additional)) return `Record<string, ${schemaToType(additional, indentLevel)}>`;
-  return "Record<string, unknown>";
+const schemaForDeclaration = (schema: JsonSchema | undefined): TypeScriptJsonSchema => {
+  const compilerSchema = structuredClone(schema ?? { tsType: "unknown" }) as TypeScriptJsonSchema;
+  delete compilerSchema.title;
+  return compilerSchema;
 };
 
-export const schemaToType = (schema: JsonSchema | undefined, indentLevel = 0): string => {
-  if (!schema) return "unknown";
-  if (schema.const !== undefined) return literalType(schema.const);
-  if (Array.isArray(schema.enum)) return union(schema.enum.map(literalType));
-
-  const combinator = Array.isArray(schema.oneOf)
-    ? schema.oneOf
-    : Array.isArray(schema.anyOf)
-      ? schema.anyOf
-      : undefined;
-  if (combinator)
-    return union(asSchemaArray(combinator).map((item) => schemaToType(item, indentLevel)));
-
-  if (Array.isArray(schema.allOf)) {
-    const parts = asSchemaArray(schema.allOf).map((item) =>
-      parenthesizeUnion(schemaToType(item, indentLevel)),
-    );
-    return parts.length > 0 ? parts.join(" & ") : "unknown";
-  }
-
-  if (Array.isArray(schema.type)) {
-    return union(
-      schema.type.map((type) =>
-        schemaToType(
-          {
-            ...schema,
-            type,
-          },
-          indentLevel,
-        ),
-      ),
-    );
-  }
-
-  if (schema.type === "string") return "string";
-  if (schema.type === "integer" || schema.type === "number") return "number";
-  if (schema.type === "boolean") return "boolean";
-  if (schema.type === "null") return "null";
-  if (schema.type === "array") {
-    const itemType = schemaToType(asSchema(schema.items), indentLevel);
-    return `${parenthesizeUnion(itemType)}[]`;
-  }
-  if (
-    schema.type === "object" ||
-    isRecord(schema.properties) ||
-    schema.additionalProperties !== undefined
-  ) {
-    return objectType(schema, indentLevel);
-  }
-
-  return "unknown";
-};
-
-export const schemaToTypeScriptDeclaration = (
+export const schemaToTypeScriptDeclaration = async (
   name: string,
   schema: JsonSchema | undefined,
-  options: TypeScriptDeclarationOptions = {},
-): TypeScriptTypeResult => {
-  const prefix = options.exported === false ? "" : "export ";
-
-  if (!schema) {
-    return {
-      declaration: `${prefix}type ${name} = unknown\n`,
-      typeName: name,
-    };
-  }
-
-  const description = renderComment(schema.description);
-  const properties = asSchema(schema.properties);
-  if (
-    (schema.type === "object" || properties) &&
-    properties &&
-    Object.keys(properties).length > 0
-  ) {
-    const required = new Set(
-      Array.isArray(schema.required)
-        ? schema.required.filter((value) => typeof value === "string")
-        : [],
-    );
-    const lines = [`${description}${prefix}interface ${name} {`];
-    for (const [propertyName, rawProperty] of Object.entries(properties)) {
-      const property = asSchema(rawProperty);
-      const type = property ? schemaToType(property, 1) : "unknown";
-      lines.push(
-        `${renderComment(property?.description, "  ")}  ${propertyKey(propertyName)}${required.has(propertyName) ? "" : "?"}: ${type}`,
-      );
-    }
-    const additional = schema.additionalProperties;
-    if (isRecord(additional)) {
-      lines.push(`  [key: string]: ${schemaToType(additional, 1)}`);
-    } else if (additional === true) {
-      lines.push("  [key: string]: unknown");
-    }
-    lines.push("}\n");
-    return { declaration: lines.join("\n"), typeName: name };
-  }
-
+): Promise<TypeScriptTypeResult> => {
   return {
-    declaration: `${description}${prefix}type ${name} = ${schemaToType(schema)}\n`,
+    declaration: await compileJsonSchema(schemaForDeclaration(schema), name, {
+      ...typeScriptDeclarationOptions,
+      customName: (nestedSchema) => {
+        const nestedName = schemaTitleName(nestedSchema.title);
+        return nestedName ? `${name}${nestedName}` : undefined;
+      },
+    }),
     typeName: name,
   };
 };

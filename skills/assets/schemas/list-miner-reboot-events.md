@@ -13,7 +13,7 @@ listMinerRebootEvents(input: ListMinerRebootEventsInput, options?: ReadonlyCallO
 ## Input
 
 ```ts
-interface ListMinerRebootEventsInput {
+export interface ListMinerRebootEventsInput {
   workspace_id: string
   farm_id: string
   /**
@@ -46,7 +46,7 @@ interface ListMinerRebootEventsInput {
 ## Output
 
 ```ts
-interface ListMinerRebootEventsOutput {
+export interface ListMinerRebootEventsOutput {
   /**
    * Indicates if the request was successful
    */
@@ -54,7 +54,7 @@ interface ListMinerRebootEventsOutput {
   /**
    * Array of items
    */
-  data: ({
+  data: {
     /**
      * Reboot event ID
      */
@@ -103,7 +103,7 @@ interface ListMinerRebootEventsOutput {
      * Record creation time (ISO 8601)
      */
     created_at: string | null
-  })[]
+  }[]
   /**
    * Pagination metadata
    */

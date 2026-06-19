@@ -13,7 +13,7 @@ searchMiners(input: SearchMinersInput, options?: ReadonlyCallOptions): Promise<S
 ## Input
 
 ```ts
-interface SearchMinersInput {
+export interface SearchMinersInput {
   workspace_id: string
   farm_id: string
   /**
@@ -81,7 +81,7 @@ interface SearchMinersInput {
 ## Output
 
 ```ts
-interface SearchMinersOutput {
+export interface SearchMinersOutput {
   /**
    * Indicates if the request was successful
    */
@@ -89,84 +89,7 @@ interface SearchMinersOutput {
   /**
    * Array of items
    */
-  data: ({
-    /**
-     * Miner identifier
-     */
-    id: string
-    /**
-     * Farm this miner belongs to
-     */
-    farm_id: string
-    /**
-     * Workspace (tenant) identifier
-     */
-    workspace_id: string
-    /**
-     * Hardware serial number
-     */
-    serial_number: string | null
-    /**
-     * Manufacturer (e.g. Bitmain, MicroBT)
-     */
-    make: string
-    /**
-     * Hardware model (e.g. S19 Pro, M50S)
-     */
-    model: string | null
-    /**
-     * Current IP address
-     */
-    ip: string
-    /**
-     * MAC address
-     */
-    mac: string
-    /**
-     * Whether the miner is actively hashing
-     */
-    is_mining: boolean
-    /**
-     * Run status (system-managed). Values: online | stale.
-     */
-    status: string
-    /**
-     * Operator-managed status. Values: maintenance | retired | off_rack | transit | archived, or null.
-     */
-    ops_status: string | null
-    /**
-     * Current power/performance mode
-     */
-    mining_mode: string
-    /**
-     * Real-time hashrate in TH/s
-     */
-    hashrate: number | null
-    /**
-     * Real-time power consumption in watts
-     */
-    power: number | null
-    /**
-     * Average board temperature in celsius
-     */
-    temp: number | null
-    /**
-     * Energy efficiency in J/TH
-     */
-    efficiency: number | null
-    /**
-     * Bitmask of active anomalies. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool.
-     */
-    anomaly_flags?: number
-    /**
-     * Uptime in seconds
-     */
-    uptime: number | null
-    /**
-     * Last heartbeat timestamp (ISO 8601)
-     */
-    last_updated_at: string | null
-  })[]
+  data: SearchMinersOutputMiner[]
   /**
    * Pagination metadata
    */
@@ -196,5 +119,83 @@ interface SearchMinersOutput {
    * Error object (null on success)
    */
   error: null
+}
+export interface SearchMinersOutputMiner {
+  /**
+   * Miner identifier
+   */
+  id: string
+  /**
+   * Farm this miner belongs to
+   */
+  farm_id: string
+  /**
+   * Workspace (tenant) identifier
+   */
+  workspace_id: string
+  /**
+   * Hardware serial number
+   */
+  serial_number: string | null
+  /**
+   * Manufacturer (e.g. Bitmain, MicroBT)
+   */
+  make: string
+  /**
+   * Hardware model (e.g. S19 Pro, M50S)
+   */
+  model: string | null
+  /**
+   * Current IP address
+   */
+  ip: string
+  /**
+   * MAC address
+   */
+  mac: string
+  /**
+   * Whether the miner is actively hashing
+   */
+  is_mining: boolean
+  /**
+   * Run status (system-managed). Values: online | stale.
+   */
+  status: string
+  /**
+   * Operator-managed status. Values: maintenance | retired | off_rack | transit | archived, or null.
+   */
+  ops_status: string | null
+  /**
+   * Current power/performance mode
+   */
+  mining_mode: string
+  /**
+   * Real-time hashrate in TH/s
+   */
+  hashrate: number | null
+  /**
+   * Real-time power consumption in watts
+   */
+  power: number | null
+  /**
+   * Average board temperature in celsius
+   */
+  temp: number | null
+  /**
+   * Energy efficiency in J/TH
+   */
+  efficiency: number | null
+  /**
+   * Bitmask of active anomalies. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool.
+   */
+  anomaly_flags?: number
+  /**
+   * Uptime in seconds
+   */
+  uptime: number | null
+  /**
+   * Last heartbeat timestamp (ISO 8601)
+   */
+  last_updated_at: string | null
 }
 ```

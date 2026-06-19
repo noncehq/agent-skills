@@ -13,7 +13,7 @@ getTaskBatch(input: GetTaskBatchInput, options?: ReadonlyCallOptions): Promise<G
 ## Input
 
 ```ts
-interface GetTaskBatchInput {
+export interface GetTaskBatchInput {
   workspace_id: string
   farm_id: string
   batch_id: string
@@ -23,7 +23,7 @@ interface GetTaskBatchInput {
 ## Output
 
 ```ts
-interface GetTaskBatchOutput {
+export interface GetTaskBatchOutput {
   /**
    * Indicates if the request was successful
    */
@@ -36,7 +36,20 @@ interface GetTaskBatchOutput {
     /**
      * Miner task name
      */
-    task_name: "agent.scan.create" | "agent.ip_diagnosis.create" | "agent.self.update" | "miner.system.reboot" | "miner.log.get" | "miner.light.update" | "miner.power_mode.update" | "miner.pool.update" | "miner.pool.lock" | "miner.firmware.update" | "miner.asset.update" | "miner.asset.delete" | "miner.rack_location.update"
+    task_name:
+      | "agent.scan.create"
+      | "agent.ip_diagnosis.create"
+      | "agent.self.update"
+      | "miner.system.reboot"
+      | "miner.log.get"
+      | "miner.light.update"
+      | "miner.power_mode.update"
+      | "miner.pool.update"
+      | "miner.pool.lock"
+      | "miner.firmware.update"
+      | "miner.asset.update"
+      | "miner.asset.delete"
+      | "miner.rack_location.update"
     /**
      * Aggregate status of a task batch. `pending` = at least one task is still running; `succeed` = all tasks succeeded; `failed` = all tasks failed, timed out, or were cancelled; `partial_succeed` = finished with a mix of success and failure.
      */
@@ -76,15 +89,21 @@ interface GetTaskBatchOutput {
     /**
      * Task parameters (JSON). Structure varies by task_name.
      */
-    task_params: Record<string, unknown> | null
+    task_params: {
+      [k: string]: unknown
+    } | null
     /**
      * Automation trigger context. Keys: trigger ({predicateField, predicateValue}), automation ({id, name}), filterSummary ({total, passed, skippedNonNormal?, skippedAnomaly?, skippedTemperature?}). Null for manually created batches.
      */
-    metadata?: Record<string, unknown> | null
+    metadata?: {
+      [k: string]: unknown
+    } | null
     /**
      * Represents an entity that performs actions in the system (user, API key, or system)
      */
-    created_by: Record<string, unknown> | null
+    created_by: {
+      [k: string]: unknown
+    } | null
     /**
      * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
      */

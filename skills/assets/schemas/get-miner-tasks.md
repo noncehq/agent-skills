@@ -13,7 +13,7 @@ getMinerTasks(input: GetMinerTasksInput, options?: ReadonlyCallOptions): Promise
 ## Input
 
 ```ts
-interface GetMinerTasksInput {
+export interface GetMinerTasksInput {
   workspace_id: string
   farm_id: string
   miner_id: string
@@ -28,7 +28,20 @@ interface GetMinerTasksInput {
   /**
    * Miner task name
    */
-  task_name?: "agent.scan.create" | "agent.ip_diagnosis.create" | "agent.self.update" | "miner.system.reboot" | "miner.log.get" | "miner.light.update" | "miner.power_mode.update" | "miner.pool.update" | "miner.pool.lock" | "miner.firmware.update" | "miner.asset.update" | "miner.asset.delete" | "miner.rack_location.update"
+  task_name?:
+    | "agent.scan.create"
+    | "agent.ip_diagnosis.create"
+    | "agent.self.update"
+    | "miner.system.reboot"
+    | "miner.log.get"
+    | "miner.light.update"
+    | "miner.power_mode.update"
+    | "miner.pool.update"
+    | "miner.pool.lock"
+    | "miner.firmware.update"
+    | "miner.asset.update"
+    | "miner.asset.delete"
+    | "miner.rack_location.update"
   /**
    * Task execution status. `created` = enqueued but not yet picked up by an agent; `queuing` = accepted by the agent and waiting in its local queue; `pending` = actively executing on the miner; `succeed` = finished successfully; `failed` = finished with an error; `timed_out` = exceeded its execution deadline; `cancelled` = aborted before completion.
    */
@@ -47,7 +60,14 @@ interface GetMinerTasksInput {
 ## Output
 
 ```ts
-interface GetMinerTasksOutput {
+/**
+ * Represents an entity that performs actions in the system (user, API key, or system)
+ */
+export type GetMinerTasksOutputActor = {
+  [k: string]: unknown
+} | null
+
+export interface GetMinerTasksOutput {
   /**
    * Indicates if the request was successful
    */
@@ -55,48 +75,7 @@ interface GetMinerTasksOutput {
   /**
    * Array of items
    */
-  data: ({
-    /**
-     * Miner task ID
-     */
-    task_id: string
-    /**
-     * Miner task batch ID
-     */
-    batch_id: string
-    /**
-     * Miner task name
-     */
-    task_name: "agent.scan.create" | "agent.ip_diagnosis.create" | "agent.self.update" | "miner.system.reboot" | "miner.log.get" | "miner.light.update" | "miner.power_mode.update" | "miner.pool.update" | "miner.pool.lock" | "miner.firmware.update" | "miner.asset.update" | "miner.asset.delete" | "miner.rack_location.update"
-    /**
-     * Task execution status. `created` = enqueued but not yet picked up by an agent; `queuing` = accepted by the agent and waiting in its local queue; `pending` = actively executing on the miner; `succeed` = finished successfully; `failed` = finished with an error; `timed_out` = exceeded its execution deadline; `cancelled` = aborted before completion.
-     */
-    status: "created" | "queuing" | "pending" | "succeed" | "failed" | "timed_out" | "cancelled"
-    /**
-     * Task parameters (JSON)
-     */
-    params: Record<string, unknown> | null
-    /**
-     * Error details if task failed (JSON)
-     */
-    error: Record<string, unknown> | null
-    /**
-     * Task execution result (JSON)
-     */
-    result: Record<string, unknown> | null
-    /**
-     * Represents an entity that performs actions in the system (user, API key, or system)
-     */
-    created_by: Record<string, unknown> | null
-    /**
-     * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
-     */
-    created_at: string
-    /**
-     * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
-     */
-    updated_at: string
-  })[]
+  data: GetMinerTasksOutputMinerTask[]
   /**
    * Pagination metadata
    */
@@ -126,5 +105,66 @@ interface GetMinerTasksOutput {
    * Error object (null on success)
    */
   error: null
+}
+/**
+ * A task execution record for a single miner
+ */
+export interface GetMinerTasksOutputMinerTask {
+  /**
+   * Miner task ID
+   */
+  task_id: string
+  /**
+   * Miner task batch ID
+   */
+  batch_id: string
+  /**
+   * Miner task name
+   */
+  task_name:
+    | "agent.scan.create"
+    | "agent.ip_diagnosis.create"
+    | "agent.self.update"
+    | "miner.system.reboot"
+    | "miner.log.get"
+    | "miner.light.update"
+    | "miner.power_mode.update"
+    | "miner.pool.update"
+    | "miner.pool.lock"
+    | "miner.firmware.update"
+    | "miner.asset.update"
+    | "miner.asset.delete"
+    | "miner.rack_location.update"
+  /**
+   * Task execution status. `created` = enqueued but not yet picked up by an agent; `queuing` = accepted by the agent and waiting in its local queue; `pending` = actively executing on the miner; `succeed` = finished successfully; `failed` = finished with an error; `timed_out` = exceeded its execution deadline; `cancelled` = aborted before completion.
+   */
+  status: "created" | "queuing" | "pending" | "succeed" | "failed" | "timed_out" | "cancelled"
+  /**
+   * Task parameters (JSON)
+   */
+  params: {
+    [k: string]: unknown
+  } | null
+  /**
+   * Error details if task failed (JSON)
+   */
+  error: {
+    [k: string]: unknown
+  } | null
+  /**
+   * Task execution result (JSON)
+   */
+  result: {
+    [k: string]: unknown
+  } | null
+  created_by: GetMinerTasksOutputActor
+  /**
+   * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
+   */
+  created_at: string
+  /**
+   * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
+   */
+  updated_at: string
 }
 ```

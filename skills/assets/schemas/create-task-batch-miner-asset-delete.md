@@ -13,7 +13,7 @@ createTaskBatchMinerAssetDelete(input: CreateTaskBatchMinerAssetDeleteInput, opt
 ## Input
 
 ```ts
-interface CreateTaskBatchMinerAssetDeleteInput {
+export interface CreateTaskBatchMinerAssetDeleteInput {
   workspace_id: string
   farm_id: string
   /**
@@ -39,7 +39,14 @@ interface CreateTaskBatchMinerAssetDeleteInput {
 ## Output
 
 ```ts
-interface CreateTaskBatchMinerAssetDeleteOutput {
+/**
+ * Represents an entity that performs actions in the system (user, API key, or system)
+ */
+export type CreateTaskBatchMinerAssetDeleteOutputActor = {
+  [k: string]: unknown
+} | null
+
+export interface CreateTaskBatchMinerAssetDeleteOutput {
   /**
    * Indicates if the request was successful
    */
@@ -47,49 +54,63 @@ interface CreateTaskBatchMinerAssetDeleteOutput {
   /**
    * Array of items
    */
-  data: ({
-    /**
-     * Miner task batch ID
-     */
-    batch_id: string
-    /**
-     * Miner task name
-     */
-    task_name: "agent.scan.create" | "agent.ip_diagnosis.create" | "agent.self.update" | "miner.system.reboot" | "miner.log.get" | "miner.light.update" | "miner.power_mode.update" | "miner.pool.update" | "miner.pool.lock" | "miner.firmware.update" | "miner.asset.update" | "miner.asset.delete" | "miner.rack_location.update"
-    /**
-     * Number of tasks in the batch
-     */
-    task_count: number
-    /**
-     * Task parameters (JSON). Structure varies by task_name.
-     */
-    task_params: Record<string, unknown> | null
-    /**
-     * Represents an entity that performs actions in the system (user, API key, or system)
-     */
-    created_by: Record<string, unknown> | null
-    /**
-     * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
-     */
-    created_at: string
-  })[]
+  data: CreateTaskBatchMinerAssetDeleteOutputMinerTaskBatch[]
   /**
    * Error object (null on success)
    */
   error: null
-  meta: {
-    summary: {
-      created_count: number
-      skipped_count: number
-    }
-    skipped?: ({
-      /**
-       * Reason a miner was skipped during task batch creation. `no_change` = miner is already in the requested state; `unsupported_mode` = miner hardware does not support the requested mode; `miner_not_found` = miner id was not found in the workspace or farm; `unstable_miner` = miner row is flagged unstable and cannot accept actions.
-       */
-      reason: "no_change" | "unsupported_mode" | "miner_not_found" | "unstable_miner"
-      message: string
-      miner_ids: string[]
-    })[]
+  meta: CreateTaskBatchMinerAssetDeleteOutputCreateTaskBatchMeta
+}
+export interface CreateTaskBatchMinerAssetDeleteOutputMinerTaskBatch {
+  /**
+   * Miner task batch ID
+   */
+  batch_id: string
+  /**
+   * Miner task name
+   */
+  task_name:
+    | "agent.scan.create"
+    | "agent.ip_diagnosis.create"
+    | "agent.self.update"
+    | "miner.system.reboot"
+    | "miner.log.get"
+    | "miner.light.update"
+    | "miner.power_mode.update"
+    | "miner.pool.update"
+    | "miner.pool.lock"
+    | "miner.firmware.update"
+    | "miner.asset.update"
+    | "miner.asset.delete"
+    | "miner.rack_location.update"
+  /**
+   * Number of tasks in the batch
+   */
+  task_count: number
+  /**
+   * Task parameters (JSON). Structure varies by task_name.
+   */
+  task_params: {
+    [k: string]: unknown
+  } | null
+  created_by: CreateTaskBatchMinerAssetDeleteOutputActor
+  /**
+   * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
+   */
+  created_at: string
+}
+export interface CreateTaskBatchMinerAssetDeleteOutputCreateTaskBatchMeta {
+  summary: {
+    created_count: number
+    skipped_count: number
   }
+  skipped?: {
+    /**
+     * Reason a miner was skipped during task batch creation. `no_change` = miner is already in the requested state; `unsupported_mode` = miner hardware does not support the requested mode; `miner_not_found` = miner id was not found in the workspace or farm; `unstable_miner` = miner row is flagged unstable and cannot accept actions.
+     */
+    reason: "no_change" | "unsupported_mode" | "miner_not_found" | "unstable_miner"
+    message: string
+    miner_ids: string[]
+  }[]
 }
 ```

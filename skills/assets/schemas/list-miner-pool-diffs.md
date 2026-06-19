@@ -13,7 +13,7 @@ listMinerPoolDiffs(input: ListMinerPoolDiffsInput, options?: ReadonlyCallOptions
 ## Input
 
 ```ts
-interface ListMinerPoolDiffsInput {
+export interface ListMinerPoolDiffsInput {
   workspace_id: string
   farm_id: string
   /**
@@ -37,7 +37,20 @@ interface ListMinerPoolDiffsInput {
 ## Output
 
 ```ts
-interface ListMinerPoolDiffsOutput {
+/**
+ * Complete miner history record before the change
+ */
+export type ListMinerPoolDiffsOutputMinerHistoryRecord = {
+  [k: string]: unknown
+} | null
+/**
+ * Complete miner history record after the change
+ */
+export type ListMinerPoolDiffsOutputMinerHistoryRecord1 = {
+  [k: string]: unknown
+} | null
+
+export interface ListMinerPoolDiffsOutput {
   /**
    * Indicates if the request was successful
    */
@@ -45,62 +58,57 @@ interface ListMinerPoolDiffsOutput {
   /**
    * Array of items
    */
-  data: ({
-    /**
-     * Miner identifier
-     */
-    miner_id: string
-    /**
-     * Complete miner history record before the change
-     */
-    before_record: Record<string, unknown> | null
-    /**
-     * Complete miner history record after the change
-     */
-    after_record: Record<string, unknown> | null
-    /**
-     * Summary of changes between the two time points
-     */
-    changes: {
-      /**
-       * Pool URL changes
-       */
-      pool_url: {
-        /**
-         * Value before the change
-         */
-        before: string | null
-        /**
-         * Value after the change
-         */
-        after: string | null
-        /**
-         * Whether the field has changed
-         */
-        changed: boolean
-      }
-      /**
-       * Worker ID changes
-       */
-      worker_id: {
-        /**
-         * Value before the change
-         */
-        before: string | null
-        /**
-         * Value after the change
-         */
-        after: string | null
-        /**
-         * Whether the field has changed
-         */
-        changed: boolean
-      }
-    }
-  })[]
+  data: ListMinerPoolDiffsOutputMinerPoolDiff[]
   /**
    * Error object (null on success)
    */
   error: null
+}
+export interface ListMinerPoolDiffsOutputMinerPoolDiff {
+  /**
+   * Miner identifier
+   */
+  miner_id: string
+  before_record: ListMinerPoolDiffsOutputMinerHistoryRecord
+  after_record: ListMinerPoolDiffsOutputMinerHistoryRecord1
+  /**
+   * Summary of changes between the two time points
+   */
+  changes: {
+    /**
+     * Pool URL changes
+     */
+    pool_url: {
+      /**
+       * Value before the change
+       */
+      before: string | null
+      /**
+       * Value after the change
+       */
+      after: string | null
+      /**
+       * Whether the field has changed
+       */
+      changed: boolean
+    }
+    /**
+     * Worker ID changes
+     */
+    worker_id: {
+      /**
+       * Value before the change
+       */
+      before: string | null
+      /**
+       * Value after the change
+       */
+      after: string | null
+      /**
+       * Whether the field has changed
+       */
+      changed: boolean
+    }
+  }
 }
 ```

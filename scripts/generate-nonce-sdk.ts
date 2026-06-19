@@ -177,7 +177,7 @@ const generate = async (options: GenerateSdkOptions): Promise<void> => {
     profile,
     skipObservedOutputs: options.skipObservedOutputs,
   });
-  const artifacts = generateArtifacts(
+  const artifacts = await generateArtifacts(
     {
       mcpEndpoint: endpoint,
       observedOutputSchemas,

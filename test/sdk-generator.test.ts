@@ -5,7 +5,7 @@ import { buildOpenApiIndex, type OpenApiDocument } from "../src/sdk-generator/op
 import {
   inferJsonSchemaFromValue,
   methodNameForTool,
-  schemaToType,
+  schemaToTypeScriptDeclaration,
 } from "../src/sdk-generator/schema.js";
 
 const typeScriptFences = (markdown: string): string[] => {
@@ -39,25 +39,29 @@ describe("SDK generator helpers", () => {
     );
   });
 
-  it("converts JSON Schema unions and object properties into TypeScript", () => {
+  it("converts JSON Schema unions and object properties into TypeScript", async () => {
     expect(
-      schemaToType({
-        anyOf: [{ enum: ["low", "normal"] }, { type: "null" }],
-      }),
-    ).toBe('"low" | "normal" | null');
+      (
+        await schemaToTypeScriptDeclaration("GeneratedUnion", {
+          anyOf: [{ enum: ["low", "normal"] }, { type: "null" }],
+        })
+      ).declaration,
+    ).toContain('export type GeneratedUnion = ("low" | "normal") | null');
 
     expect(
-      schemaToType({
-        properties: {
-          mode: { type: "string" },
-        },
-        required: ["mode"],
-        type: "object",
-      }),
+      (
+        await schemaToTypeScriptDeclaration("GeneratedObject", {
+          properties: {
+            mode: { type: "string" },
+          },
+          required: ["mode"],
+          type: "object",
+        })
+      ).declaration,
     ).toContain("mode: string");
   });
 
-  it("infers JSON Schema from observed ListWorkspaces output without preserving values", () => {
+  it("infers JSON Schema from observed ListWorkspaces output without preserving values", async () => {
     const schema = inferJsonSchemaFromValue({
       data: {
         data: [
@@ -73,14 +77,16 @@ describe("SDK generator helpers", () => {
       },
       status: 200,
     });
+    const declaration = (await schemaToTypeScriptDeclaration("ListWorkspacesOutput", schema))
+      .declaration;
 
-    expect(schemaToType(schema)).toContain("workspace_id: string");
-    expect(schemaToType(schema)).toContain("error: null");
+    expect(declaration).toContain("workspace_id: string");
+    expect(declaration).toContain("error: null");
     expect(JSON.stringify(schema)).not.toContain("org_123");
     expect(JSON.stringify(schema)).not.toContain("Demo");
   });
 
-  it("keeps MCP schemas primary and supplements missing output from OpenAPI", () => {
+  it("keeps MCP schemas primary and supplements missing output from OpenAPI", async () => {
     const openApi: OpenApiDocument = {
       paths: {
         "/private-api/v1/{workspace_id}/farms": {
@@ -114,7 +120,7 @@ describe("SDK generator helpers", () => {
       },
     };
 
-    const artifacts = generateArtifacts(
+    const artifacts = await generateArtifacts(
       {
         mcpEndpoint: "https://mcp.nonce.app/mcp",
         tools: [
@@ -160,10 +166,9 @@ describe("SDK generator helpers", () => {
     const listFarmsFile = artifacts.methodSchemaFiles.get("list-farms.md");
     expect(listFarmsFile).toBeTruthy();
     expect(listFarmsFile).toContain("# listFarms");
-    expect(listFarmsFile).toContain("interface ListFarmsInput");
-    expect(listFarmsFile).toContain("interface ListFarmsOutput");
+    expect(listFarmsFile).toContain("export interface ListFarmsInput");
+    expect(listFarmsFile).toContain("export interface ListFarmsOutput");
     expect(listFarmsFile).toContain("workspace_id");
-    expect(listFarmsFile).not.toContain("export ");
 
     const generatedTypeScript = [
       artifacts.referenceMarkdown,
@@ -174,8 +179,8 @@ describe("SDK generator helpers", () => {
     expect(semicolonLines(generatedTypeScript)).toEqual([]);
   });
 
-  it("uses observed read-only MCP output when MCP and OpenAPI output schemas are missing", () => {
-    const artifacts = generateArtifacts({
+  it("uses observed read-only MCP output when MCP and OpenAPI output schemas are missing", async () => {
+    const artifacts = await generateArtifacts({
       mcpEndpoint: "https://mcp.nonce.app/mcp",
       observedOutputSchemas: {
         ListWorkspaces: inferJsonSchemaFromValue({
@@ -213,6 +218,6 @@ describe("SDK generator helpers", () => {
     const wsFile = artifacts.methodSchemaFiles.get("list-workspaces.md");
     expect(wsFile).toContain("# listWorkspaces");
     expect(wsFile).toContain("workspace_slug: string");
-    expect(wsFile).not.toContain("export ");
+    expect(wsFile).toContain("export interface ListWorkspacesOutput");
   });
 });

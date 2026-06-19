@@ -13,7 +13,7 @@ listTaskBatches(input: ListTaskBatchesInput, options?: ReadonlyCallOptions): Pro
 ## Input
 
 ```ts
-interface ListTaskBatchesInput {
+export interface ListTaskBatchesInput {
   workspace_id: string
   farm_id: string
   /**
@@ -34,7 +34,14 @@ interface ListTaskBatchesInput {
 ## Output
 
 ```ts
-interface ListTaskBatchesOutput {
+/**
+ * Represents an entity that performs actions in the system (user, API key, or system)
+ */
+export type ListTaskBatchesOutputActor = {
+  [k: string]: unknown
+} | null
+
+export interface ListTaskBatchesOutput {
   /**
    * Indicates if the request was successful
    */
@@ -42,48 +49,7 @@ interface ListTaskBatchesOutput {
   /**
    * Array of items
    */
-  data: ({
-    /**
-     * Miner task batch ID
-     */
-    batch_id: string
-    /**
-     * Miner task name
-     */
-    task_name: "agent.scan.create" | "agent.ip_diagnosis.create" | "agent.self.update" | "miner.system.reboot" | "miner.log.get" | "miner.light.update" | "miner.power_mode.update" | "miner.pool.update" | "miner.pool.lock" | "miner.firmware.update" | "miner.asset.update" | "miner.asset.delete" | "miner.rack_location.update"
-    /**
-     * Aggregate status of a task batch. `pending` = at least one task is still running; `succeed` = all tasks succeeded; `failed` = all tasks failed, timed out, or were cancelled; `partial_succeed` = finished with a mix of success and failure.
-     */
-    status: "pending" | "succeed" | "failed" | "partial_succeed"
-    /**
-     * Number of tasks in the batch
-     */
-    task_count: number
-    /**
-     * Number of succeeded tasks
-     */
-    succeed_count: number
-    /**
-     * Number of failed tasks
-     */
-    failed_count: number
-    /**
-     * Task parameters (JSON). Structure varies by task_name.
-     */
-    task_params: Record<string, unknown> | null
-    /**
-     * Automation trigger context. Keys: trigger ({predicateField, predicateValue}), automation ({id, name}), filterSummary ({total, passed, skippedNonNormal?, skippedAnomaly?, skippedTemperature?}). Null for manually created batches.
-     */
-    metadata?: Record<string, unknown> | null
-    /**
-     * Represents an entity that performs actions in the system (user, API key, or system)
-     */
-    created_by: Record<string, unknown> | null
-    /**
-     * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
-     */
-    created_at: string
-  })[]
+  data: ListTaskBatchesOutputTaskBatchSummary[]
   /**
    * Pagination metadata
    */
@@ -113,5 +79,61 @@ interface ListTaskBatchesOutput {
    * Error object (null on success)
    */
   error: null
+}
+export interface ListTaskBatchesOutputTaskBatchSummary {
+  /**
+   * Miner task batch ID
+   */
+  batch_id: string
+  /**
+   * Miner task name
+   */
+  task_name:
+    | "agent.scan.create"
+    | "agent.ip_diagnosis.create"
+    | "agent.self.update"
+    | "miner.system.reboot"
+    | "miner.log.get"
+    | "miner.light.update"
+    | "miner.power_mode.update"
+    | "miner.pool.update"
+    | "miner.pool.lock"
+    | "miner.firmware.update"
+    | "miner.asset.update"
+    | "miner.asset.delete"
+    | "miner.rack_location.update"
+  /**
+   * Aggregate status of a task batch. `pending` = at least one task is still running; `succeed` = all tasks succeeded; `failed` = all tasks failed, timed out, or were cancelled; `partial_succeed` = finished with a mix of success and failure.
+   */
+  status: "pending" | "succeed" | "failed" | "partial_succeed"
+  /**
+   * Number of tasks in the batch
+   */
+  task_count: number
+  /**
+   * Number of succeeded tasks
+   */
+  succeed_count: number
+  /**
+   * Number of failed tasks
+   */
+  failed_count: number
+  /**
+   * Task parameters (JSON). Structure varies by task_name.
+   */
+  task_params: {
+    [k: string]: unknown
+  } | null
+  /**
+   * Automation trigger context. Keys: trigger ({predicateField, predicateValue}), automation ({id, name}), filterSummary ({total, passed, skippedNonNormal?, skippedAnomaly?, skippedTemperature?}). Null for manually created batches.
+   */
+  metadata?: {
+    [k: string]: unknown
+  } | null
+  created_by: ListTaskBatchesOutputActor
+  /**
+   * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
+   */
+  created_at: string
 }
 ```

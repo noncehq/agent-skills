@@ -181,11 +181,17 @@ const requiredInputSummary = (tool: GeneratedTool): string | undefined => {
   return `required: ${required.join(", ")}`;
 };
 
-const renderSignatures = (tools: GeneratedTool[]): string => {
-  const declarations = tools.flatMap((tool) => [
-    schemaToTypeScriptDeclaration(`${tool.typeBase}Input`, tool.inputSchema).declaration,
-    schemaToTypeScriptDeclaration(`${tool.typeBase}Output`, tool.outputSchema).declaration,
-  ]);
+const renderSignatures = async (tools: GeneratedTool[]): Promise<string> => {
+  const declarations = (
+    await Promise.all(
+      tools.map(async (tool) => [
+        (await schemaToTypeScriptDeclaration(`${tool.typeBase}Input`, tool.inputSchema))
+          .declaration,
+        (await schemaToTypeScriptDeclaration(`${tool.typeBase}Output`, tool.outputSchema))
+          .declaration,
+      ]),
+    )
+  ).flat();
 
   const definitions = tools.map((tool) => ({
     destructive: tool.destructive,
@@ -222,13 +228,11 @@ const methodFileName = (methodName: string): string =>
 
 const renderTypeScriptBlock = (source: string): string[] => ["```ts", source.trimEnd(), "```"];
 
-const renderMethodSignatureFile = (tool: GeneratedTool): string => {
-  const inputDecl = schemaToTypeScriptDeclaration(`${tool.typeBase}Input`, tool.inputSchema, {
-    exported: false,
-  });
-  const outputDecl = schemaToTypeScriptDeclaration(`${tool.typeBase}Output`, tool.outputSchema, {
-    exported: false,
-  });
+const renderMethodSignatureFile = async (tool: GeneratedTool): Promise<string> => {
+  const [inputDecl, outputDecl] = await Promise.all([
+    schemaToTypeScriptDeclaration(`${tool.typeBase}Input`, tool.inputSchema),
+    schemaToTypeScriptDeclaration(`${tool.typeBase}Output`, tool.outputSchema),
+  ]);
   const required = requiredProperties(tool.inputSchema);
 
   const inputType = `${tool.typeBase}Input`;
@@ -342,10 +346,10 @@ const renderReferenceMarkdown = (
   return `${lines.join("\n")}\n`;
 };
 
-export const generateArtifacts = (
+export const generateArtifacts = async (
   options: GenerateArtifactsOptions,
   openApiIndex?: OpenApiIndex,
-): GeneratedArtifacts => {
+): Promise<GeneratedArtifacts> => {
   const tools = options.tools.map((tool) =>
     generatedToolFromMcpTool(tool, openApiIndex, options.observedOutputSchemas),
   );
@@ -362,10 +366,13 @@ export const generateArtifacts = (
     typeBase: tool.typeBase,
   }));
 
-  const methodSchemaFiles = new Map<string, string>();
-  for (const tool of tools) {
-    methodSchemaFiles.set(methodFileName(tool.methodName), renderMethodSignatureFile(tool));
-  }
+  const methodSchemaFileEntries: Array<[string, string]> = await Promise.all(
+    tools.map(async (tool) => [
+      methodFileName(tool.methodName),
+      await renderMethodSignatureFile(tool),
+    ]),
+  );
+  const methodSchemaFiles = new Map(methodSchemaFileEntries);
 
   return {
     manifest: {
@@ -392,7 +399,7 @@ export const generateArtifacts = (
         ]),
       ),
     },
-    signatures: renderSignatures(tools),
+    signatures: await renderSignatures(tools),
     tools,
   };
 };

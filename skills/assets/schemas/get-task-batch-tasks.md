@@ -13,7 +13,7 @@ getTaskBatchTasks(input: GetTaskBatchTasksInput, options?: ReadonlyCallOptions):
 ## Input
 
 ```ts
-interface GetTaskBatchTasksInput {
+export interface GetTaskBatchTasksInput {
   workspace_id: string
   farm_id: string
   batch_id: string
@@ -35,7 +35,7 @@ interface GetTaskBatchTasksInput {
 ## Output
 
 ```ts
-interface GetTaskBatchTasksOutput {
+export interface GetTaskBatchTasksOutput {
   /**
    * Indicates if the request was successful
    */
@@ -43,7 +43,7 @@ interface GetTaskBatchTasksOutput {
   /**
    * Array of items
    */
-  data: ({
+  data: {
     /**
      * Miner task ID
      */
@@ -55,7 +55,20 @@ interface GetTaskBatchTasksOutput {
     /**
      * Miner task name
      */
-    task_name: "agent.scan.create" | "agent.ip_diagnosis.create" | "agent.self.update" | "miner.system.reboot" | "miner.log.get" | "miner.light.update" | "miner.power_mode.update" | "miner.pool.update" | "miner.pool.lock" | "miner.firmware.update" | "miner.asset.update" | "miner.asset.delete" | "miner.rack_location.update"
+    task_name:
+      | "agent.scan.create"
+      | "agent.ip_diagnosis.create"
+      | "agent.self.update"
+      | "miner.system.reboot"
+      | "miner.log.get"
+      | "miner.light.update"
+      | "miner.power_mode.update"
+      | "miner.pool.update"
+      | "miner.pool.lock"
+      | "miner.firmware.update"
+      | "miner.asset.update"
+      | "miner.asset.delete"
+      | "miner.rack_location.update"
     /**
      * Miner Id
      */
@@ -67,7 +80,9 @@ interface GetTaskBatchTasksOutput {
     /**
      * Task parameters (JSON)
      */
-    params?: Record<string, unknown> | null
+    params?: {
+      [k: string]: unknown
+    } | null
     /**
      * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
      */
@@ -99,7 +114,9 @@ interface GetTaskBatchTasksOutput {
     /**
      * Task execution result (JSON)
      */
-    result?: Record<string, unknown>
+    result?: {
+      [k: string]: unknown
+    }
     error?: {
       /**
        * Error message
@@ -114,7 +131,7 @@ interface GetTaskBatchTasksOutput {
      * Miner log file size in bytes
      */
     log_file_size?: number | null
-  })[]
+  }[]
   /**
    * Pagination metadata
    */
