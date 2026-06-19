@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nonce MCP SDK"
+  short_description: "Use Nonce MCP through a local TypeScript SDK"
+  default_prompt: "Use $nonce to query and operate Nonce MCP by preparing the local Node runtime, authenticating, and writing TypeScript code against the bundled SDK."

@@ -1,0 +1,33 @@
+{
+  "name": "@noncehq/skills",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "vp check",
+    "lint": "vp lint",
+    "format": "vp fmt",
+    "format:check": "vp fmt --check",
+    "staged": "vp staged",
+    "test": "vp test",
+    "nonce:bootstrap": "tsx nonce/scripts/bootstrap-runtime.ts",
+    "nonce:auth": "tsx nonce/scripts/auth.ts",
+    "nonce:inspect": "tsx nonce/scripts/inspect-tools.ts",
+    "nonce:run": "tsx nonce/scripts/run-task.ts",
+    "nonce:generate-sdk": "tsx nonce/scripts/generate-sdk.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "commander": "^15.0.0",
+    "open": "^11.0.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vite-plus": "^0.2.1"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
