@@ -29,15 +29,15 @@ try {
 
 ```ts
 interface CallOptions {
-  signal?: AbortSignal;
-  timeoutMs?: number;
+  signal?: AbortSignal
+  timeoutMs?: number
 }
 
-type ReadonlyCallOptions = CallOptions;
+type ReadonlyCallOptions = CallOptions
 
 interface DestructiveCallOptions extends CallOptions {
-  confirmDestructive: true;
-  confirmation: string;
+  confirmDestructive: true
+  confirmation: string
 }
 ```
 

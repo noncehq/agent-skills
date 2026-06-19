@@ -8,6 +8,12 @@ import {
   schemaToType,
 } from "../src/sdk-generator/schema.js";
 
+const typeScriptFences = (markdown: string): string[] =>
+  [...markdown.matchAll(/```ts\n([\s\S]*?)\n```/g)].map((match) => match[1] ?? "");
+
+const declarationSemicolonPattern =
+  /^[ \t]*(?:(?:export[ \t]+)?(?:type|interface)\b|(?:[A-Za-z_$][\w$]*|"[^"]+"|'[^']+'|\[[^\]]+\])\??:|\[key:[^\]]+\]:|[A-Za-z_$][\w$]*\([^)]*\):).+;[ \t]*$/m;
+
 describe("SDK generator helpers", () => {
   it("normalizes MCP tool names into SDK method names", () => {
     expect(methodNameForTool("CreateTaskBatch_MinerPower_modeUpdate")).toBe(
@@ -140,6 +146,14 @@ describe("SDK generator helpers", () => {
     expect(listFarmsFile).toContain("interface ListFarmsOutput");
     expect(listFarmsFile).toContain("workspace_id");
     expect(listFarmsFile).not.toContain("export ");
+
+    const generatedTypeScript = [
+      artifacts.referenceMarkdown,
+      ...artifacts.methodSchemaFiles.values(),
+    ]
+      .flatMap(typeScriptFences)
+      .join("\n");
+    expect(generatedTypeScript).not.toMatch(declarationSemicolonPattern);
   });
 
   it("uses observed read-only MCP output when MCP and OpenAPI output schemas are missing", () => {

@@ -13,6 +13,7 @@ const generatedOutputs = [
   "skills/assets/tool-manifest.json",
   "skills/assets/tool-schemas.json",
   "skills/assets/schemas/*.md",
+  "skills/references/tool-signatures.md",
   "skills/scripts/**/*.mjs",
 ];
 

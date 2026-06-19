@@ -220,6 +220,21 @@ ${tools.map(methodSignature).join("\n")}
 const methodFileName = (methodName: string): string =>
   `${methodName.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)}.md`;
 
+const declarationSemicolonLine =
+  /^(\s*(?:(?:export\s+)?(?:type|interface)\b|(?:[A-Za-z_$][\w$]*|"(?:[^"\\]|\\.)+"|'(?:[^'\\]|\\.)+'|\[[^\]]+\])\??:|\[key:[^\]]+\]:|[A-Za-z_$][\w$]*\([^)]*\):).+);(\s*)$/;
+
+const normalizeTypeScriptSnippet = (source: string): string =>
+  source
+    .split("\n")
+    .map((line) => line.replace(declarationSemicolonLine, "$1$2"))
+    .join("\n");
+
+const renderTypeScriptBlock = (source: string): string[] => [
+  "```ts",
+  normalizeTypeScriptSnippet(source).trimEnd(),
+  "```",
+];
+
 const renderMethodSignatureFile = (tool: GeneratedTool): string => {
   const inputDecl = schemaToTypeScriptDeclaration(`${tool.typeBase}Input`, tool.inputSchema);
   const outputDecl = schemaToTypeScriptDeclaration(`${tool.typeBase}Output`, tool.outputSchema);
@@ -246,21 +261,15 @@ const renderMethodSignatureFile = (tool: GeneratedTool): string => {
   lines.push(
     "## Signature",
     "",
-    "```ts",
-    `${tool.methodName}(${input}, ${options}): Promise<${outputType}>`,
-    "```",
+    ...renderTypeScriptBlock(`${tool.methodName}(${input}, ${options}): Promise<${outputType}>`),
     "",
     "## Input",
     "",
-    "```ts",
-    inputDecl.declaration.replace(/^export /gm, "").trimEnd(),
-    "```",
+    ...renderTypeScriptBlock(inputDecl.declaration.replace(/^export /gm, "")),
     "",
     "## Output",
     "",
-    "```ts",
-    outputDecl.declaration.replace(/^export /gm, "").trimEnd(),
-    "```",
+    ...renderTypeScriptBlock(outputDecl.declaration.replace(/^export /gm, "")),
     "",
   );
 
@@ -301,19 +310,21 @@ const renderReferenceMarkdown = (
     "",
     "## Shared Types",
     "",
-    "```ts",
-    "interface CallOptions {",
-    "  signal?: AbortSignal",
-    "  timeoutMs?: number",
-    "}",
-    "",
-    "type ReadonlyCallOptions = CallOptions",
-    "",
-    "interface DestructiveCallOptions extends CallOptions {",
-    "  confirmDestructive: true",
-    "  confirmation: string",
-    "}",
-    "```",
+    ...renderTypeScriptBlock(
+      [
+        "interface CallOptions {",
+        "  signal?: AbortSignal",
+        "  timeoutMs?: number",
+        "}",
+        "",
+        "type ReadonlyCallOptions = CallOptions",
+        "",
+        "interface DestructiveCallOptions extends CallOptions {",
+        "  confirmDestructive: true",
+        "  confirmation: string",
+        "}",
+      ].join("\n"),
+    ),
     "",
     "## Methods",
     "",
