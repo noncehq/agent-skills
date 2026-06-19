@@ -18,7 +18,7 @@ export type { CredentialStore } from "./credential-store.js";
 export type {
   CreateNonceClientOptions,
   DestructiveCallOptions,
-  NonceMcpClient,
+  NonceClient,
   ReadonlyCallOptions,
 } from "./nonce-client.js";
 export type {

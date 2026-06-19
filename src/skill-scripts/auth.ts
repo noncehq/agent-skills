@@ -97,7 +97,7 @@ const createCallbackListener = async (
         res.statusCode = 200;
         res.setHeader("content-type", "text/plain; charset=utf-8");
         res.setHeader("connection", "close");
-        res.end("Nonce MCP authentication completed. You can close this window.", () => {
+        res.end("Nonce authentication completed. You can close this window.", () => {
           resolve({ code, state: requestUrl.searchParams.get("state") ?? undefined });
           void closeServer();
         });
@@ -297,7 +297,9 @@ const verify = async (options: SharedAuthOptions): Promise<void> => {
   const provider = createProviderFromOptions(options);
   const tokens = await provider.tokens();
   if (!tokens?.access_token && !tokens?.refresh_token) {
-    throw new Error("Not authenticated. Run `vp run nonce:auth -- login` first.");
+    throw new Error(
+      "Not authenticated. Run `vp node -- scripts/auth.mjs login` from the skill directory first.",
+    );
   }
 
   const client = new Client({ name: "nonce-skill-smoke", version: "0.0.0" });
@@ -341,13 +343,13 @@ const logout = async (options: SharedAuthOptions & { all?: boolean }): Promise<v
 
 const addSharedOptions = (command: Command): Command =>
   command
-    .option("--endpoint <url>", "Nonce MCP endpoint", DEFAULT_MCP_ENDPOINT)
+    .option("--endpoint <url>", "Nonce endpoint", DEFAULT_MCP_ENDPOINT)
     .option("--profile <name>", "credential profile", DEFAULT_PROFILE);
 
 const main = async (): Promise<void> => {
   const program = new Command()
     .name("nonce auth")
-    .description("Authenticate the local Nonce MCP SDK runtime");
+    .description("Authenticate the local Nonce SDK runtime");
 
   addSharedOptions(
     program.command("status").description("show local authentication status"),
@@ -373,7 +375,9 @@ const main = async (): Promise<void> => {
   addSharedOptions(
     program
       .command("verify")
-      .description("verify saved OAuth credentials by initializing MCP and listing tools"),
+      .description(
+        "verify saved credentials by initializing the local connection and listing methods",
+      ),
   ).action(verify);
 
   addSharedOptions(

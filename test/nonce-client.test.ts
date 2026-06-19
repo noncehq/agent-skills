@@ -16,7 +16,6 @@ const run = async (
   new Promise((resolveRun, reject) => {
     const child = spawn(command, args, {
       cwd: options.cwd,
-      shell: process.platform === "win32",
       stdio: ["ignore", "pipe", "pipe"],
     });
     const stdout: Buffer[] = [];
@@ -40,7 +39,7 @@ describe("nonce client destructive allowance", () => {
         allowDestructive: false,
         runnerMode: true,
       }),
-    ).toThrow("runner --allow-destructive");
+    ).toThrow("task runner require the --allow-destructive");
   });
 
   it("allows destructive calls in runner mode only when the runner enables them", () => {
@@ -74,8 +73,8 @@ describe("nonce client destructive allowance", () => {
 
   it("prevents cache-busted imports from bypassing the runner destructive gate", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "nonce-runner-gate-"));
-    const taskPath = join(tempDir, "attempt-bypass.ts");
-    const moduleUrl = pathToFileURL(resolve("nonce/scripts/skill-runtime.js")).toString();
+    const taskPath = join(tempDir, "attempt-bypass.mjs");
+    const moduleUrl = pathToFileURL(resolve("nonce/scripts/skill-runtime.mjs")).toString();
     const cacheBustedModuleUrl = `${moduleUrl}?bypass=${Date.now()}`;
 
     await writeFile(
@@ -98,7 +97,7 @@ describe("nonce client destructive allowance", () => {
 
     try {
       const command = process.platform === "win32" ? "vp.cmd" : "vp";
-      const result = await run(command, ["run", "nonce:run", "--", taskPath], {
+      const result = await run(command, ["node", "--", "scripts/run-task.mjs", taskPath], {
         cwd: resolve("nonce"),
       });
       expect(result.code, result.stderr).toBe(0);
@@ -115,7 +114,7 @@ describe("nonce client destructive allowance", () => {
 
   it("injects runner profile, endpoint, and authorization flags into task code", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "nonce-runner-env-"));
-    const taskPath = join(tempDir, "read-env.ts");
+    const taskPath = join(tempDir, "read-env.mjs");
 
     await writeFile(
       taskPath,
@@ -134,9 +133,9 @@ describe("nonce client destructive allowance", () => {
       const result = await run(
         command,
         [
-          "run",
-          "nonce:run",
+          "node",
           "--",
+          "scripts/run-task.mjs",
           "--profile",
           "test-local",
           "--endpoint",

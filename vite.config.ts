@@ -1,17 +1,26 @@
 import { defineConfig } from "vite-plus";
 import type { PackUserConfig } from "vite-plus/pack";
 
-const runtimeBundleOutputs = ["nonce/scripts/skill-runtime.js"];
-const scriptBundleOutputPattern = "nonce/scripts/**/*.js";
+const runtimeBundleOutputs = ["nonce/scripts/skill-runtime.mjs"];
+const scriptBundleOutputPatterns = ["nonce/scripts/**/*.mjs", "nonce/scripts/**/*.js"];
 const staleChunkOutputPatterns = [
   "nonce/scripts/argv-*.js",
+  "nonce/scripts/argv-*.mjs",
   "nonce/scripts/cli-options-*.js",
+  "nonce/scripts/cli-options-*.mjs",
   "nonce/scripts/runtime-*.js",
+  "nonce/scripts/runtime-*.mjs",
 ];
-const skillScriptBundleOutputs = [
+const staleScriptBundleOutputs = [
   "nonce/scripts/auth.js",
   "nonce/scripts/bootstrap-runtime.js",
   "nonce/scripts/run-task.js",
+  "nonce/scripts/skill-runtime.js",
+];
+const skillScriptBundleOutputs = [
+  "nonce/scripts/auth.mjs",
+  "nonce/scripts/bootstrap-runtime.mjs",
+  "nonce/scripts/run-task.mjs",
 ];
 const generatedAssetOutputs = [
   "nonce/assets/tool-signatures.ts",
@@ -21,9 +30,10 @@ const generatedAssetOutputs = [
 const generatedBundleOutputs = [
   ...runtimeBundleOutputs,
   ...skillScriptBundleOutputs,
+  ...staleScriptBundleOutputs,
   ...staleChunkOutputPatterns,
   ...generatedAssetOutputs,
-  scriptBundleOutputPattern,
+  ...scriptBundleOutputPatterns,
   ".pnpm-store/**",
 ];
 const taskInputExcludes = [".pnpm-store/**"];
@@ -31,7 +41,11 @@ const createScriptPack = (
   name: string,
   outputName: string,
   entry: string,
-  clean: string[] = [`nonce/scripts/${outputName}.js`, ...staleChunkOutputPatterns],
+  clean: string[] = [
+    `nonce/scripts/${outputName}.mjs`,
+    `nonce/scripts/${outputName}.js`,
+    ...staleChunkOutputPatterns,
+  ],
 ): PackUserConfig => ({
   clean,
   dts: false,
@@ -41,7 +55,7 @@ const createScriptPack = (
   entry: {
     [outputName]: entry,
   },
-  fixedExtension: false,
+  fixedExtension: true,
   format: "esm",
   minify: true,
   name,
@@ -59,6 +73,7 @@ export default defineConfig({
   pack: [
     createScriptPack("runtime", "skill-runtime", "src/runtime/index.ts", [
       ...runtimeBundleOutputs,
+      "nonce/scripts/skill-runtime.js",
       ...staleChunkOutputPatterns,
     ]),
     createScriptPack("skill-script-auth", "auth", "src/skill-scripts/auth.ts"),
@@ -80,7 +95,7 @@ export default defineConfig({
     tasks: {
       build: {
         cache: false,
-        command: "vp run nonce:generate-sdk",
+        command: "vp run generate:nonce-sdk",
         dependsOn: ["build:runtime", "build:scripts"],
       },
       "build:runtime": {
@@ -88,6 +103,7 @@ export default defineConfig({
         input: [
           { auto: true },
           ...runtimeBundleOutputs.map((path) => `!${path}`),
+          ...staleScriptBundleOutputs.map((path) => `!${path}`),
           ...staleChunkOutputPatterns.map((path) => `!${path}`),
           ...taskInputExcludes.map((path) => `!${path}`),
         ],
@@ -102,14 +118,15 @@ export default defineConfig({
         input: [
           { auto: true },
           ...skillScriptBundleOutputs.map((path) => `!${path}`),
+          ...staleScriptBundleOutputs.map((path) => `!${path}`),
           ...staleChunkOutputPatterns.map((path) => `!${path}`),
           ...taskInputExcludes.map((path) => `!${path}`),
         ],
         output: skillScriptBundleOutputs,
       },
-      "nonce:generate-sdk": {
+      "generate:nonce-sdk": {
         cache: false,
-        command: "tsx scripts/generate-nonce-sdk.ts",
+        command: "node --import tsx scripts/generate-nonce-sdk.ts",
       },
     },
   },

@@ -1,18 +1,18 @@
 ---
 name: nonce
-description: Use when a task, agent, or host application needs to query or operate Nonce resources such as workspaces, farms, miners, agents, task batches, or miner tasks through the local TypeScript SDK/runner.
+description: Use when a task, agent, or host application needs to query or operate Nonce resources such as workspaces, farms, miners, agents, task batches, or miner tasks through the local JavaScript SDK/runner.
 ---
 
 # Nonce
 
 Nonce manages Bitcoin mining workspaces, farms, miners, agents, task batches, and miner tasks.
 
-Use this skill to work with those resources through the local typed SDK/runner. Determine the user's intent, write task-specific TypeScript code against the SDK, run it locally, and use compact JSON output for the next decision.
+Use this skill to work with those resources through the local SDK/runner. Determine the user's intent, write task-specific JavaScript code against the SDK, run it locally, and use compact JSON output for the next decision.
 
 ## Before Use
 
 - If the local SDK/runner environment is missing or broken, initialize or repair it before authentication or business queries. Read `references/workflow.md` for the concrete commands.
-- If credentials are missing or expired, complete Nonce MCP OAuth before business queries. Read `references/auth.md` for status, login, callback, and logout flows.
+- If credentials are missing or expired, complete Nonce authentication before business queries. Read `references/auth.md` for status, login, callback, and logout flows.
 - Support macOS and Windows.
 
 ## Operating Rules
@@ -35,5 +35,5 @@ Use this skill to work with those resources through the local typed SDK/runner. 
 
 - `references/workflow.md`: local task-code workflow, runner usage, host integration, and runtime repair.
 - `references/auth.md`: authentication, profiles, credential storage, and endpoint configuration.
-- `references/tool-signatures.md`: generated TypeScript interfaces and method signatures.
+- `references/tool-signatures.md`: generated interfaces and method signatures.
 - `references/safety.md`: destructive-operation guardrails.

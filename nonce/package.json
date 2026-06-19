@@ -2,24 +2,15 @@
   "name": "@nonce-skill/nonce",
   "version": "0.0.0",
   "private": true,
-  "type": "module",
   "exports": {
     ".": {
       "types": "./assets/tool-signatures.ts",
-      "import": "./scripts/skill-runtime.js"
+      "import": "./scripts/skill-runtime.mjs"
     },
     "./runtime": {
       "types": "./assets/tool-signatures.ts",
-      "import": "./scripts/skill-runtime.js"
+      "import": "./scripts/skill-runtime.mjs"
     }
-  },
-  "scripts": {
-    "nonce:bootstrap": "node scripts/bootstrap-runtime.js",
-    "nonce:auth": "node scripts/auth.js",
-    "nonce:run": "node scripts/run-task.js"
-  },
-  "dependencies": {
-    "tsx": "^4.22.4"
   },
   "devEngines": {
     "runtime": {
@@ -27,6 +18,5 @@
       "version": "24.17.0",
       "onFail": "download"
     }
-  },
-  "packageManager": "pnpm@10.33.0"
+  }
 }

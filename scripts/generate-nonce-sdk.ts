@@ -70,7 +70,7 @@ const textContent = (content: unknown): string | undefined => {
 
 const parseToolResult = (result: Record<string, unknown>): unknown => {
   if (result.isError === true) {
-    throw new Error(textContent(result.content) ?? "Nonce MCP tool returned an error");
+    throw new Error(textContent(result.content) ?? "Nonce method returned an error");
   }
   if (result.structuredContent !== undefined) return result.structuredContent;
   if (result.toolResult !== undefined) return result.toolResult;
@@ -124,7 +124,9 @@ const inspectMcp = async (
   });
   const tokens = await provider.tokens();
   if (!tokens?.access_token && !tokens?.refresh_token) {
-    throw new Error("Not authenticated. Run `vp run nonce:auth -- login` first.");
+    throw new Error(
+      "Not authenticated. Run `vp node -- nonce/scripts/auth.mjs login` from the repository root first.",
+    );
   }
 
   const client = new Client({ name: "nonce-sdk-generator", version: "0.0.0" });
@@ -214,8 +216,10 @@ const generate = async (options: GenerateSdkOptions): Promise<void> => {
 const main = async (): Promise<void> => {
   const program = new Command()
     .name("nonce generate-sdk")
-    .description("Generate TypeScript interfaces and SDK method signatures from Nonce MCP tools")
-    .option("--endpoint <url>", "Nonce MCP endpoint", DEFAULT_MCP_ENDPOINT)
+    .description(
+      "Generate TypeScript interfaces and SDK method signatures from Nonce method definitions",
+    )
+    .option("--endpoint <url>", "Nonce endpoint", DEFAULT_MCP_ENDPOINT)
     .option("--openapi-url <url>", "OpenAPI supplement URL", DEFAULT_OPENAPI_URL)
     .option("--output-dir <path>", "generated runtime output directory", "nonce/assets")
     .option("--profile <name>", "credential profile", DEFAULT_PROFILE)

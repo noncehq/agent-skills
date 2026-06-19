@@ -29,7 +29,7 @@ export interface DestructiveCallOptions extends CallOptions {
   confirmation: string;
 }
 
-export interface NonceMcpClient {
+export interface NonceClient {
   close(): Promise<void>;
   [methodName: string]: unknown;
 }
@@ -115,7 +115,7 @@ const assertDestructiveConfirmation = (
   if (!definition.destructive) return;
   if (!allowDestructive) {
     const enablement = runnerMode
-      ? "Run nonce:run with --allow-destructive after explicit user confirmation"
+      ? "Run the task runner with --allow-destructive after explicit user confirmation"
       : "Create the client with allowDestructive: true after explicit user confirmation";
     throw new Error(`Tool ${definition.name} is destructive. ${enablement}.`);
   }
@@ -149,7 +149,7 @@ const textContent = (content: unknown): string | undefined => {
 
 const parseToolResult = (result: Record<string, unknown>): unknown => {
   if (result.isError === true) {
-    throw new Error(textContent(result.content) ?? "Nonce MCP tool returned an error");
+    throw new Error(textContent(result.content) ?? "Nonce method returned an error");
   }
   if (result.structuredContent !== undefined) return result.structuredContent;
   if (result.toolResult !== undefined) return result.toolResult;
@@ -191,7 +191,7 @@ export const resolveDestructiveAllowance = (
   if (runnerAuthorization.runnerMode) {
     if (allowDestructiveOption === true && !runnerAuthorization.allowDestructive) {
       throw new Error(
-        "Destructive calls through nonce:run require the runner --allow-destructive flag.",
+        "Destructive calls through the task runner require the --allow-destructive flag.",
       );
     }
     return runnerAuthorization.allowDestructive;
@@ -213,7 +213,7 @@ const createDefaultTransport = (
 export const createNonceClientWithDependencies = async (
   options: CreateNonceClientOptions = {},
   dependencies: NonceClientRuntimeDependencies = {},
-): Promise<NonceMcpClient> => {
+): Promise<NonceClient> => {
   const endpoint = options.endpoint ?? process.env.NONCE_MCP_ENDPOINT ?? DEFAULT_MCP_ENDPOINT;
   const toolDefinitions = dependencies.toolDefinitions ?? (await loadGeneratedToolDefinitions());
   const runnerAuthorization = dependencies.runnerAuthorization ?? nonceRunnerAuthorizationSnapshot;
@@ -263,9 +263,9 @@ export const createNonceClientWithDependencies = async (
     };
   }
 
-  return sdk as unknown as NonceMcpClient;
+  return sdk as unknown as NonceClient;
 };
 
 export const createNonceClient = async (
   options: CreateNonceClientOptions = {},
-): Promise<NonceMcpClient> => createNonceClientWithDependencies(options);
+): Promise<NonceClient> => createNonceClientWithDependencies(options);

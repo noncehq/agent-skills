@@ -20,4 +20,3 @@ vp env setup
 vp env on
 vp env install
 vp env doctor
-vp install

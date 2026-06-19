@@ -37,6 +37,9 @@ describe("bootstrap runtime helpers", () => {
       expect(script).toContain("vp env on");
       expect(script).toContain("vp env install");
       expect(script).toContain("vp env doctor");
+      expect(script).not.toContain("vp install");
     }
+    expect(packageJson).not.toHaveProperty("dependencies");
+    expect(packageJson).not.toHaveProperty("scripts");
   });
 });
