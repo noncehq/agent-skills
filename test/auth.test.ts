@@ -2,10 +2,14 @@ import { readFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import { createCredentialStore } from "../nonce/assets/runtime/src/credential-store.js";
-import { normalizeProfile } from "../nonce/assets/runtime/src/profile.js";
-import { hasCurrentLoginTokens, parseCallback, shouldOpenBrowser } from "../nonce/scripts/auth.js";
-import { parseTimeoutMs } from "../nonce/scripts/cli-options.js";
+import { createCredentialStore } from "../src/runtime/credential-store.js";
+import { normalizeProfile } from "../src/runtime/profile.js";
+import {
+  hasCurrentLoginTokens,
+  parseCallback,
+  shouldOpenBrowser,
+} from "../src/skill-scripts/auth.js";
+import { parseTimeoutMs } from "../src/skill-scripts/cli-options.js";
 
 describe("auth helpers", () => {
   it("parses callback URLs without exposing tokens", () => {
@@ -77,7 +81,7 @@ describe("credential store selection", () => {
 
   it("does not include OS credential store integrations", async () => {
     const source = await readFile(
-      new URL("../nonce/assets/runtime/src/credential-store.ts", import.meta.url),
+      new URL("../src/runtime/credential-store.ts", import.meta.url),
       "utf8",
     );
 

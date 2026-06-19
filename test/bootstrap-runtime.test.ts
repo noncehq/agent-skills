@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import { runtimeCheckExitCode } from "../nonce/scripts/bootstrap-runtime.js";
+import { runtimeCheckExitCode } from "../src/skill-scripts/bootstrap-runtime.js";
 
 describe("bootstrap runtime helpers", () => {
   it("fails closed when the platform or Vite+ runtime is unhealthy", () => {

@@ -6,9 +6,9 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Command } from "commander";
 
-import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE } from "../nonce/assets/runtime/src/constants.js";
-import { createOAuthProvider } from "../nonce/assets/runtime/src/oauth-provider.js";
-import { normalizeProfile } from "../nonce/assets/runtime/src/profile.js";
+import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE } from "../src/runtime/constants.js";
+import { createOAuthProvider } from "../src/runtime/oauth-provider.js";
+import { normalizeProfile } from "../src/runtime/profile.js";
 import { generateArtifacts } from "../src/sdk-generator/artifacts.js";
 import {
   buildOpenApiIndex,
@@ -161,7 +161,7 @@ const writeText = async (path: string, value: string): Promise<void> => {
 const generate = async (options: GenerateSdkOptions): Promise<void> => {
   const endpoint = options.endpoint ?? DEFAULT_MCP_ENDPOINT;
   const profile = normalizeProfile(options.profile ?? DEFAULT_PROFILE);
-  const outputDir = options.outputDir ?? "nonce/assets/runtime/src/generated";
+  const outputDir = options.outputDir ?? "nonce/assets";
   const openapiUrl = options.openapiUrl ?? DEFAULT_OPENAPI_URL;
   const referenceOutput = options.referenceOutput ?? "nonce/references/tool-signatures.md";
 
@@ -217,11 +217,7 @@ const main = async (): Promise<void> => {
     .description("Generate TypeScript interfaces and SDK method signatures from Nonce MCP tools")
     .option("--endpoint <url>", "Nonce MCP endpoint", DEFAULT_MCP_ENDPOINT)
     .option("--openapi-url <url>", "OpenAPI supplement URL", DEFAULT_OPENAPI_URL)
-    .option(
-      "--output-dir <path>",
-      "generated runtime output directory",
-      "nonce/assets/runtime/src/generated",
-    )
+    .option("--output-dir <path>", "generated runtime output directory", "nonce/assets")
     .option("--profile <name>", "credential profile", DEFAULT_PROFILE)
     .option(
       "--reference-output <path>",

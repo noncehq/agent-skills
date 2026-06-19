@@ -6,7 +6,7 @@ import { pathToFileURL } from "node:url";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import { resolveDestructiveAllowance } from "../nonce/assets/runtime/src/nonce-client.js";
+import { resolveDestructiveAllowance } from "../src/runtime/nonce-client.js";
 
 const run = async (
   command: string,
@@ -75,7 +75,7 @@ describe("nonce client destructive allowance", () => {
   it("prevents cache-busted imports from bypassing the runner destructive gate", async () => {
     const tempDir = await mkdtemp(join(tmpdir(), "nonce-runner-gate-"));
     const taskPath = join(tempDir, "attempt-bypass.ts");
-    const moduleUrl = pathToFileURL(resolve("nonce/assets/runtime/src/nonce-client.ts")).toString();
+    const moduleUrl = pathToFileURL(resolve("nonce/scripts/skill-runtime.js")).toString();
     const cacheBustedModuleUrl = `${moduleUrl}?bypass=${Date.now()}`;
 
     await writeFile(

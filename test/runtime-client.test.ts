@@ -3,8 +3,8 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   createNonceClientWithDependencies,
   type NonceClientRuntimeDependencies,
-} from "../nonce/assets/runtime/src/nonce-client.js";
-import type { CreateTaskBatchMinerSystemRebootInput } from "../nonce/assets/runtime/src/generated/tool-signatures.js";
+} from "../src/runtime/nonce-client.js";
+import type { CreateTaskBatchMinerSystemRebootInput } from "../nonce/assets/tool-signatures.js";
 
 interface ToolCallRecord {
   options: unknown;
@@ -12,6 +12,21 @@ interface ToolCallRecord {
     arguments: Record<string, unknown>;
     name: string;
   };
+}
+
+interface RuntimeClientForTest {
+  close(): Promise<void>;
+  createTaskBatchMinerSystemReboot(
+    input: CreateTaskBatchMinerSystemRebootInput,
+    options: {
+      confirmDestructive: true;
+      confirmation: string;
+    },
+  ): Promise<unknown>;
+  listWorkspaces(
+    input?: Record<string, unknown>,
+    options?: Record<string, unknown>,
+  ): Promise<unknown>;
 }
 
 const createHarness = (results: Record<string, unknown>[]) => {
@@ -45,6 +60,14 @@ const createHarness = (results: Record<string, unknown>[]) => {
       return { endpoint: providerInput.endpoint } as never;
     },
     createTransport: (endpoint, provider) => ({ endpoint, provider }),
+    toolDefinitions: [
+      { destructive: false, methodName: "listWorkspaces", name: "ListWorkspaces" },
+      {
+        destructive: true,
+        methodName: "createTaskBatchMinerSystemReboot",
+        name: "CreateTaskBatch_MinerSystemReboot",
+      },
+    ],
   };
 
   return {
@@ -70,7 +93,7 @@ describe("runtime SDK client", () => {
     const harness = createHarness([{ structuredContent: { data: [], success: true } }]);
     const signal = new AbortController().signal;
 
-    const client = await createNonceClientWithDependencies(
+    const client = (await createNonceClientWithDependencies(
       {
         endpoint: "https://example.test/mcp",
         name: "runtime-test",
@@ -78,7 +101,7 @@ describe("runtime SDK client", () => {
         version: "1.2.3",
       },
       harness.dependencies,
-    );
+    )) as unknown as RuntimeClientForTest;
     const result = await client.listWorkspaces({ scope: "all" }, { signal, timeoutMs: 1234 });
 
     expect(result).toEqual({ data: [], success: true });
@@ -130,10 +153,10 @@ describe("runtime SDK client", () => {
     };
     try {
       const blockedHarness = createHarness([{ structuredContent: { success: true } }]);
-      const blockedClient = await createNonceClientWithDependencies(
+      const blockedClient = (await createNonceClientWithDependencies(
         {},
         blockedHarness.dependencies,
-      );
+      )) as unknown as RuntimeClientForTest;
 
       await expect(
         blockedClient.createTaskBatchMinerSystemReboot(input, {
@@ -144,10 +167,10 @@ describe("runtime SDK client", () => {
       expect(blockedHarness.calls).toHaveLength(0);
 
       const allowedHarness = createHarness([{ structuredContent: { success: true } }]);
-      const allowedClient = await createNonceClientWithDependencies(
+      const allowedClient = (await createNonceClientWithDependencies(
         { allowDestructive: true },
         allowedHarness.dependencies,
-      );
+      )) as unknown as RuntimeClientForTest;
 
       await expect(
         allowedClient.createTaskBatchMinerSystemReboot(input, {

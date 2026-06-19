@@ -1,14 +1,10 @@
+import { readFile } from "node:fs/promises";
+
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { RequestOptions } from "@modelcontextprotocol/sdk/shared/protocol.js";
 
 import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE } from "./constants.js";
-import {
-  type DestructiveCallOptions,
-  type NonceMcpClient,
-  nonceToolDefinitions,
-  type ReadonlyCallOptions,
-} from "./generated/tool-signatures.js";
 import { createOAuthProvider } from "./oauth-provider.js";
 import { normalizeProfile } from "./profile.js";
 
@@ -21,7 +17,24 @@ export interface CreateNonceClientOptions {
   version?: string;
 }
 
-interface ToolDefinition {
+export interface CallOptions {
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
+
+export type ReadonlyCallOptions = CallOptions;
+
+export interface DestructiveCallOptions extends CallOptions {
+  confirmDestructive: true;
+  confirmation: string;
+}
+
+export interface NonceMcpClient {
+  close(): Promise<void>;
+  [methodName: string]: unknown;
+}
+
+export interface ToolDefinition {
   destructive: boolean;
   methodName: string;
   name: string;
@@ -52,6 +65,7 @@ export interface NonceClientRuntimeDependencies {
   createProvider?: typeof createOAuthProvider;
   createTransport?: (endpoint: string, provider: ReturnType<typeof createOAuthProvider>) => unknown;
   runnerAuthorization?: RunnerAuthorizationSnapshot;
+  toolDefinitions?: readonly ToolDefinition[];
 }
 
 const RUNNER_AUTHORIZATION_GLOBAL = "__nonceSkillRunnerAuthorization";
@@ -149,6 +163,27 @@ const parseToolResult = (result: Record<string, unknown>): unknown => {
   }
 };
 
+const isToolDefinition = (value: unknown): value is ToolDefinition =>
+  typeof value === "object" &&
+  value !== null &&
+  "destructive" in value &&
+  typeof value.destructive === "boolean" &&
+  "methodName" in value &&
+  typeof value.methodName === "string" &&
+  "name" in value &&
+  typeof value.name === "string";
+
+const loadGeneratedToolDefinitions = async (): Promise<readonly ToolDefinition[]> => {
+  const manifestPath = "../assets/tool-manifest.json";
+  const manifestUrl = new URL(manifestPath, import.meta.url);
+  const manifest = JSON.parse(await readFile(manifestUrl, "utf8")) as { tools?: unknown };
+  const tools = Array.isArray(manifest.tools) ? manifest.tools.filter(isToolDefinition) : [];
+  if (tools.length === 0) {
+    throw new Error(`Generated Nonce tool manifest is missing or empty: ${manifestUrl.toString()}`);
+  }
+  return tools;
+};
+
 export const resolveDestructiveAllowance = (
   allowDestructiveOption: boolean | undefined,
   runnerAuthorization: RunnerAuthorizationSnapshot = nonceRunnerAuthorizationSnapshot,
@@ -180,6 +215,7 @@ export const createNonceClientWithDependencies = async (
   dependencies: NonceClientRuntimeDependencies = {},
 ): Promise<NonceMcpClient> => {
   const endpoint = options.endpoint ?? process.env.NONCE_MCP_ENDPOINT ?? DEFAULT_MCP_ENDPOINT;
+  const toolDefinitions = dependencies.toolDefinitions ?? (await loadGeneratedToolDefinitions());
   const runnerAuthorization = dependencies.runnerAuthorization ?? nonceRunnerAuthorizationSnapshot;
   const allowDestructive = resolveDestructiveAllowance(
     options.allowDestructive,
@@ -204,7 +240,7 @@ export const createNonceClientWithDependencies = async (
     },
   };
 
-  for (const definition of nonceToolDefinitions) {
+  for (const definition of toolDefinitions) {
     sdk[definition.methodName] = async (
       input: Record<string, unknown> | undefined,
       callOptions: ReadonlyCallOptions | DestructiveCallOptions | undefined,

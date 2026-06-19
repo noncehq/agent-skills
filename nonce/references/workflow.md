@@ -19,7 +19,7 @@ Run commands from the skill directory.
 1. Authenticate with `vp run nonce:auth -- login` before business queries.
 2. Inspect the checked-in generated tool signatures before writing code. Regenerating signatures is a repository maintenance action, not an installed-skill runtime step.
 3. Write a TypeScript task file under an ignored skill-local path such as `.nonce-skill/tasks/query.ts`.
-4. Import the runtime SDK from the task file, for example `import { createNonceClient } from "../../assets/runtime/src/index.ts";` when using `.nonce-skill/tasks/query.ts`.
+4. Import the runtime SDK from the task file, for example `import { createNonceClient } from "../../scripts/skill-runtime.js";` when using `.nonce-skill/tasks/query.ts`.
 5. Run the task through `vp run nonce:run -- ".nonce-skill/tasks/query.ts"`.
 6. Pass `--profile` and `--endpoint` to the runner instead of hardcoding those values in task code.
 7. For destructive task-batch methods, use `vp run nonce:run -- --allow-destructive "<task-file>"` only after explicit user confirmation, and still pass the SDK destructive confirmation options in code.

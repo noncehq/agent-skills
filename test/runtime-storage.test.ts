@@ -4,8 +4,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import { createCredentialStore } from "../nonce/assets/runtime/src/credential-store.js";
-import { createStateStore } from "../nonce/assets/runtime/src/state-store.js";
+import { createCredentialStore } from "../src/runtime/credential-store.js";
+import { createStateStore } from "../src/runtime/state-store.js";
 
 describe("runtime file stores", () => {
   it("round-trips JSON state under a caller-provided base directory", async () => {

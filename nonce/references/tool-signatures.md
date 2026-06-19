@@ -6,14 +6,14 @@ Generated from Nonce MCP `tools/list`; OpenAPI and observed read-only MCP output
 - OpenAPI supplement: https://docs.nonce.app/api-reference/openapi.json
 - Tool count: 27
 
-This file is a compact index. Before writing task code, open `assets/runtime/src/generated/tool-signatures.ts` and read the exact `<MethodType>Input` and `<MethodType>Output` interfaces for every method you call.
+This file is a compact index. Before writing task code, open `assets/tool-signatures.ts` and read the exact `<MethodType>Input` and `<MethodType>Output` interfaces for every method you call.
 
 Do not call the OpenAPI endpoint for business operations. OpenAPI is only used here to supplement missing schema metadata; runtime calls must go through the local SDK.
 
 The example below assumes the task file is `.nonce-skill/tasks/query.ts`. Runner task code should receive profile and endpoint selection from `nonce:run` flags rather than hardcoding them.
 
 ```ts
-import { createNonceClient } from "../../assets/runtime/src/index.ts";
+import { createNonceClient } from "../../scripts/skill-runtime.js";
 
 const client = await createNonceClient();
 try {

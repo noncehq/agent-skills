@@ -12,14 +12,12 @@ import {
   DEFAULT_CALLBACK_PORT,
   DEFAULT_MCP_ENDPOINT,
   DEFAULT_PROFILE,
-  OAUTH_CALLBACK_PATH,
-} from "../assets/runtime/src/constants.js";
-import {
   createOAuthProvider,
-  type TokenMetadata,
   type LocalNonceOAuthProvider,
-} from "../assets/runtime/src/oauth-provider.js";
-import { normalizeProfile } from "../assets/runtime/src/profile.js";
+  OAUTH_CALLBACK_PATH,
+  type TokenMetadata,
+  normalizeProfile,
+} from "../runtime/index.js";
 import { getCliArgv } from "./argv.js";
 import { parseTimeoutMs } from "./cli-options.js";
 

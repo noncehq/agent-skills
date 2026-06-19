@@ -4,17 +4,15 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
     "check": "vp check",
     "lint": "vp lint",
     "format": "vp fmt",
     "format:check": "vp fmt --check",
     "staged": "vp staged",
     "test": "vp test",
-    "nonce:bootstrap": "tsx nonce/scripts/bootstrap-runtime.ts",
-    "nonce:auth": "tsx nonce/scripts/auth.ts",
-    "nonce:run": "tsx nonce/scripts/run-task.ts",
-    "nonce:generate-sdk": "tsx scripts/generate-nonce-sdk.ts"
+    "nonce:bootstrap": "node nonce/scripts/bootstrap-runtime.js",
+    "nonce:auth": "node nonce/scripts/auth.js",
+    "nonce:run": "node nonce/scripts/run-task.js"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

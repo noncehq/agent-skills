@@ -6,7 +6,7 @@ import { join } from "node:path";
 
 import { Command } from "commander";
 
-import { DEFAULT_MCP_ENDPOINT } from "../assets/runtime/src/constants.js";
+import { DEFAULT_MCP_ENDPOINT } from "../runtime/index.js";
 import { getCliArgv } from "./argv.js";
 
 export const bootstrapCommandName = "nonce bootstrap-runtime";
