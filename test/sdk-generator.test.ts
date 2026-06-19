@@ -8,11 +8,29 @@ import {
   schemaToType,
 } from "../src/sdk-generator/schema.js";
 
-const typeScriptFences = (markdown: string): string[] =>
-  [...markdown.matchAll(/```ts\n([\s\S]*?)\n```/g)].map((match) => match[1] ?? "");
+const typeScriptFences = (markdown: string): string[] => {
+  const blocks: string[] = [];
+  const startMarker = "```ts\n";
+  const endMarker = "\n```";
+  let offset = 0;
 
-const declarationSemicolonPattern =
-  /^[ \t]*(?:(?:export[ \t]+)?(?:type|interface)\b|(?:[A-Za-z_$][\w$]*|"[^"]+"|'[^']+'|\[[^\]]+\])\??:|\[key:[^\]]+\]:|[A-Za-z_$][\w$]*\([^)]*\):).+;[ \t]*$/m;
+  while (offset < markdown.length) {
+    const start = markdown.indexOf(startMarker, offset);
+    if (start === -1) return blocks;
+
+    const contentStart = start + startMarker.length;
+    const end = markdown.indexOf(endMarker, contentStart);
+    if (end === -1) return blocks;
+
+    blocks.push(markdown.slice(contentStart, end));
+    offset = end + endMarker.length;
+  }
+
+  return blocks;
+};
+
+const semicolonLines = (source: string): string[] =>
+  source.split("\n").filter((line) => line.trimEnd().endsWith(";"));
 
 describe("SDK generator helpers", () => {
   it("normalizes MCP tool names into SDK method names", () => {
@@ -153,7 +171,7 @@ describe("SDK generator helpers", () => {
     ]
       .flatMap(typeScriptFences)
       .join("\n");
-    expect(generatedTypeScript).not.toMatch(declarationSemicolonPattern);
+    expect(semicolonLines(generatedTypeScript)).toEqual([]);
   });
 
   it("uses observed read-only MCP output when MCP and OpenAPI output schemas are missing", () => {

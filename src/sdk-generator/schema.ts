@@ -10,6 +10,10 @@ export interface TypeScriptTypeResult {
   typeName: string;
 }
 
+export interface TypeScriptDeclarationOptions {
+  exported?: boolean;
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
@@ -336,10 +340,13 @@ export const schemaToType = (schema: JsonSchema | undefined, indentLevel = 0): s
 export const schemaToTypeScriptDeclaration = (
   name: string,
   schema: JsonSchema | undefined,
+  options: TypeScriptDeclarationOptions = {},
 ): TypeScriptTypeResult => {
+  const prefix = options.exported === false ? "" : "export ";
+
   if (!schema) {
     return {
-      declaration: `export type ${name} = unknown\n`,
+      declaration: `${prefix}type ${name} = unknown\n`,
       typeName: name,
     };
   }
@@ -356,7 +363,7 @@ export const schemaToTypeScriptDeclaration = (
         ? schema.required.filter((value) => typeof value === "string")
         : [],
     );
-    const lines = [`${description}export interface ${name} {`];
+    const lines = [`${description}${prefix}interface ${name} {`];
     for (const [propertyName, rawProperty] of Object.entries(properties)) {
       const property = asSchema(rawProperty);
       const type = property ? schemaToType(property, 1) : "unknown";
@@ -375,7 +382,7 @@ export const schemaToTypeScriptDeclaration = (
   }
 
   return {
-    declaration: `${description}export type ${name} = ${schemaToType(schema)}\n`,
+    declaration: `${description}${prefix}type ${name} = ${schemaToType(schema)}\n`,
     typeName: name,
   };
 };

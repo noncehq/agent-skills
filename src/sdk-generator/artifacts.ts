@@ -220,24 +220,15 @@ ${tools.map(methodSignature).join("\n")}
 const methodFileName = (methodName: string): string =>
   `${methodName.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)}.md`;
 
-const declarationSemicolonLine =
-  /^(\s*(?:(?:export\s+)?(?:type|interface)\b|(?:[A-Za-z_$][\w$]*|"(?:[^"\\]|\\.)+"|'(?:[^'\\]|\\.)+'|\[[^\]]+\])\??:|\[key:[^\]]+\]:|[A-Za-z_$][\w$]*\([^)]*\):).+);(\s*)$/;
-
-const normalizeTypeScriptSnippet = (source: string): string =>
-  source
-    .split("\n")
-    .map((line) => line.replace(declarationSemicolonLine, "$1$2"))
-    .join("\n");
-
-const renderTypeScriptBlock = (source: string): string[] => [
-  "```ts",
-  normalizeTypeScriptSnippet(source).trimEnd(),
-  "```",
-];
+const renderTypeScriptBlock = (source: string): string[] => ["```ts", source.trimEnd(), "```"];
 
 const renderMethodSignatureFile = (tool: GeneratedTool): string => {
-  const inputDecl = schemaToTypeScriptDeclaration(`${tool.typeBase}Input`, tool.inputSchema);
-  const outputDecl = schemaToTypeScriptDeclaration(`${tool.typeBase}Output`, tool.outputSchema);
+  const inputDecl = schemaToTypeScriptDeclaration(`${tool.typeBase}Input`, tool.inputSchema, {
+    exported: false,
+  });
+  const outputDecl = schemaToTypeScriptDeclaration(`${tool.typeBase}Output`, tool.outputSchema, {
+    exported: false,
+  });
   const required = requiredProperties(tool.inputSchema);
 
   const inputType = `${tool.typeBase}Input`;
@@ -265,11 +256,11 @@ const renderMethodSignatureFile = (tool: GeneratedTool): string => {
     "",
     "## Input",
     "",
-    ...renderTypeScriptBlock(inputDecl.declaration.replace(/^export /gm, "")),
+    ...renderTypeScriptBlock(inputDecl.declaration),
     "",
     "## Output",
     "",
-    ...renderTypeScriptBlock(outputDecl.declaration.replace(/^export /gm, "")),
+    ...renderTypeScriptBlock(outputDecl.declaration),
     "",
   );
 
