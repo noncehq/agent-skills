@@ -35,6 +35,9 @@ describe("bootstrap runtime helpers", () => {
     const posixScript = await readFile("skills/scripts/bootstrap-runtime.sh", "utf8");
     const windowsScript = await readFile("skills/scripts/bootstrap-runtime.ps1", "utf8");
 
+    expect(posixScript).toContain("Darwin|Linux");
+    expect(posixScript).toContain("macOS and Linux");
+    expect(posixScript).not.toContain('!= "Darwin"');
     expect(EXPECTED_NODE_VERSION).toBe("24.17.0");
     for (const script of [posixScript, windowsScript]) {
       expect(script).toContain("vp env setup");

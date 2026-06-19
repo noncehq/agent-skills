@@ -1,10 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$(uname -s)" != "Darwin" ]; then
-  echo "This bootstrap script supports macOS. Use bootstrap-runtime.ps1 on Windows." >&2
-  exit 1
-fi
+OS_NAME="$(uname -s)"
+case "$OS_NAME" in
+  Darwin|Linux) ;;
+  *)
+    echo "This bootstrap script supports macOS and Linux. Use bootstrap-runtime.ps1 on Windows." >&2
+    exit 1
+    ;;
+esac
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
