@@ -22,22 +22,25 @@ export const getStateBaseDir = (): string => {
   return join(env.XDG_STATE_HOME ?? join(homedir(), ".local", "state"), OAUTH_SERVICE_NAME);
 };
 
-const statePath = (profile: string, key: string): string => {
+const statePath = (baseDir: string, profile: string, key: string): string => {
   const safeProfile = normalizeProfile(profile);
   const safeKey = key.replaceAll(/[^a-zA-Z0-9_.-]/g, "-");
-  return join(getStateBaseDir(), safeProfile, `${safeKey}.json`);
+  return join(baseDir, safeProfile, `${safeKey}.json`);
 };
 
 export class FileStateStore implements StateStore {
-  constructor(private readonly profile: string) {}
+  constructor(
+    private readonly profile: string,
+    private readonly baseDir = getStateBaseDir(),
+  ) {}
 
   async delete(key: string): Promise<void> {
-    await rm(statePath(this.profile, key), { force: true });
+    await rm(statePath(this.baseDir, this.profile, key), { force: true });
   }
 
   async getJson<T>(key: string): Promise<T | undefined> {
     try {
-      return JSON.parse(await readFile(statePath(this.profile, key), "utf8")) as T;
+      return JSON.parse(await readFile(statePath(this.baseDir, this.profile, key), "utf8")) as T;
     } catch (error) {
       if (error instanceof Error && "code" in error && error.code === "ENOENT") {
         return undefined;
@@ -47,10 +50,11 @@ export class FileStateStore implements StateStore {
   }
 
   async setJson<T>(key: string, value: T): Promise<void> {
-    const file = statePath(this.profile, key);
+    const file = statePath(this.baseDir, this.profile, key);
     await mkdir(dirname(file), { recursive: true, mode: 0o700 });
     await writeFile(file, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o600 });
   }
 }
 
-export const createStateStore = (profile = "default"): StateStore => new FileStateStore(profile);
+export const createStateStore = (profile = "default", baseDir?: string): StateStore =>
+  new FileStateStore(profile, baseDir);

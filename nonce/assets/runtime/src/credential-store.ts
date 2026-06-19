@@ -35,10 +35,15 @@ const run = async (
     );
   });
 
-const credentialPath = (profile: string, key: string, extension = "secret"): string => {
+const credentialPath = (
+  baseDir: string,
+  profile: string,
+  key: string,
+  extension = "secret",
+): string => {
   const safeProfile = normalizeProfile(profile);
   const safeKey = key.replaceAll(/[^a-zA-Z0-9_.-]/g, "-");
-  return join(getStateBaseDir(), safeProfile, "credentials", `${safeKey}.${extension}`);
+  return join(baseDir, safeProfile, "credentials", `${safeKey}.${extension}`);
 };
 
 const restrictWindowsFileToCurrentUser = async (file: string): Promise<void> => {
@@ -55,15 +60,18 @@ const restrictWindowsFileToCurrentUser = async (file: string): Promise<void> => 
 export class FileCredentialStore implements CredentialStore {
   readonly kind = "local-file";
 
-  constructor(private readonly profile: string) {}
+  constructor(
+    private readonly profile: string,
+    private readonly baseDir = getStateBaseDir(),
+  ) {}
 
   async delete(key: string): Promise<void> {
-    await rm(credentialPath(this.profile, key), { force: true });
+    await rm(credentialPath(this.baseDir, this.profile, key), { force: true });
   }
 
   async get(key: string): Promise<string | undefined> {
     try {
-      return await readFile(credentialPath(this.profile, key), "utf8");
+      return await readFile(credentialPath(this.baseDir, this.profile, key), "utf8");
     } catch (error) {
       if (error instanceof Error && "code" in error && error.code === "ENOENT") {
         return undefined;
@@ -73,7 +81,7 @@ export class FileCredentialStore implements CredentialStore {
   }
 
   async set(key: string, value: string): Promise<void> {
-    const file = credentialPath(this.profile, key);
+    const file = credentialPath(this.baseDir, this.profile, key);
     await mkdir(dirname(file), { recursive: true, mode: 0o700 });
     await writeFile(file, value, { mode: 0o600 });
     if (platform() === "win32") {
@@ -83,6 +91,7 @@ export class FileCredentialStore implements CredentialStore {
 }
 
 export interface CreateCredentialStoreOptions {
+  baseDir?: string;
   profile?: string;
 }
 
@@ -90,5 +99,5 @@ export const createCredentialStore = (
   options: CreateCredentialStoreOptions = {},
 ): CredentialStore => {
   const profile = normalizeProfile(options.profile);
-  return new FileCredentialStore(profile);
+  return new FileCredentialStore(profile, options.baseDir);
 };

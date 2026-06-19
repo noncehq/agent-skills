@@ -112,4 +112,57 @@ describe("nonce client destructive allowance", () => {
       await rm(tempDir, { force: true, recursive: true });
     }
   });
+
+  it("injects runner profile, endpoint, and authorization flags into task code", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "nonce-runner-env-"));
+    const taskPath = join(tempDir, "read-env.ts");
+
+    await writeFile(
+      taskPath,
+      [
+        "console.log(JSON.stringify({",
+        "  allowDestructive: process.env.NONCE_ALLOW_DESTRUCTIVE,",
+        "  endpoint: process.env.NONCE_MCP_ENDPOINT,",
+        "  profile: process.env.NONCE_PROFILE,",
+        "  runnerMode: process.env.NONCE_RUNNER_MODE,",
+        "}));",
+      ].join("\n"),
+    );
+
+    try {
+      const command = process.platform === "win32" ? "vp.cmd" : "vp";
+      const result = await run(
+        command,
+        [
+          "run",
+          "nonce:run",
+          "--",
+          "--profile",
+          "test-local",
+          "--endpoint",
+          "https://example.test/mcp",
+          "--timeout-ms",
+          "5000",
+          taskPath,
+        ],
+        {
+          cwd: resolve("nonce"),
+        },
+      );
+      expect(result.code, result.stderr).toBe(0);
+      const jsonLine = result.stdout
+        .split(/\r?\n/)
+        .reverse()
+        .find((line) => line.startsWith("{"));
+      expect(jsonLine).toBeTruthy();
+      expect(JSON.parse(jsonLine ?? "{}")).toEqual({
+        allowDestructive: "0",
+        endpoint: "https://example.test/mcp",
+        profile: "test-local",
+        runnerMode: "1",
+      });
+    } finally {
+      await rm(tempDir, { force: true, recursive: true });
+    }
+  });
 });

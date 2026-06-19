@@ -27,9 +27,31 @@ interface ToolDefinition {
   name: string;
 }
 
-interface RunnerAuthorizationSnapshot {
+export interface RunnerAuthorizationSnapshot {
   allowDestructive: boolean;
   runnerMode: boolean;
+}
+
+interface McpClientLike {
+  callTool(
+    request: { arguments: Record<string, unknown>; name: string },
+    resultSchema?: unknown,
+    options?: RequestOptions,
+  ): Promise<Record<string, unknown>>;
+  close(): Promise<void>;
+  connect(transport: unknown): Promise<void>;
+}
+
+interface ClientMetadata {
+  name: string;
+  version: string;
+}
+
+export interface NonceClientRuntimeDependencies {
+  createClient?: (metadata: ClientMetadata) => McpClientLike;
+  createProvider?: typeof createOAuthProvider;
+  createTransport?: (endpoint: string, provider: ReturnType<typeof createOAuthProvider>) => unknown;
+  runnerAuthorization?: RunnerAuthorizationSnapshot;
 }
 
 const RUNNER_AUTHORIZATION_GLOBAL = "__nonceSkillRunnerAuthorization";
@@ -142,23 +164,37 @@ export const resolveDestructiveAllowance = (
   return allowDestructiveOption ?? process.env.NONCE_ALLOW_DESTRUCTIVE === "1";
 };
 
-export const createNonceClient = async (
+const createDefaultClient = (metadata: ClientMetadata): McpClientLike =>
+  new Client(metadata) as unknown as McpClientLike;
+
+const createDefaultTransport = (
+  endpoint: string,
+  provider: ReturnType<typeof createOAuthProvider>,
+): unknown =>
+  new StreamableHTTPClientTransport(new URL(endpoint), {
+    authProvider: provider,
+  });
+
+export const createNonceClientWithDependencies = async (
   options: CreateNonceClientOptions = {},
+  dependencies: NonceClientRuntimeDependencies = {},
 ): Promise<NonceMcpClient> => {
   const endpoint = options.endpoint ?? process.env.NONCE_MCP_ENDPOINT ?? DEFAULT_MCP_ENDPOINT;
-  const allowDestructive = resolveDestructiveAllowance(options.allowDestructive);
-  const provider = createOAuthProvider({
+  const runnerAuthorization = dependencies.runnerAuthorization ?? nonceRunnerAuthorizationSnapshot;
+  const allowDestructive = resolveDestructiveAllowance(
+    options.allowDestructive,
+    runnerAuthorization,
+  );
+  const provider = (dependencies.createProvider ?? createOAuthProvider)({
     endpoint,
     openBrowser: options.openBrowser ?? false,
     profile: normalizeProfile(options.profile ?? process.env.NONCE_PROFILE ?? DEFAULT_PROFILE),
   });
-  const client = new Client({
+  const client = (dependencies.createClient ?? createDefaultClient)({
     name: options.name ?? "nonce-skill-runtime",
     version: options.version ?? "0.0.0",
   });
-  const transport = new StreamableHTTPClientTransport(new URL(endpoint), {
-    authProvider: provider,
-  });
+  const transport = (dependencies.createTransport ?? createDefaultTransport)(endpoint, provider);
 
   await client.connect(transport);
 
@@ -177,7 +213,7 @@ export const createNonceClient = async (
         definition,
         callOptions,
         allowDestructive,
-        nonceRunnerAuthorizationSnapshot.runnerMode,
+        runnerAuthorization.runnerMode,
       );
       const result = await client.callTool(
         {
@@ -193,3 +229,7 @@ export const createNonceClient = async (
 
   return sdk as unknown as NonceMcpClient;
 };
+
+export const createNonceClient = async (
+  options: CreateNonceClientOptions = {},
+): Promise<NonceMcpClient> => createNonceClientWithDependencies(options);
