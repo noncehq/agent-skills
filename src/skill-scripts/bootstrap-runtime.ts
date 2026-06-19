@@ -10,15 +10,20 @@ import { getCliArgv } from "./argv.js";
 
 export const bootstrapCommandName = "nonce bootstrap-runtime";
 export const EXPECTED_NODE_VERSION = "24.17.0";
+export const MINIMUM_NODE_MAJOR_VERSION = 22;
 
 export const runtimeCheckExitCode = (result: {
   nodeVersionOk: boolean;
   supported: boolean;
-  vpEnvCurrentOk: boolean;
-}): 0 | 1 => (result.supported && result.vpEnvCurrentOk && result.nodeVersionOk ? 0 : 1);
+}): 0 | 1 => (result.supported && result.nodeVersionOk ? 0 : 1);
 
 export const isSupportedPlatform = (os: NodeJS.Platform): boolean =>
   os === "darwin" || os === "linux" || os === "win32";
+
+export const isNodeVersionSupported = (version: string): boolean => {
+  const major = Number(version.replace(/^v/, "").split(".")[0]);
+  return Number.isInteger(major) && major >= MINIMUM_NODE_MAJOR_VERSION;
+};
 
 const resolveVpCommand = (): string => {
   const executable = platform() === "win32" ? "vp.cmd" : "vp";
@@ -75,27 +80,33 @@ const main = async (): Promise<void> => {
   const expectedNodeVersion = EXPECTED_NODE_VERSION;
   const vpVersion = await run(vpCommand, ["--version"]);
   const envCurrent = await run(vpCommand, ["env", "current", "--json"]);
+  const envDoctor = await run(vpCommand, ["env", "doctor"]);
   const envInfo =
     envCurrent.code === 0
       ? (JSON.parse(envCurrent.stdout) as { node_path?: string; version?: string })
       : {};
+  const vpManagedNodeVersionOk = envInfo.version === expectedNodeVersion;
 
   const result = {
     command: bootstrapCommandName,
     endpoint: DEFAULT_MCP_ENDPOINT,
+    minimumNodeMajorVersion: MINIMUM_NODE_MAJOR_VERSION,
     node: process.version,
     nodePath: process.execPath,
-    nodeVersionOk: Boolean(expectedNodeVersion && envInfo.version === expectedNodeVersion),
+    nodeVersionOk: isNodeVersionSupported(process.version),
     platform: os,
+    recommendedRunner: "node",
     supported,
     vp: vpVersion.stdout.trim(),
     vpCommand,
+    vpEnvDoctorOk: envDoctor.code === 0,
     vpEnvCurrent: {
       expectedVersion: expectedNodeVersion,
       nodePath: envInfo.node_path,
       version: envInfo.version,
     },
     vpEnvCurrentOk: envCurrent.code === 0,
+    vpManagedNodeVersionOk,
   };
   const exitCode = runtimeCheckExitCode(result);
 
@@ -110,11 +121,15 @@ const main = async (): Promise<void> => {
     `Platform: ${result.platform}${result.supported ? "" : " (supported platforms: macOS, Linux, Windows)"}`,
   );
   console.log(`Vite+: ${result.vp || "not found"}`);
-  console.log(`Node: ${result.node} (${result.nodePath})`);
   console.log(
-    `Vite+ Node version: ${result.vpEnvCurrent.version ?? "unknown"}${result.nodeVersionOk ? "" : ` (expected ${result.vpEnvCurrent.expectedVersion ?? "unknown"})`}`,
+    `Node: ${result.node} (${result.nodePath})${result.nodeVersionOk ? "" : ` (expected >=${result.minimumNodeMajorVersion})`}`,
+  );
+  console.log(
+    `Vite+ Node version: ${result.vpEnvCurrent.version ?? "unknown"}${result.vpManagedNodeVersionOk ? "" : ` (recommended ${result.vpEnvCurrent.expectedVersion ?? "unknown"})`}`,
   );
   console.log(`vp env current: ${result.vpEnvCurrentOk ? "ok" : "failed"}`);
+  console.log(`vp env doctor: ${result.vpEnvDoctorOk ? "ok" : "failed"}`);
+  console.log(`Recommended runner: ${result.recommendedRunner}`);
   process.exitCode = exitCode;
 };
 

@@ -301,7 +301,7 @@ const verify = async (options: SharedAuthOptions): Promise<void> => {
   const tokens = await provider.tokens();
   if (!tokens?.access_token && !tokens?.refresh_token) {
     throw new Error(
-      "Not authenticated. Run `vp node -- scripts/auth.mjs login` from the skill directory first.",
+      "Not authenticated. Run `node scripts/auth.mjs login` from the skill directory first.",
     );
   }
 

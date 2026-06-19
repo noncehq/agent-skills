@@ -33,22 +33,22 @@ Test-Path .\scripts\skill-runtime.mjs
 ## Runtime gate
 
 1. Confirm the host is macOS, Linux, or Windows.
-2. If `vp` is missing, the Node runtime is not the skill-pinned LTS version, or `vp env doctor` fails, run the platform bootstrap script directly:
+2. Prefer the Vite+ managed runtime. If `vp` is missing, `vp env doctor` fails, or `node --version` reports a major version below 22, run the platform bootstrap script directly:
    - macOS/Linux: `./scripts/bootstrap-runtime.sh`
    - Windows PowerShell: `powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap-runtime.ps1`
 3. The bootstrap script installs Vite+ if needed, enables managed Node mode, installs the skill-pinned LTS Node runtime, and runs `vp env doctor`.
-4. After bootstrap, inspect the runtime with `vp node -- scripts/bootstrap-runtime.mjs --json`. This command checks the runtime; it does not install missing pieces by itself.
-5. Proceed only when the runtime check reports a supported platform, a healthy Vite+ environment, and `nodeVersionOk: true`.
+4. After bootstrap, inspect the runtime with `node scripts/bootstrap-runtime.mjs --json`. This command checks the runtime; it does not install missing pieces by itself.
+5. Proceed only when the runtime check reports a supported platform and `nodeVersionOk: true`. Treat a failed `vpEnvDoctorOk` or `vpManagedNodeVersionOk` as a repair recommendation, not a hard block when direct `node` is already version 22 or newer.
 
 ## Task flow
 
-1. Authenticate with `vp node -- scripts/auth.mjs login` before business queries.
+1. Authenticate with `node scripts/auth.mjs login` before business queries.
 2. Read `references/tool-signatures.md` for the method index, then read the specific method's schema file under `assets/schemas/` for full Input and Output interfaces. Regenerating schemas is not an installed-skill runtime step.
 3. Write a JavaScript module task file under an ignored path inside the installed skill root, such as `.nonce-skill/tasks/query.mjs`.
 4. Import the runtime SDK relative to the task file. From `<installed skill root>/.nonce-skill/tasks/query.mjs`, use `import { createNonceClient } from "../../scripts/skill-runtime.mjs";`.
-5. Run the task through `vp node -- scripts/run-task.mjs ".nonce-skill/tasks/query.mjs"`.
+5. Run the task through `node scripts/run-task.mjs ".nonce-skill/tasks/query.mjs"`.
 6. Pass `--profile` and `--endpoint` to the runner instead of hardcoding those values in task code.
-7. For destructive task-batch methods, use `vp node -- scripts/run-task.mjs --allow-destructive "<task-file>"` only after explicit user confirmation, and still pass the SDK destructive confirmation options in code.
+7. For destructive task-batch methods, use `node scripts/run-task.mjs --allow-destructive "<task-file>"` only after explicit user confirmation, and still pass the SDK destructive confirmation options in code.
 8. Do not mutate `NONCE_*` environment variables or spawn alternate SDK processes from task code to change runner behavior.
 9. Use compact JSON stdout as the only model-facing data surface.
 

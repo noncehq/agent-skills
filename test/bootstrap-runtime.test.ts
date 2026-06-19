@@ -4,6 +4,8 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   EXPECTED_NODE_VERSION,
+  MINIMUM_NODE_MAJOR_VERSION,
+  isNodeVersionSupported,
   isSupportedPlatform,
   runtimeCheckExitCode,
 } from "../src/skill-scripts/bootstrap-runtime.js";
@@ -16,19 +18,18 @@ describe("bootstrap runtime helpers", () => {
     expect(isSupportedPlatform("freebsd")).toBe(false);
   });
 
-  it("fails closed when the platform or Vite+ runtime is unhealthy", () => {
-    expect(
-      runtimeCheckExitCode({ nodeVersionOk: true, supported: true, vpEnvCurrentOk: true }),
-    ).toBe(0);
-    expect(
-      runtimeCheckExitCode({ nodeVersionOk: true, supported: false, vpEnvCurrentOk: true }),
-    ).toBe(1);
-    expect(
-      runtimeCheckExitCode({ nodeVersionOk: true, supported: true, vpEnvCurrentOk: false }),
-    ).toBe(1);
-    expect(
-      runtimeCheckExitCode({ nodeVersionOk: false, supported: true, vpEnvCurrentOk: true }),
-    ).toBe(1);
+  it("accepts direct Node runtimes that can run ESM skill scripts", () => {
+    expect(MINIMUM_NODE_MAJOR_VERSION).toBe(22);
+    expect(isNodeVersionSupported("v22.0.0")).toBe(true);
+    expect(isNodeVersionSupported("24.17.0")).toBe(true);
+    expect(isNodeVersionSupported("v21.9.0")).toBe(false);
+    expect(isNodeVersionSupported("not-a-version")).toBe(false);
+  });
+
+  it("fails closed when the platform or direct Node runtime is unhealthy", () => {
+    expect(runtimeCheckExitCode({ nodeVersionOk: true, supported: true })).toBe(0);
+    expect(runtimeCheckExitCode({ nodeVersionOk: true, supported: false })).toBe(1);
+    expect(runtimeCheckExitCode({ nodeVersionOk: false, supported: true })).toBe(1);
   });
 
   it("pins and installs the Vite+ managed Node LTS runtime", async () => {
@@ -46,5 +47,15 @@ describe("bootstrap runtime helpers", () => {
       expect(script).toContain("vp env doctor");
       expect(script).not.toContain("vp install");
     }
+  });
+
+  it("uses direct node commands in installed skill docs", async () => {
+    const authReference = await readFile("skills/references/auth.md", "utf8");
+    const workflowReference = await readFile("skills/references/workflow.md", "utf8");
+
+    expect(authReference).toContain("node scripts/auth.mjs login");
+    expect(workflowReference).toContain("node scripts/bootstrap-runtime.mjs --json");
+    expect(workflowReference).toContain('node scripts/run-task.mjs ".nonce-skill/tasks/query.mjs"');
+    expect(`${authReference}\n${workflowReference}`).not.toContain("vp node --");
   });
 });
