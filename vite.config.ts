@@ -11,6 +11,7 @@ const assetOutputs = [
   "skills/assets/tool-signatures.ts",
   "skills/assets/tool-manifest.json",
   "skills/assets/tool-schemas.json",
+  "skills/assets/schemas/*.md",
 ];
 const generatedOutputs = [...assetOutputs, "skills/scripts/**/*.mjs", "skills/scripts/**/*.js"];
 
