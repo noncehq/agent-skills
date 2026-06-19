@@ -19,7 +19,7 @@ Use this skill to work with those resources through the local SDK/runner. Determ
 
 ## Operating Rules
 
-- Before writing task code, read `references/tool-signatures.md` for the method index, then read the specific method's file under `references/signatures/` for full Input and Output interfaces.
+- Before writing task code, read `references/tool-signatures.md` for the method index, then read the specific method's schema file under `assets/schemas/` for full Input and Output interfaces.
 - Missing IDs: discover them in order with `listWorkspaces` -> `listFarms` -> `listMiners` as needed.
 - Reuse returned `workspace_id`, `farm_id`, `miner_id`, and task IDs. Never invent IDs.
 - Prefer the narrowest method and scope that satisfy the user's request.
@@ -43,5 +43,5 @@ Use this skill to work with those resources through the local SDK/runner. Determ
 - `references/workflow.md`: local task-code workflow, runner usage, host integration, and runtime repair.
 - `references/auth.md`: authentication, profiles, credential storage, and endpoint configuration.
 - `references/tool-signatures.md`: method index and shared types.
-- `references/signatures/`: per-method Input/Output interfaces and signatures.
+- `assets/schemas/`: per-method Input/Output interfaces and signatures.
 - `references/safety.md`: destructive-operation guardrails.

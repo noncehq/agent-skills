@@ -37,7 +37,7 @@ export interface GeneratedTool {
 
 export interface GeneratedArtifacts {
   manifest: Record<string, unknown>;
-  methodSignatureFiles: Map<string, string>;
+  methodSchemaFiles: Map<string, string>;
   referenceMarkdown: string;
   schemas: Record<string, unknown>;
   signatures: string;
@@ -279,7 +279,7 @@ const renderReferenceMarkdown = (
     `- Default endpoint: \`${options.mcpEndpoint}\``,
     `- Method count: ${tools.length}`,
     "",
-    "This file is a compact index. Before writing JavaScript task code, read the method's signature file under `references/signatures/` for the full `<MethodType>Input` / `<MethodType>Output` interfaces.",
+    "This file is a compact index. Before writing JavaScript task code, read the method's schema file under `assets/schemas/` for the full `<MethodType>Input` / `<MethodType>Output` interfaces.",
     "",
     "Do not call schema/reference endpoints for business operations. Runtime calls must go through the local SDK.",
     "",
@@ -333,7 +333,7 @@ const renderReferenceMarkdown = (
     ].filter(Boolean);
     const fileName = methodFileName(tool.methodName);
     lines.push(
-      `- \`${tool.methodName}(${input}, ${options}): Promise<${tool.typeBase}Output>\` — ${tool.name} (${markers.join(", ")}) → [signatures/${fileName}](signatures/${fileName})`,
+      `- \`${tool.methodName}(${input}, ${options}): Promise<${tool.typeBase}Output>\` — ${tool.name} (${markers.join(", ")}) → [schemas/${fileName}](../assets/schemas/${fileName})`,
     );
   }
 
@@ -360,9 +360,9 @@ export const generateArtifacts = (
     typeBase: tool.typeBase,
   }));
 
-  const methodSignatureFiles = new Map<string, string>();
+  const methodSchemaFiles = new Map<string, string>();
   for (const tool of tools) {
-    methodSignatureFiles.set(methodFileName(tool.methodName), renderMethodSignatureFile(tool));
+    methodSchemaFiles.set(methodFileName(tool.methodName), renderMethodSignatureFile(tool));
   }
 
   return {
@@ -375,7 +375,7 @@ export const generateArtifacts = (
       toolCount: tools.length,
       tools: manifestTools,
     },
-    methodSignatureFiles,
+    methodSchemaFiles,
     referenceMarkdown: renderReferenceMarkdown(tools, options),
     schemas: {
       tools: Object.fromEntries(

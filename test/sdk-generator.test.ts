@@ -118,7 +118,7 @@ describe("SDK generator helpers", () => {
     expect(artifacts.signatures).toContain("export interface ListFarmsOutput");
     expect(artifacts.referenceMarkdown).toContain("compact index");
     expect(artifacts.referenceMarkdown).toContain(
-      "read the method's signature file under `references/signatures/`",
+      "read the method's schema file under `assets/schemas/`",
     );
     expect(artifacts.referenceMarkdown).toContain("required: workspace_id");
     expect(artifacts.referenceMarkdown).toContain("Runtime calls must go through the local SDK");
@@ -129,11 +129,11 @@ describe("SDK generator helpers", () => {
     expect(artifacts.referenceMarkdown).toContain("console.log(JSON.stringify({ farms }))");
     expect(artifacts.referenceMarkdown).toContain("Shared Types");
     expect(artifacts.referenceMarkdown).toContain("DestructiveCallOptions");
-    expect(artifacts.referenceMarkdown).toContain("signatures/list-farms.md");
+    expect(artifacts.referenceMarkdown).toContain("schemas/list-farms.md");
     expect(artifacts.referenceMarkdown).not.toContain('profile: "default"');
 
-    expect(artifacts.methodSignatureFiles.size).toBe(1);
-    const listFarmsFile = artifacts.methodSignatureFiles.get("list-farms.md");
+    expect(artifacts.methodSchemaFiles.size).toBe(1);
+    const listFarmsFile = artifacts.methodSchemaFiles.get("list-farms.md");
     expect(listFarmsFile).toBeTruthy();
     expect(listFarmsFile).toContain("# listFarms");
     expect(listFarmsFile).toContain("interface ListFarmsInput");
@@ -178,7 +178,7 @@ describe("SDK generator helpers", () => {
     expect(artifacts.signatures).toContain("export interface ListWorkspacesOutput");
     expect(artifacts.signatures).toContain("workspace_slug: string");
 
-    const wsFile = artifacts.methodSignatureFiles.get("list-workspaces.md");
+    const wsFile = artifacts.methodSchemaFiles.get("list-workspaces.md");
     expect(wsFile).toContain("# listWorkspaces");
     expect(wsFile).toContain("workspace_slug: string");
     expect(wsFile).not.toContain("export ");

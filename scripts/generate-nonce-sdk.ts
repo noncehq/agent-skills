@@ -30,7 +30,7 @@ interface GenerateSdkOptions {
   outputDir?: string;
   profile?: string;
   referenceOutput?: string;
-  signaturesDir?: string;
+  schemasDir?: string;
   skipObservedOutputs?: boolean;
 }
 
@@ -167,7 +167,7 @@ const generate = async (options: GenerateSdkOptions): Promise<void> => {
   const outputDir = options.outputDir ?? "skills/assets";
   const openapiUrl = options.openapiUrl ?? DEFAULT_OPENAPI_URL;
   const referenceOutput = options.referenceOutput ?? "skills/references/tool-signatures.md";
-  const signaturesDir = options.signaturesDir ?? "skills/references/signatures";
+  const schemasDir = options.schemasDir ?? "skills/assets/schemas";
 
   const openApiDocument = await fetchOpenApiDocument(openapiUrl);
   const openApiIndex = buildOpenApiIndex(openApiDocument);
@@ -189,8 +189,8 @@ const generate = async (options: GenerateSdkOptions): Promise<void> => {
     openApiIndex,
   );
 
-  const signatureFileWrites = [...artifacts.methodSignatureFiles.entries()].map(
-    ([fileName, content]) => writeText(join(signaturesDir, fileName), content),
+  const signatureFileWrites = [...artifacts.methodSchemaFiles.entries()].map(
+    ([fileName, content]) => writeText(join(schemasDir, fileName), content),
   );
 
   await Promise.all([
@@ -236,9 +236,9 @@ const main = async (): Promise<void> => {
       "skills/references/tool-signatures.md",
     )
     .option(
-      "--signatures-dir <path>",
-      "generated per-method Markdown signature directory",
-      "skills/references/signatures",
+      "--schemas-dir <path>",
+      "generated per-method Markdown schema directory",
+      "skills/assets/schemas",
     )
     .option(
       "--skip-observed-outputs",
