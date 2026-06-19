@@ -20,7 +20,7 @@ Use this skill to work with those resources through the local SDK/runner. Determ
 ## Operating Rules
 
 - Before writing task code, read `references/tool-signatures.md` for available typed methods and interfaces.
-- Missing IDs: discover them in order with `ListWorkspaces` -> `ListFarms` -> `ListMiners` as needed.
+- Missing IDs: discover them in order with `listWorkspaces` -> `listFarms` -> `listMiners` as needed.
 - Reuse returned `workspace_id`, `farm_id`, `miner_id`, and task IDs. Never invent IDs.
 - Prefer the narrowest method and scope that satisfy the user's request.
 - Most operations need `workspace_id`; farm and miner operations usually also need `farm_id` or `miner_id`.
