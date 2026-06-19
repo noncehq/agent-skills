@@ -55,6 +55,10 @@ export default defineConfig({
         cache: false,
         command: ["vp pack", "vp run generate:nonce-sdk"],
       },
+      "archive:skills": {
+        cache: false,
+        command: ["rm -f nonce-skills.zip", "zip -X -r -q nonce-skills.zip skills"],
+      },
       "generate:nonce-sdk": {
         cache: false,
         command: "node --import tsx/esm scripts/generate-nonce-sdk.ts",
