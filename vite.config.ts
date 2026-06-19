@@ -16,6 +16,7 @@ const generatedOutputs = [
   "skills/references/tool-signatures.md",
   "skills/scripts/**/*.mjs",
 ];
+const generatedOutputExcludes = generatedOutputs.map((pattern) => `!${pattern}`);
 
 const createScriptPack = ([name, entry]: [string, string]): PackUserConfig => ({
   clean: [`skills/scripts/${name}.mjs`, `skills/scripts/${name}.js`],
@@ -52,8 +53,10 @@ export default defineConfig({
   run: {
     tasks: {
       build: {
-        cache: false,
+        cache: true,
         command: ["vp pack", "vp run generate:nonce-sdk"],
+        input: [{ auto: true }, ...generatedOutputExcludes],
+        output: generatedOutputs,
       },
       "generate:nonce-sdk": {
         cache: false,
