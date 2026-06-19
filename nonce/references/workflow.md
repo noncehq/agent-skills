@@ -4,8 +4,31 @@ Use this skill as a local-code execution layer for Nonce resources.
 
 Run commands with the installed skill root as the working directory. The skill root is the directory containing `SKILL.md`; do not assume any fixed filesystem path.
 
-- macOS examples use `$NONCE_SKILL_HOME` for the installed skill root. Run `cd "$NONCE_SKILL_HOME"` first.
-- Windows PowerShell examples use `$NonceSkillHome` for the installed skill root. Run `Set-Location $NonceSkillHome` first.
+## Path setup
+
+1. Resolve the installed skill root from the location of this `SKILL.md`.
+2. Print the resolved value before running any scripts so it is visible in the session.
+3. Keep using the printed value for all later commands and task-code imports.
+
+macOS:
+
+```bash
+export NONCE_SKILL_HOME="<installed skill root>"
+printf 'NONCE_SKILL_HOME=%s\n' "$NONCE_SKILL_HOME"
+cd "$NONCE_SKILL_HOME"
+test -f SKILL.md && test -f scripts/run-task.mjs && test -f scripts/skill-runtime.mjs
+```
+
+Windows PowerShell:
+
+```powershell
+$NonceSkillHome = "<installed skill root>"
+Write-Output "NonceSkillHome=$NonceSkillHome"
+Set-Location $NonceSkillHome
+Test-Path .\SKILL.md
+Test-Path .\scripts\run-task.mjs
+Test-Path .\scripts\skill-runtime.mjs
+```
 
 ## Runtime gate
 
