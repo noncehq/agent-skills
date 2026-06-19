@@ -118,7 +118,7 @@ describe("SDK generator helpers", () => {
     expect(artifacts.signatures).toContain("export interface ListFarmsOutput");
     expect(artifacts.referenceMarkdown).toContain("compact index");
     expect(artifacts.referenceMarkdown).toContain(
-      "search `assets/tool-signatures.ts` from the installed skill root",
+      "read the method's signature file under `references/signatures/`",
     );
     expect(artifacts.referenceMarkdown).toContain("required: workspace_id");
     expect(artifacts.referenceMarkdown).toContain("Runtime calls must go through the local SDK");
@@ -127,7 +127,19 @@ describe("SDK generator helpers", () => {
     );
     expect(artifacts.referenceMarkdown).toContain("const client = await createNonceClient()");
     expect(artifacts.referenceMarkdown).toContain("console.log(JSON.stringify({ farms }))");
+    expect(artifacts.referenceMarkdown).toContain("Shared Types");
+    expect(artifacts.referenceMarkdown).toContain("DestructiveCallOptions");
+    expect(artifacts.referenceMarkdown).toContain("signatures/list-farms.md");
     expect(artifacts.referenceMarkdown).not.toContain('profile: "default"');
+
+    expect(artifacts.methodSignatureFiles.size).toBe(1);
+    const listFarmsFile = artifacts.methodSignatureFiles.get("list-farms.md");
+    expect(listFarmsFile).toBeTruthy();
+    expect(listFarmsFile).toContain("# listFarms");
+    expect(listFarmsFile).toContain("interface ListFarmsInput");
+    expect(listFarmsFile).toContain("interface ListFarmsOutput");
+    expect(listFarmsFile).toContain("workspace_id");
+    expect(listFarmsFile).not.toContain("export ");
   });
 
   it("uses observed read-only MCP output when MCP and OpenAPI output schemas are missing", () => {
@@ -165,5 +177,10 @@ describe("SDK generator helpers", () => {
     expect(artifacts.tools[0]?.outputSchemaSource).toBe("observed-mcp");
     expect(artifacts.signatures).toContain("export interface ListWorkspacesOutput");
     expect(artifacts.signatures).toContain("workspace_slug: string");
+
+    const wsFile = artifacts.methodSignatureFiles.get("list-workspaces.md");
+    expect(wsFile).toContain("# listWorkspaces");
+    expect(wsFile).toContain("workspace_slug: string");
+    expect(wsFile).not.toContain("export ");
   });
 });

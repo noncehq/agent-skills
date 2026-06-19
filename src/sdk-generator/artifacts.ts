@@ -37,6 +37,7 @@ export interface GeneratedTool {
 
 export interface GeneratedArtifacts {
   manifest: Record<string, unknown>;
+  methodSignatureFiles: Map<string, string>;
   referenceMarkdown: string;
   schemas: Record<string, unknown>;
   signatures: string;
@@ -216,6 +217,56 @@ ${tools.map(methodSignature).join("\n")}
 `;
 };
 
+const methodFileName = (methodName: string): string =>
+  `${methodName.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`)}.md`;
+
+const renderMethodSignatureFile = (tool: GeneratedTool): string => {
+  const inputDecl = schemaToTypeScriptDeclaration(`${tool.typeBase}Input`, tool.inputSchema);
+  const outputDecl = schemaToTypeScriptDeclaration(`${tool.typeBase}Output`, tool.outputSchema);
+  const required = requiredProperties(tool.inputSchema);
+
+  const inputType = `${tool.typeBase}Input`;
+  const outputType = `${tool.typeBase}Output`;
+  const input = tool.inputOptional ? `input?: ${inputType}` : `input: ${inputType}`;
+  const options = tool.destructive
+    ? `options: DestructiveCallOptions`
+    : `options?: ReadonlyCallOptions`;
+
+  const markers = [
+    tool.readOnly ? "read-only" : undefined,
+    tool.destructive ? "destructive" : undefined,
+  ].filter(Boolean);
+
+  const lines = [`# ${tool.methodName}`, "", `${tool.name} — ${markers.join(", ")}`, ""];
+
+  if (required.length > 0) {
+    lines.push(`Required: ${required.map((r) => `\`${r}\``).join(", ")}`, "");
+  }
+
+  lines.push(
+    "## Signature",
+    "",
+    "```ts",
+    `${tool.methodName}(${input}, ${options}): Promise<${outputType}>`,
+    "```",
+    "",
+    "## Input",
+    "",
+    "```ts",
+    inputDecl.declaration.replace(/^export /gm, "").trimEnd(),
+    "```",
+    "",
+    "## Output",
+    "",
+    "```ts",
+    outputDecl.declaration.replace(/^export /gm, "").trimEnd(),
+    "```",
+    "",
+  );
+
+  return lines.join("\n");
+};
+
 const renderReferenceMarkdown = (
   tools: GeneratedTool[],
   options: GenerateArtifactsOptions,
@@ -228,7 +279,7 @@ const renderReferenceMarkdown = (
     `- Default endpoint: \`${options.mcpEndpoint}\``,
     `- Method count: ${tools.length}`,
     "",
-    "This file is a compact index. Before writing JavaScript task code, search `assets/tool-signatures.ts` from the installed skill root recorded during path setup for the exact method names and `<MethodType>Input` / `<MethodType>Output` interfaces you call.",
+    "This file is a compact index. Before writing JavaScript task code, read the method's signature file under `references/signatures/` for the full `<MethodType>Input` / `<MethodType>Output` interfaces.",
     "",
     "Do not call schema/reference endpoints for business operations. Runtime calls must go through the local SDK.",
     "",
@@ -248,6 +299,22 @@ const renderReferenceMarkdown = (
     "}",
     "```",
     "",
+    "## Shared Types",
+    "",
+    "```ts",
+    "interface CallOptions {",
+    "  signal?: AbortSignal",
+    "  timeoutMs?: number",
+    "}",
+    "",
+    "type ReadonlyCallOptions = CallOptions",
+    "",
+    "interface DestructiveCallOptions extends CallOptions {",
+    "  confirmDestructive: true",
+    "  confirmation: string",
+    "}",
+    "```",
+    "",
     "## Methods",
     "",
   ];
@@ -264,8 +331,9 @@ const renderReferenceMarkdown = (
       tool.destructive ? "destructive" : undefined,
       requiredInputSummary(tool),
     ].filter(Boolean);
+    const fileName = methodFileName(tool.methodName);
     lines.push(
-      `- \`${tool.methodName}(${input}, ${options}): Promise<${tool.typeBase}Output>\` - ${tool.name} (${markers.join(", ")})`,
+      `- \`${tool.methodName}(${input}, ${options}): Promise<${tool.typeBase}Output>\` — ${tool.name} (${markers.join(", ")}) → [signatures/${fileName}](signatures/${fileName})`,
     );
   }
 
@@ -292,6 +360,11 @@ export const generateArtifacts = (
     typeBase: tool.typeBase,
   }));
 
+  const methodSignatureFiles = new Map<string, string>();
+  for (const tool of tools) {
+    methodSignatureFiles.set(methodFileName(tool.methodName), renderMethodSignatureFile(tool));
+  }
+
   return {
     manifest: {
       mcpEndpoint: options.mcpEndpoint,
@@ -302,6 +375,7 @@ export const generateArtifacts = (
       toolCount: tools.length,
       tools: manifestTools,
     },
+    methodSignatureFiles,
     referenceMarkdown: renderReferenceMarkdown(tools, options),
     schemas: {
       tools: Object.fromEntries(

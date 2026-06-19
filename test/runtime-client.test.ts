@@ -4,7 +4,13 @@ import {
   createNonceClientWithDependencies,
   type NonceClientRuntimeDependencies,
 } from "../src/runtime/nonce-client.js";
-import type { CreateTaskBatchMinerSystemRebootInput } from "../skills/assets/tool-signatures.js";
+
+interface CreateTaskBatchMinerSystemRebootInput {
+  farm_id: string;
+  miner_ids: string[];
+  task_name: string;
+  workspace_id: string;
+}
 
 interface ToolCallRecord {
   options: unknown;

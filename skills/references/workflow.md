@@ -43,7 +43,7 @@ Test-Path .\scripts\skill-runtime.mjs
 ## Task flow
 
 1. Authenticate with `vp node -- scripts/auth.mjs login` before business queries.
-2. Inspect the bundled tool signatures before writing code. Search for the method or interface names you need; regenerating signatures is not an installed-skill runtime step.
+2. Read `references/tool-signatures.md` for the method index, then read the specific method's file under `references/signatures/` for full Input and Output interfaces. Regenerating signatures is not an installed-skill runtime step.
 3. Write a JavaScript module task file under an ignored path inside the installed skill root, such as `.nonce-skill/tasks/query.mjs`.
 4. Import the runtime SDK relative to the task file. From `<installed skill root>/.nonce-skill/tasks/query.mjs`, use `import { createNonceClient } from "../../scripts/skill-runtime.mjs";`.
 5. Run the task through `vp node -- scripts/run-task.mjs ".nonce-skill/tasks/query.mjs"`.
