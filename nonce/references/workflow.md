@@ -7,11 +7,12 @@ Run commands from the skill directory.
 ## Runtime gate
 
 1. Confirm the host is macOS or Windows. Linux is not supported for this skill version.
-2. If `vp` is missing, `vp env doctor` fails, or dependencies are absent, run the platform bootstrap script directly:
+2. If `vp` is missing, the Node runtime is not the skill-pinned LTS version, `vp env doctor` fails, or dependencies are absent, run the platform bootstrap script directly:
    - macOS: `scripts/bootstrap-runtime.sh`
    - Windows PowerShell: `.\scripts\bootstrap-runtime.ps1`
-3. After bootstrap, inspect the runtime with `vp run nonce:bootstrap -- --json`. This command checks the runtime; it does not install missing pieces by itself.
-4. Proceed only when the runtime check reports a supported platform and a healthy Vite+ Node environment.
+3. The bootstrap script installs Vite+ if needed, enables managed Node mode, installs the skill-pinned LTS Node runtime, runs `vp env doctor`, and installs package dependencies.
+4. After bootstrap, inspect the runtime with `vp run nonce:bootstrap -- --json`. This command checks the runtime; it does not install missing pieces by itself.
+5. Proceed only when the runtime check reports a supported platform, a healthy Vite+ environment, and `nodeVersionOk: true`.
 
 ## Task flow
 

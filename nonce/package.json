@@ -19,5 +19,12 @@
     "tsx": "^4.22.4",
     "zod": "^4.4.3"
   },
+  "devEngines": {
+    "runtime": {
+      "name": "node",
+      "version": "24.17.0",
+      "onFail": "download"
+    }
+  },
   "packageManager": "pnpm@10.33.0"
 }
