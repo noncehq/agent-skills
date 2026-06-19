@@ -10,7 +10,7 @@ Run commands with the installed skill root as the working directory. The skill r
 2. Print the resolved value before running any scripts so it is visible in the session.
 3. Keep using the printed value for all later commands and task-code imports.
 
-macOS:
+macOS/Linux:
 
 ```bash
 export NONCE_SKILL_HOME="<installed skill root>"
@@ -32,9 +32,9 @@ Test-Path .\scripts\skill-runtime.mjs
 
 ## Runtime gate
 
-1. Confirm the host is macOS or Windows. Linux is not supported for this skill version.
+1. Confirm the host is macOS, Linux, or Windows.
 2. If `vp` is missing, the Node runtime is not the skill-pinned LTS version, or `vp env doctor` fails, run the platform bootstrap script directly:
-   - macOS: `./scripts/bootstrap-runtime.sh`
+   - macOS/Linux: `./scripts/bootstrap-runtime.sh`
    - Windows PowerShell: `powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap-runtime.ps1`
 3. The bootstrap script installs Vite+ if needed, enables managed Node mode, installs the skill-pinned LTS Node runtime, and runs `vp env doctor`.
 4. After bootstrap, inspect the runtime with `vp node -- scripts/bootstrap-runtime.mjs --json`. This command checks the runtime; it does not install missing pieces by itself.

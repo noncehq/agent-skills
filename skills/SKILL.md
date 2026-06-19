@@ -13,10 +13,10 @@ Use this skill to work with those resources through the local SDK/runner. Determ
 ## Before Use
 
 - Resolve every relative path in this skill from the installed skill root, the directory containing this `SKILL.md`. Do not assume any fixed filesystem path.
-- Before running scripts or writing task code, record the resolved installed skill root in context as `NONCE_SKILL_HOME` on macOS or `$NonceSkillHome` on Windows. Read `references/workflow.md` for the path setup command that prints the value back to the session.
+- Before running scripts or writing task code, record the resolved installed skill root in context as `NONCE_SKILL_HOME` on macOS/Linux or `$NonceSkillHome` on Windows. Read `references/workflow.md` for the path setup command that prints the value back to the session.
 - If the local SDK/runner environment is missing or broken, initialize or repair it before authentication or business queries. Read `references/workflow.md` for the concrete commands.
 - If credentials are missing or expired, complete Nonce authentication before business queries. Read `references/auth.md` for status, login, callback, and logout flows.
-- Support macOS and Windows.
+- Support macOS, Linux, and Windows.
 
 ## Operating Rules
 

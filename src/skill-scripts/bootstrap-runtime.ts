@@ -17,6 +17,9 @@ export const runtimeCheckExitCode = (result: {
   vpEnvCurrentOk: boolean;
 }): 0 | 1 => (result.supported && result.vpEnvCurrentOk && result.nodeVersionOk ? 0 : 1);
 
+export const isSupportedPlatform = (os: NodeJS.Platform): boolean =>
+  os === "darwin" || os === "linux" || os === "win32";
+
 const resolveVpCommand = (): string => {
   const executable = platform() === "win32" ? "vp.cmd" : "vp";
   const home = process.env.VP_HOME ?? join(homedir(), ".vite-plus");
@@ -67,7 +70,7 @@ const main = async (): Promise<void> => {
   program.parse(getCliArgv());
   const options = program.opts<{ json: boolean }>();
   const os = platform();
-  const supported = os === "darwin" || os === "win32";
+  const supported = isSupportedPlatform(os);
   const vpCommand = resolveVpCommand();
   const expectedNodeVersion = EXPECTED_NODE_VERSION;
   const vpVersion = await run(vpCommand, ["--version"]);
@@ -104,7 +107,7 @@ const main = async (): Promise<void> => {
 
   console.log(`Nonce endpoint: ${result.endpoint}`);
   console.log(
-    `Platform: ${result.platform}${result.supported ? "" : " (not supported by this skill MVP)"}`,
+    `Platform: ${result.platform}${result.supported ? "" : " (supported platforms: macOS, Linux, Windows)"}`,
   );
   console.log(`Vite+: ${result.vp || "not found"}`);
   console.log(`Node: ${result.node} (${result.nodePath})`);
