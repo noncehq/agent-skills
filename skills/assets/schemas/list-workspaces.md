@@ -11,7 +11,7 @@ listWorkspaces(input?: ListWorkspacesInput, options?: ReadonlyCallOptions): Prom
 ## Input
 
 ```ts
-type ListWorkspacesInput = Record<string, unknown>;
+type ListWorkspacesInput = Record<string, unknown>
 ```
 
 ## Output
@@ -21,16 +21,16 @@ type ListWorkspacesInput = Record<string, unknown>;
  * Observed output from read-only MCP tool ListWorkspaces.
  */
 interface ListWorkspacesOutput {
-  status: number;
+  status: number
   data: {
-    success: boolean;
+    success: boolean
     data: {
-      workspace_id: string;
-      workspace_name: string;
-      workspace_slug: string;
-      role: string;
-    }[];
-    error: null;
-  };
+      workspace_id: string
+      workspace_name: string
+      workspace_slug: string
+      role: string
+    }[]
+    error: null
+  }
 }
 ```

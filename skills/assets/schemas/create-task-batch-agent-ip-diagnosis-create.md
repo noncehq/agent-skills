@@ -14,12 +14,12 @@ createTaskBatchAgentIpDiagnosisCreate(input: CreateTaskBatchAgentIpDiagnosisCrea
 
 ```ts
 interface CreateTaskBatchAgentIpDiagnosisCreateInput {
-  workspace_id: string;
-  farm_id: string;
+  workspace_id: string
+  farm_id: string
   /**
    * Trigger agent IP diagnosis and upload a CSV report. Uses local diagnostic context first unless refresh is requested.
    */
-  task_name: "agent.ip_diagnosis.create";
+  task_name: "agent.ip_diagnosis.create"
   /**
    * IP diagnosis parameters.
    */
@@ -27,7 +27,7 @@ interface CreateTaskBatchAgentIpDiagnosisCreateInput {
     /**
      * Diagnosis target scope. custom_only uses only custom targets; known_with_custom merges agent known IPs and custom targets; known_only uses only agent known IPs.
      */
-    target_scope?: "custom_only" | "known_with_custom" | "known_only";
+    target_scope?: "custom_only" | "known_with_custom" | "known_only"
     /**
      * Custom diagnosis targets
      */
@@ -35,21 +35,21 @@ interface CreateTaskBatchAgentIpDiagnosisCreateInput {
       /**
        * Optional custom target identifier
        */
-      id?: string;
+      id?: string
       /**
        * Optional custom target label
        */
-      label?: string;
+      label?: string
       /**
        * IPv4 address, CIDR, or hyphen range to diagnose
        */
-      value: string;
-    }[];
+      value: string
+    }[]
     /**
      * Only perform ICMP ping checks when the agent probes targets without local context
      */
-    ping_only?: boolean;
-  };
+    ping_only?: boolean
+  }
 }
 ```
 
@@ -60,66 +60,53 @@ interface CreateTaskBatchAgentIpDiagnosisCreateOutput {
   /**
    * Indicates if the request was successful
    */
-  success: boolean;
+  success: boolean
   /**
    * Array of items
    */
-  data: {
+  data: ({
     /**
      * Miner task batch ID
      */
-    batch_id: string;
+    batch_id: string
     /**
      * Miner task name
      */
-    task_name:
-      | "agent.scan.create"
-      | "agent.ip_diagnosis.create"
-      | "agent.self.update"
-      | "miner.system.reboot"
-      | "miner.log.get"
-      | "miner.light.update"
-      | "miner.power_mode.update"
-      | "miner.pool.update"
-      | "miner.pool.lock"
-      | "miner.firmware.update"
-      | "miner.asset.update"
-      | "miner.asset.delete"
-      | "miner.rack_location.update";
+    task_name: "agent.scan.create" | "agent.ip_diagnosis.create" | "agent.self.update" | "miner.system.reboot" | "miner.log.get" | "miner.light.update" | "miner.power_mode.update" | "miner.pool.update" | "miner.pool.lock" | "miner.firmware.update" | "miner.asset.update" | "miner.asset.delete" | "miner.rack_location.update"
     /**
      * Number of tasks in the batch
      */
-    task_count: number;
+    task_count: number
     /**
      * Task parameters (JSON). Structure varies by task_name.
      */
-    task_params: Record<string, unknown> | null;
+    task_params: Record<string, unknown> | null
     /**
      * Represents an entity that performs actions in the system (user, API key, or system)
      */
-    created_by: Record<string, unknown> | null;
+    created_by: Record<string, unknown> | null
     /**
      * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
      */
-    created_at: string;
-  }[];
+    created_at: string
+  })[]
   /**
    * Error object (null on success)
    */
-  error: null;
+  error: null
   meta: {
     summary: {
-      created_count: number;
-      skipped_count: number;
-    };
-    skipped?: {
+      created_count: number
+      skipped_count: number
+    }
+    skipped?: ({
       /**
        * Reason a miner was skipped during task batch creation. `no_change` = miner is already in the requested state; `unsupported_mode` = miner hardware does not support the requested mode; `miner_not_found` = miner id was not found in the workspace or farm; `unstable_miner` = miner row is flagged unstable and cannot accept actions.
        */
-      reason: "no_change" | "unsupported_mode" | "miner_not_found" | "unstable_miner";
-      message: string;
-      miner_ids: string[];
-    }[];
-  };
+      reason: "no_change" | "unsupported_mode" | "miner_not_found" | "unstable_miner"
+      message: string
+      miner_ids: string[]
+    })[]
+  }
 }
 ```

@@ -14,46 +14,33 @@ getMinerTasks(input: GetMinerTasksInput, options?: ReadonlyCallOptions): Promise
 
 ```ts
 interface GetMinerTasksInput {
-  workspace_id: string;
-  farm_id: string;
-  miner_id: string;
+  workspace_id: string
+  farm_id: string
+  miner_id: string
   /**
    * Page number (default: 1)
    */
-  page?: number;
+  page?: number
   /**
    * Number of items per page (default: 10, max: 10000)
    */
-  pageSize?: number;
+  pageSize?: number
   /**
    * Miner task name
    */
-  task_name?:
-    | "agent.scan.create"
-    | "agent.ip_diagnosis.create"
-    | "agent.self.update"
-    | "miner.system.reboot"
-    | "miner.log.get"
-    | "miner.light.update"
-    | "miner.power_mode.update"
-    | "miner.pool.update"
-    | "miner.pool.lock"
-    | "miner.firmware.update"
-    | "miner.asset.update"
-    | "miner.asset.delete"
-    | "miner.rack_location.update";
+  task_name?: "agent.scan.create" | "agent.ip_diagnosis.create" | "agent.self.update" | "miner.system.reboot" | "miner.log.get" | "miner.light.update" | "miner.power_mode.update" | "miner.pool.update" | "miner.pool.lock" | "miner.firmware.update" | "miner.asset.update" | "miner.asset.delete" | "miner.rack_location.update"
   /**
    * Task execution status. `created` = enqueued but not yet picked up by an agent; `queuing` = accepted by the agent and waiting in its local queue; `pending` = actively executing on the miner; `succeed` = finished successfully; `failed` = finished with an error; `timed_out` = exceeded its execution deadline; `cancelled` = aborted before completion.
    */
-  status?: "created" | "queuing" | "pending" | "succeed" | "failed" | "timed_out" | "cancelled";
+  status?: "created" | "queuing" | "pending" | "succeed" | "failed" | "timed_out" | "cancelled"
   /**
    * Start time for task history in ISO 8601 format with timezone offset. Must be within the last 7 days. Defaults to 7 days ago if not provided
    */
-  from_time?: string;
+  from_time?: string
   /**
    * End time for task history in ISO 8601 format with timezone offset. Must be within the last 7 days. Defaults to now if not provided
    */
-  to_time?: string;
+  to_time?: string
 }
 ```
 
@@ -64,65 +51,52 @@ interface GetMinerTasksOutput {
   /**
    * Indicates if the request was successful
    */
-  success: boolean;
+  success: boolean
   /**
    * Array of items
    */
-  data: {
+  data: ({
     /**
      * Miner task ID
      */
-    task_id: string;
+    task_id: string
     /**
      * Miner task batch ID
      */
-    batch_id: string;
+    batch_id: string
     /**
      * Miner task name
      */
-    task_name:
-      | "agent.scan.create"
-      | "agent.ip_diagnosis.create"
-      | "agent.self.update"
-      | "miner.system.reboot"
-      | "miner.log.get"
-      | "miner.light.update"
-      | "miner.power_mode.update"
-      | "miner.pool.update"
-      | "miner.pool.lock"
-      | "miner.firmware.update"
-      | "miner.asset.update"
-      | "miner.asset.delete"
-      | "miner.rack_location.update";
+    task_name: "agent.scan.create" | "agent.ip_diagnosis.create" | "agent.self.update" | "miner.system.reboot" | "miner.log.get" | "miner.light.update" | "miner.power_mode.update" | "miner.pool.update" | "miner.pool.lock" | "miner.firmware.update" | "miner.asset.update" | "miner.asset.delete" | "miner.rack_location.update"
     /**
      * Task execution status. `created` = enqueued but not yet picked up by an agent; `queuing` = accepted by the agent and waiting in its local queue; `pending` = actively executing on the miner; `succeed` = finished successfully; `failed` = finished with an error; `timed_out` = exceeded its execution deadline; `cancelled` = aborted before completion.
      */
-    status: "created" | "queuing" | "pending" | "succeed" | "failed" | "timed_out" | "cancelled";
+    status: "created" | "queuing" | "pending" | "succeed" | "failed" | "timed_out" | "cancelled"
     /**
      * Task parameters (JSON)
      */
-    params: Record<string, unknown> | null;
+    params: Record<string, unknown> | null
     /**
      * Error details if task failed (JSON)
      */
-    error: Record<string, unknown> | null;
+    error: Record<string, unknown> | null
     /**
      * Task execution result (JSON)
      */
-    result: Record<string, unknown> | null;
+    result: Record<string, unknown> | null
     /**
      * Represents an entity that performs actions in the system (user, API key, or system)
      */
-    created_by: Record<string, unknown> | null;
+    created_by: Record<string, unknown> | null
     /**
      * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
      */
-    created_at: string;
+    created_at: string
     /**
      * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
      */
-    updated_at: string;
-  }[];
+    updated_at: string
+  })[]
   /**
    * Pagination metadata
    */
@@ -130,27 +104,27 @@ interface GetMinerTasksOutput {
     /**
      * Total number of items
      */
-    total: number;
+    total: number
     /**
      * Maximum number of items per page
      */
-    limit: number;
+    limit: number
     /**
      * Number of items to skip
      */
-    offset: number;
+    offset: number
     /**
      * Whether there are more items after this page
      */
-    hasNext: boolean;
+    hasNext: boolean
     /**
      * Whether there are items before this page
      */
-    hasPrevious: boolean;
-  };
+    hasPrevious: boolean
+  }
   /**
    * Error object (null on success)
    */
-  error: null;
+  error: null
 }
 ```
