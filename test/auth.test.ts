@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vite-plus/test";
 
-import { credentialStoreKindForPlatform } from "../nonce/assets/runtime/src/credential-store.js";
+import { createCredentialStore } from "../nonce/assets/runtime/src/credential-store.js";
 import { normalizeProfile } from "../nonce/assets/runtime/src/profile.js";
 import { hasCurrentLoginTokens, parseCallback, shouldOpenBrowser } from "../nonce/scripts/auth.js";
 import { parseTimeoutMs } from "../nonce/scripts/cli-options.js";
@@ -71,20 +71,19 @@ describe("CLI option helpers", () => {
 });
 
 describe("credential store selection", () => {
-  it("uses OS-backed stores by default on supported platforms", () => {
-    expect(credentialStoreKindForPlatform("darwin")).toBe("macos-keychain");
-    expect(credentialStoreKindForPlatform("win32")).toBe("windows-dpapi");
-    expect(credentialStoreKindForPlatform("win32", true)).toBe("local-file");
+  it("always uses local file credential storage", () => {
+    expect(createCredentialStore({ profile: "test" }).kind).toBe("local-file");
   });
 
-  it("does not pass macOS Keychain secrets as security argv", async () => {
+  it("does not include OS credential store integrations", async () => {
     const source = await readFile(
       new URL("../nonce/assets/runtime/src/credential-store.ts", import.meta.url),
       "utf8",
     );
 
-    expect(source).toContain("set secret [read stdin]");
-    expect(source).toContain("spawn security add-generic-password -U -s $service -a $account -w");
-    expect(source).not.toContain('run("security", [\n      "add-generic-password"');
+    expect(source).not.toContain("add-generic-password");
+    expect(source).not.toContain("ProtectedData");
+    expect(source).not.toContain("macos-keychain");
+    expect(source).not.toContain("windows-dpapi");
   });
 });

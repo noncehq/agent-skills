@@ -26,7 +26,6 @@ export const generateSdkCommandName = "nonce generate-sdk";
 
 interface GenerateSdkOptions {
   endpoint?: string;
-  fileCredentials?: boolean;
   openapiUrl?: string;
   outputDir?: string;
   profile?: string;
@@ -114,14 +113,13 @@ const observeOutputSchemas = async (
 
 const inspectMcp = async (
   options: Required<Pick<GenerateSdkOptions, "endpoint" | "profile">> &
-    Pick<GenerateSdkOptions, "fileCredentials" | "skipObservedOutputs"> & {
+    Pick<GenerateSdkOptions, "skipObservedOutputs"> & {
       openApiIndex: OpenApiIndex;
     },
 ): Promise<McpInspection> => {
   const provider = createOAuthProvider({
     endpoint: options.endpoint,
     openBrowser: false,
-    preferFileCredentials: options.fileCredentials,
     profile: normalizeProfile(options.profile),
   });
   const tokens = await provider.tokens();
@@ -171,7 +169,6 @@ const generate = async (options: GenerateSdkOptions): Promise<void> => {
   const openApiIndex = buildOpenApiIndex(openApiDocument);
   const { observedOutputSchemas, server, tools } = await inspectMcp({
     endpoint,
-    fileCredentials: options.fileCredentials,
     openApiIndex,
     profile,
     skipObservedOutputs: options.skipObservedOutputs,
@@ -219,7 +216,6 @@ const main = async (): Promise<void> => {
     .name("nonce generate-sdk")
     .description("Generate TypeScript interfaces and SDK method signatures from Nonce MCP tools")
     .option("--endpoint <url>", "Nonce MCP endpoint", DEFAULT_MCP_ENDPOINT)
-    .option("--file-credentials", "read OAuth credentials from the local file fallback")
     .option("--openapi-url <url>", "OpenAPI supplement URL", DEFAULT_OPENAPI_URL)
     .option(
       "--output-dir <path>",

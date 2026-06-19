@@ -15,7 +15,6 @@ import { normalizeProfile } from "./profile.js";
 export interface CreateNonceClientOptions {
   allowDestructive?: boolean;
   endpoint?: string;
-  fileCredentials?: boolean;
   name?: string;
   openBrowser?: boolean;
   profile?: string;
@@ -151,7 +150,6 @@ export const createNonceClient = async (
   const provider = createOAuthProvider({
     endpoint,
     openBrowser: options.openBrowser ?? false,
-    preferFileCredentials: options.fileCredentials ?? process.env.NONCE_FILE_CREDENTIALS === "1",
     profile: normalizeProfile(options.profile ?? process.env.NONCE_PROFILE ?? DEFAULT_PROFILE),
   });
   const client = new Client({

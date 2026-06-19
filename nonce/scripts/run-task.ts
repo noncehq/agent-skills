@@ -15,7 +15,6 @@ interface RunTaskOptions {
   allowDestructive?: boolean;
   cwd?: string;
   endpoint?: string;
-  fileCredentials?: boolean;
   profile?: string;
   timeoutMs?: string;
 }
@@ -35,7 +34,6 @@ const runTask = async (taskFile: string, options: RunTaskOptions): Promise<void>
     env: {
       ...process.env,
       NONCE_ALLOW_DESTRUCTIVE: options.allowDestructive ? "1" : "0",
-      NONCE_FILE_CREDENTIALS: options.fileCredentials ? "1" : "0",
       NONCE_MCP_ENDPOINT: options.endpoint ?? DEFAULT_MCP_ENDPOINT,
       NONCE_PROFILE: normalizeProfile(options.profile ?? DEFAULT_PROFILE),
       NONCE_RUNNER_MODE: "1",
@@ -67,7 +65,6 @@ const main = async (): Promise<void> => {
     .option("--allow-destructive", "allow destructive CreateTaskBatch_* SDK methods", false)
     .option("--cwd <path>", "task working directory", process.cwd())
     .option("--endpoint <url>", "Nonce MCP endpoint", DEFAULT_MCP_ENDPOINT)
-    .option("--file-credentials", "read OAuth credentials from the local file fallback")
     .option("--profile <name>", "credential profile", DEFAULT_PROFILE)
     .option("--timeout-ms <ms>", "task timeout in milliseconds", "60000")
     .action(runTask);

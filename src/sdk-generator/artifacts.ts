@@ -233,7 +233,7 @@ const renderReferenceMarkdown = (
     "",
     "Do not call the OpenAPI endpoint for business operations. OpenAPI is only used here to supplement missing schema metadata; runtime calls must go through the local SDK.",
     "",
-    "The example below assumes the task file is `.nonce-skill/tasks/query.ts`. Runner task code should receive profile, endpoint, and credential-storage selection from `nonce:run` flags rather than hardcoding them.",
+    "The example below assumes the task file is `.nonce-skill/tasks/query.ts`. Runner task code should receive profile and endpoint selection from `nonce:run` flags rather than hardcoding them.",
     "",
     "```ts",
     'import { createNonceClient } from "../../assets/runtime/src/index.ts"',

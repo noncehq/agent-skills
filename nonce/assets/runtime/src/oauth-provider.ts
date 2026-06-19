@@ -28,7 +28,6 @@ const jsonSet = async <T>(store: CredentialStore, key: string, value: T): Promis
 export interface OAuthProviderOptions {
   endpoint?: string;
   openBrowser?: boolean;
-  preferFileCredentials?: boolean;
   profile?: string;
   redirectUrl?: string;
 }
@@ -61,7 +60,6 @@ export class LocalNonceOAuthProvider implements NonceOAuthProvider {
     this.redirect =
       options.redirectUrl ?? `http://127.0.0.1:${DEFAULT_CALLBACK_PORT}${OAUTH_CALLBACK_PATH}`;
     this.credentials = createCredentialStore({
-      preferFile: options.preferFileCredentials,
       profile: this.profile,
     });
     this.credentialStoreKind = this.credentials.kind;

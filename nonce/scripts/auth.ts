@@ -27,7 +27,6 @@ export const authCommandName = "nonce auth";
 
 interface SharedAuthOptions {
   endpoint?: string;
-  fileCredentials?: boolean;
   profile?: string;
 }
 
@@ -38,7 +37,6 @@ const createProviderFromOptions = (
   return createOAuthProvider({
     endpoint: options.endpoint ?? DEFAULT_MCP_ENDPOINT,
     openBrowser: shouldOpenBrowser(options),
-    preferFileCredentials: options.fileCredentials,
     profile: normalizeProfile(options.profile ?? DEFAULT_PROFILE),
     redirectUrl: `http://127.0.0.1:${port}${OAUTH_CALLBACK_PATH}`,
   });
@@ -346,7 +344,6 @@ const logout = async (options: SharedAuthOptions & { all?: boolean }): Promise<v
 const addSharedOptions = (command: Command): Command =>
   command
     .option("--endpoint <url>", "Nonce MCP endpoint", DEFAULT_MCP_ENDPOINT)
-    .option("--file-credentials", "store secrets in the local file fallback")
     .option("--profile <name>", "credential profile", DEFAULT_PROFILE);
 
 const main = async (): Promise<void> => {
