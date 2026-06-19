@@ -1,5 +1,5 @@
 {
-  "generatedBy": "nonce/scripts/generate-sdk.ts",
+  "generatedBy": "scripts/generate-nonce-sdk.ts",
   "mcpEndpoint": "https://mcp.nonce.app/mcp",
   "openapiOperationCount": 17,
   "openapiUrl": "https://docs.nonce.app/api-reference/openapi.json",

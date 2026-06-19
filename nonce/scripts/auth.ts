@@ -145,6 +145,54 @@ const assertState = async (
   }
 };
 
+const waitForSavedTokens = async (
+  provider: LocalNonceOAuthProvider,
+  timeoutMs: number,
+  signal: AbortSignal,
+): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const startedAt = Date.now();
+    let timer: NodeJS.Timeout | undefined;
+
+    const cleanup = (): void => {
+      if (timer) clearTimeout(timer);
+      signal.removeEventListener("abort", onAbort);
+    };
+
+    const onAbort = (): void => {
+      cleanup();
+      resolve();
+    };
+
+    signal.addEventListener("abort", onAbort, { once: true });
+
+    const poll = async (): Promise<void> => {
+      if (signal.aborted) {
+        cleanup();
+        resolve();
+        return;
+      }
+      try {
+        const tokens = await provider.tokens();
+        if (tokens?.access_token || tokens?.refresh_token) {
+          cleanup();
+          resolve();
+          return;
+        }
+        if (Date.now() - startedAt >= timeoutMs) {
+          cleanup();
+          reject(new Error("Timed out waiting for OAuth callback"));
+          return;
+        }
+        timer = setTimeout(() => void poll(), 1000);
+      } catch (error) {
+        cleanup();
+        reject(error);
+      }
+    };
+    void poll();
+  });
+
 const status = async (options: SharedAuthOptions): Promise<void> => {
   const provider = createProviderFromOptions(options);
   const tokens = await provider.tokens();
@@ -176,7 +224,8 @@ const login = async (
     }
   }
 
-  const listener = await createCallbackListener(provider, Number(options.timeoutMs ?? 180_000));
+  const timeoutMs = Number(options.timeoutMs ?? 180_000);
+  const listener = await createCallbackListener(provider, timeoutMs);
   let first: "AUTHORIZED" | "REDIRECT";
   try {
     first = await auth(provider, { serverUrl: provider.endpoint });
@@ -191,10 +240,21 @@ const login = async (
     return;
   }
 
-  const callback = await listener.wait();
-  await assertState(provider, callback.state);
-  await auth(provider, { authorizationCode: callback.code, serverUrl: provider.endpoint });
-  await status(options);
+  const savedTokenWaiter = new AbortController();
+  try {
+    const callback = await Promise.race([
+      listener.wait(),
+      waitForSavedTokens(provider, timeoutMs, savedTokenWaiter.signal).then(() => undefined),
+    ]);
+    if (callback) {
+      await assertState(provider, callback.state);
+      await auth(provider, { authorizationCode: callback.code, serverUrl: provider.endpoint });
+    }
+    await status(options);
+  } finally {
+    savedTokenWaiter.abort();
+    await listener.close();
+  }
 };
 
 const callback = async (

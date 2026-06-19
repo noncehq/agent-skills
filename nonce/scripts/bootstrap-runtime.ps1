@@ -5,8 +5,10 @@ if (-not (Get-Command vp -ErrorAction SilentlyContinue)) {
   $env:Path = "$env:USERPROFILE\.vite-plus\bin;$env:Path"
 }
 
+$SkillDir = Split-Path -Parent $PSScriptRoot
+Set-Location $SkillDir
+
 vp env setup
 vp env install
 vp env doctor
 vp install
-

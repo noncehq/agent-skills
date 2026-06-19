@@ -1,5 +1,5 @@
 {
-  "generatedBy": "nonce/scripts/generate-sdk.ts",
+  "generatedBy": "scripts/generate-nonce-sdk.ts",
   "tools": {
     "ListFarms": {
       "input": {

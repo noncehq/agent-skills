@@ -1,46 +1,41 @@
 ---
 name: nonce
-description: Use when Codex needs to query or operate Nonce MCP resources such as workspaces, farms, miners, agents, task batches, or miner tasks by preparing a local Node.js runtime, authenticating with Nonce MCP OAuth, and writing TypeScript code against the bundled MCP-only SDK instead of calling MCP tools directly.
+description: Use when a task, agent, or host application needs to query or operate Nonce resources such as workspaces, farms, miners, agents, task batches, or miner tasks through the local TypeScript SDK/runner.
 ---
 
 # Nonce
 
-## Overview
+Nonce manages Bitcoin mining workspaces, farms, miners, agents, task batches, and miner tasks.
 
-Use the bundled local TypeScript runner and SDK to call Nonce MCP. Prepare runtime and authentication first, then generate task-specific TypeScript code that imports the SDK, calls MCP tools through typed methods, and prints compact JSON for the next decision.
+Use this skill to work with those resources through the local typed SDK/runner. Determine the user's intent, write task-specific TypeScript code against the SDK, run it locally, and use compact JSON output for the next decision.
 
-## Workflow
+## Before Use
 
-1. Ensure the local runtime is ready. Use `scripts/bootstrap-runtime.sh` on macOS or `scripts/bootstrap-runtime.ps1` on Windows when Node.js, Vite+, or dependencies are missing.
-2. Ensure OAuth credentials exist. Use `vp run nonce:auth -- status` and `vp run nonce:auth -- login` before making business queries.
-3. Refresh the SDK surface when tools may have changed. Run `vp run nonce:generate-sdk -- --profile <profile>`; it reads MCP `tools/list` first and only uses OpenAPI to fill missing schema metadata.
-4. Inspect the generated SDK surface before writing task code. Read `references/tool-signatures.md` for compact method signatures or import from `assets/runtime/src/generated/tool-signatures.ts`.
-5. Write TypeScript task code that imports `createNonceClient` from the bundled runtime and calls typed SDK methods.
-6. Run the task through `scripts/run-task.ts`; do not call Nonce MCP tools directly from the agent tool interface.
-7. Parse the task stdout as JSON and continue reasoning from that result.
+- If the local SDK/runner environment is missing or broken, initialize or repair it before authentication or business queries. Read `references/workflow.md` for the concrete commands.
+- If credentials are missing or expired, complete Nonce MCP OAuth before business queries. Read `references/auth.md` for status, login, callback, and logout flows.
+- Support macOS and Windows. If the current host is unsupported, report that limitation instead of improvising another runtime path.
 
-## Runtime
+## Operating Rules
 
-Support macOS and Windows. Linux is not required for the first version.
+- Use the local SDK/runner for Nonce MCP operations.
+- Do not call direct REST/OpenAPI endpoints for business operations. OpenAPI metadata is only a schema supplement for generated types.
+- Before writing task code, read `references/tool-signatures.md` for available typed methods and interfaces.
+- Missing IDs: discover them in order with `ListWorkspaces` -> `ListFarms` -> `ListMiners` as needed.
+- Reuse returned `workspace_id`, `farm_id`, `miner_id`, and task IDs. Never invent IDs.
+- Prefer the narrowest method and scope that satisfy the user's request.
+- Most operations need `workspace_id`; farm and miner operations usually also need `farm_id` or `miner_id`.
+- For permission errors, report the role or scope limit. Do not broaden the operation to bypass the limit.
 
-Use Vite+ as the runtime manager. Keep runtime state in the skill cache or runtime folder, not in the user's project unless the user explicitly asks for project integration.
+## Safety
 
-The default MCP endpoint is `https://mcp.nonce.app/mcp`.
-
-## Authentication
-
-Use MCP OAuth through the bundled local provider. Prefer OS credential storage; if unavailable, ask for confirmation before falling back to a local user-only credential file. Never print tokens or refresh tokens.
-
-## Code Rules
-
-- Use MCP-only transport. Do not bypass the MCP server with direct REST calls.
-- Generate TypeScript for data access and filtering instead of chaining MCP tool calls directly.
-- Keep stdout compact and machine-readable, preferably one JSON object.
-- For destructive `CreateTaskBatch_*` methods, explain the target and effect to the user and obtain explicit confirmation before running code. Destructive methods must pass the SDK's destructive confirmation options.
+- `CreateTaskBatch_*` affects physical ASIC devices, even read-like calls.
+- Before any `CreateTaskBatch_*` call, explain the target and expected effect and obtain explicit user confirmation.
+- Treat the local runner as a guardrail for generated task code, not as a sandbox for untrusted code.
+- Read `references/safety.md` before implementing or running task-batch operations.
 
 ## References
 
-- Read `references/workflow.md` for detailed task flow.
-- Read `references/auth.md` before changing OAuth or credential behavior.
-- Read `references/safety.md` before implementing or running task-batch operations.
-- Read `references/tool-signatures.md` before generating code against the SDK.
+- `references/workflow.md`: local task-code workflow, runner usage, host integration, and runtime repair.
+- `references/auth.md`: authentication, profiles, credential storage, and endpoint configuration.
+- `references/tool-signatures.md`: generated TypeScript interfaces and method signatures.
+- `references/safety.md`: destructive-operation guardrails.

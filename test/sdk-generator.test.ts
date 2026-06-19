@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vite-plus/test";
 
-import { generateArtifacts } from "../nonce/scripts/sdk-generator/artifacts.js";
-import { buildOpenApiIndex, type OpenApiDocument } from "../nonce/scripts/sdk-generator/openapi.js";
+import { generateArtifacts } from "../src/sdk-generator/artifacts.js";
+import { buildOpenApiIndex, type OpenApiDocument } from "../src/sdk-generator/openapi.js";
 import {
   inferJsonSchemaFromValue,
   methodNameForTool,
   schemaToType,
-} from "../nonce/scripts/sdk-generator/schema.js";
+} from "../src/sdk-generator/schema.js";
 
 describe("SDK generator helpers", () => {
   it("normalizes MCP tool names into SDK method names", () => {
@@ -113,6 +113,12 @@ describe("SDK generator helpers", () => {
     expect(artifacts.tools[0]?.outputSchemaSource).toBe("openapi");
     expect(artifacts.signatures).toContain("listFarms(input: ListFarmsInput");
     expect(artifacts.signatures).toContain("export interface ListFarmsOutput");
+    expect(artifacts.referenceMarkdown).toContain("compact index");
+    expect(artifacts.referenceMarkdown).toContain(
+      "read the exact `<MethodType>Input` and `<MethodType>Output` interfaces",
+    );
+    expect(artifacts.referenceMarkdown).toContain("required: workspace_id");
+    expect(artifacts.referenceMarkdown).toContain("runtime calls must go through the local SDK");
   });
 
   it("uses observed read-only MCP output when MCP and OpenAPI output schemas are missing", () => {

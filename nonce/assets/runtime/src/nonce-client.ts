@@ -13,6 +13,7 @@ import { createOAuthProvider } from "./oauth-provider.js";
 import { normalizeProfile } from "./profile.js";
 
 export interface CreateNonceClientOptions {
+  allowDestructive?: boolean;
   endpoint?: string;
   fileCredentials?: boolean;
   name?: string;
@@ -27,6 +28,39 @@ interface ToolDefinition {
   name: string;
 }
 
+interface RunnerAuthorizationSnapshot {
+  allowDestructive: boolean;
+  runnerMode: boolean;
+}
+
+const RUNNER_AUTHORIZATION_GLOBAL = "__nonceSkillRunnerAuthorization";
+
+const createRunnerAuthorizationSnapshot = (): RunnerAuthorizationSnapshot =>
+  Object.freeze({
+    allowDestructive: process.env.NONCE_ALLOW_DESTRUCTIVE === "1",
+    runnerMode: process.env.NONCE_RUNNER_MODE === "1",
+  });
+
+const getRunnerAuthorizationSnapshot = (): RunnerAuthorizationSnapshot => {
+  const globalRecord = globalThis as typeof globalThis & {
+    [RUNNER_AUTHORIZATION_GLOBAL]?: RunnerAuthorizationSnapshot;
+  };
+  if (globalRecord[RUNNER_AUTHORIZATION_GLOBAL]) {
+    return globalRecord[RUNNER_AUTHORIZATION_GLOBAL];
+  }
+
+  const snapshot = createRunnerAuthorizationSnapshot();
+  Object.defineProperty(globalThis, RUNNER_AUTHORIZATION_GLOBAL, {
+    configurable: false,
+    enumerable: false,
+    value: snapshot,
+    writable: false,
+  });
+  return snapshot;
+};
+
+export const nonceRunnerAuthorizationSnapshot = getRunnerAuthorizationSnapshot();
+
 const toRequestOptions = (
   options: ReadonlyCallOptions | DestructiveCallOptions | undefined,
 ): RequestOptions | undefined => {
@@ -40,8 +74,16 @@ const toRequestOptions = (
 const assertDestructiveConfirmation = (
   definition: ToolDefinition,
   options: ReadonlyCallOptions | DestructiveCallOptions | undefined,
+  allowDestructive: boolean,
+  runnerMode: boolean,
 ): void => {
   if (!definition.destructive) return;
+  if (!allowDestructive) {
+    const enablement = runnerMode
+      ? "Run nonce:run with --allow-destructive after explicit user confirmation"
+      : "Create the client with allowDestructive: true after explicit user confirmation";
+    throw new Error(`Tool ${definition.name} is destructive. ${enablement}.`);
+  }
   const destructiveOptions = options as DestructiveCallOptions | undefined;
   if (destructiveOptions?.confirmDestructive !== true || !destructiveOptions.confirmation) {
     throw new Error(
@@ -86,15 +128,31 @@ const parseToolResult = (result: Record<string, unknown>): unknown => {
   }
 };
 
+export const resolveDestructiveAllowance = (
+  allowDestructiveOption: boolean | undefined,
+  runnerAuthorization: RunnerAuthorizationSnapshot = nonceRunnerAuthorizationSnapshot,
+): boolean => {
+  if (runnerAuthorization.runnerMode) {
+    if (allowDestructiveOption === true && !runnerAuthorization.allowDestructive) {
+      throw new Error(
+        "Destructive calls through nonce:run require the runner --allow-destructive flag.",
+      );
+    }
+    return runnerAuthorization.allowDestructive;
+  }
+  return allowDestructiveOption ?? process.env.NONCE_ALLOW_DESTRUCTIVE === "1";
+};
+
 export const createNonceClient = async (
   options: CreateNonceClientOptions = {},
 ): Promise<NonceMcpClient> => {
-  const endpoint = options.endpoint ?? DEFAULT_MCP_ENDPOINT;
+  const endpoint = options.endpoint ?? process.env.NONCE_MCP_ENDPOINT ?? DEFAULT_MCP_ENDPOINT;
+  const allowDestructive = resolveDestructiveAllowance(options.allowDestructive);
   const provider = createOAuthProvider({
     endpoint,
     openBrowser: options.openBrowser ?? false,
-    preferFileCredentials: options.fileCredentials,
-    profile: normalizeProfile(options.profile ?? DEFAULT_PROFILE),
+    preferFileCredentials: options.fileCredentials ?? process.env.NONCE_FILE_CREDENTIALS === "1",
+    profile: normalizeProfile(options.profile ?? process.env.NONCE_PROFILE ?? DEFAULT_PROFILE),
   });
   const client = new Client({
     name: options.name ?? "nonce-skill-runtime",
@@ -117,7 +175,12 @@ export const createNonceClient = async (
       input: Record<string, unknown> | undefined,
       callOptions: ReadonlyCallOptions | DestructiveCallOptions | undefined,
     ): Promise<unknown> => {
-      assertDestructiveConfirmation(definition, callOptions);
+      assertDestructiveConfirmation(
+        definition,
+        callOptions,
+        allowDestructive,
+        nonceRunnerAuthorizationSnapshot.runnerMode,
+      );
       const result = await client.callTool(
         {
           arguments: input ?? {},

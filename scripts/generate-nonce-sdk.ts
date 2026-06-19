@@ -6,22 +6,21 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Command } from "commander";
 
-import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE } from "../assets/runtime/src/constants.js";
-import { createOAuthProvider } from "../assets/runtime/src/oauth-provider.js";
-import { normalizeProfile } from "../assets/runtime/src/profile.js";
-import { getCliArgv } from "./argv.js";
-import { generateArtifacts } from "./sdk-generator/artifacts.js";
+import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE } from "../nonce/assets/runtime/src/constants.js";
+import { createOAuthProvider } from "../nonce/assets/runtime/src/oauth-provider.js";
+import { normalizeProfile } from "../nonce/assets/runtime/src/profile.js";
+import { generateArtifacts } from "../src/sdk-generator/artifacts.js";
 import {
   buildOpenApiIndex,
   DEFAULT_OPENAPI_URL,
   type OpenApiIndex,
   fetchOpenApiDocument,
-} from "./sdk-generator/openapi.js";
+} from "../src/sdk-generator/openapi.js";
 import {
   hasUsefulOutputSchema,
   inferJsonSchemaFromValue,
   type JsonSchema,
-} from "./sdk-generator/schema.js";
+} from "../src/sdk-generator/schema.js";
 
 export const generateSdkCommandName = "nonce generate-sdk";
 
@@ -40,6 +39,15 @@ interface McpInspection {
   server: unknown;
   tools: Tool[];
 }
+
+const getCliArgv = (): string[] => {
+  const argv = [...process.argv];
+  const separatorIndex = argv.indexOf("--", 2);
+  if (separatorIndex !== -1) {
+    argv.splice(separatorIndex, 1);
+  }
+  return argv;
+};
 
 const textContent = (content: unknown): string | undefined => {
   if (!Array.isArray(content)) return undefined;
