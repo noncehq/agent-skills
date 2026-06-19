@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { describe, expect, it } from "vite-plus/test";
 
 import { credentialStoreKindForPlatform } from "../nonce/assets/runtime/src/credential-store.js";
@@ -73,5 +75,16 @@ describe("credential store selection", () => {
     expect(credentialStoreKindForPlatform("darwin")).toBe("macos-keychain");
     expect(credentialStoreKindForPlatform("win32")).toBe("windows-dpapi");
     expect(credentialStoreKindForPlatform("win32", true)).toBe("local-file");
+  });
+
+  it("does not pass macOS Keychain secrets as security argv", async () => {
+    const source = await readFile(
+      new URL("../nonce/assets/runtime/src/credential-store.ts", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).toContain("set secret [read stdin]");
+    expect(source).toContain("spawn security add-generic-password -U -s $service -a $account -w");
+    expect(source).not.toContain('run("security", [\n      "add-generic-password"');
   });
 });

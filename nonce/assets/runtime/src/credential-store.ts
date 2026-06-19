@@ -20,9 +20,13 @@ const run = async (
   command: string,
   args: string[],
   input?: string,
+  options: { env?: NodeJS.ProcessEnv } = {},
 ): Promise<{ code: number; stdout: string; stderr: string }> =>
   new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"] });
+    const child = spawn(command, args, {
+      env: options.env === undefined ? undefined : { ...process.env, ...options.env },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
     const stdout: Buffer[] = [];
     const stderr: Buffer[] = [];
     child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
@@ -44,6 +48,49 @@ const run = async (
 
 const namespacedKey = (profile: string, key: string): string =>
   `${normalizeProfile(profile)}:${key}`;
+
+const MACOS_KEYCHAIN_EXPECT = "/usr/bin/expect";
+
+const MACOS_KEYCHAIN_SET_SCRIPT = [
+  "set timeout 30",
+  "log_user 0",
+  "set secret [read stdin]",
+  "set service $env(NONCE_KEYCHAIN_SERVICE)",
+  "set account $env(NONCE_KEYCHAIN_ACCOUNT)",
+  "spawn security add-generic-password -U -s $service -a $account -w",
+  "expect {",
+  "  -re {(?i)password.*:} {",
+  '    send -- "$secret\\r"',
+  "    exp_continue",
+  "  }",
+  "  eof {}",
+  "  timeout { exit 124 }",
+  "}",
+  "set waitResult [wait]",
+  "exit [lindex $waitResult 3]",
+].join("\n");
+
+const saveMacOSKeychainCredential = async (account: string, value: string): Promise<void> => {
+  let result: { code: number; stdout: string; stderr: string };
+  try {
+    result = await run(MACOS_KEYCHAIN_EXPECT, ["-c", MACOS_KEYCHAIN_SET_SCRIPT], value, {
+      env: {
+        NONCE_KEYCHAIN_ACCOUNT: account,
+        NONCE_KEYCHAIN_SERVICE: OAUTH_SERVICE_NAME,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Failed to save credential in macOS Keychain: ${MACOS_KEYCHAIN_EXPECT} is required to avoid exposing secrets in process arguments. ${message}`,
+    );
+  }
+
+  if (result.code !== 0) {
+    const detail = result.stderr.trim() || result.stdout.trim() || `exit code ${result.code}`;
+    throw new Error(`Failed to save credential in macOS Keychain: ${detail}`);
+  }
+};
 
 export class MacOSKeychainCredentialStore implements CredentialStore {
   readonly kind = "macos-keychain";
@@ -74,19 +121,7 @@ export class MacOSKeychainCredentialStore implements CredentialStore {
   }
 
   async set(key: string, value: string): Promise<void> {
-    const result = await run("security", [
-      "add-generic-password",
-      "-U",
-      "-s",
-      OAUTH_SERVICE_NAME,
-      "-a",
-      namespacedKey(this.profile, key),
-      "-w",
-      value,
-    ]);
-    if (result.code !== 0) {
-      throw new Error(`Failed to save credential in macOS Keychain: ${result.stderr.trim()}`);
-    }
+    await saveMacOSKeychainCredential(namespacedKey(this.profile, key), value);
   }
 }
 
