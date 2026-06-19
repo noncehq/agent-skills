@@ -9,7 +9,8 @@ import { fileURLToPath } from "node:url";
 import { Command } from "commander";
 
 import { getCredentialDirectory } from "../runtime/credential-store.js";
-import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE, normalizeProfile } from "../runtime/index.js";
+import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE } from "../runtime/constants.js";
+import { normalizeProfile } from "../runtime/profile.js";
 import { getStateBaseDir, getStateProfileDir } from "../runtime/state-store.js";
 import { getCliArgv } from "./argv.js";
 

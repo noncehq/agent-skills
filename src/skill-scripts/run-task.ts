@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 
 import { Command } from "commander";
 
-import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE, normalizeProfile } from "../runtime/index.js";
+import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE } from "../runtime/constants.js";
+import { normalizeProfile } from "../runtime/profile.js";
 import { getCliArgv } from "./argv.js";
 import { parseTimeoutMs } from "./cli-options.js";
 
