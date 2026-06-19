@@ -38,6 +38,11 @@ export interface NonceOAuthProvider extends OAuthClientProvider {
   readonly endpoint: string;
   clearAll(): Promise<void>;
   clearTokens(): Promise<void>;
+  tokenMetadata(): Promise<TokenMetadata | undefined>;
+}
+
+export interface TokenMetadata {
+  savedAt: string;
 }
 
 export class LocalNonceOAuthProvider implements NonceOAuthProvider {
@@ -98,6 +103,10 @@ export class LocalNonceOAuthProvider implements NonceOAuthProvider {
   async saveTokens(tokens: OAuthTokens): Promise<void> {
     await jsonSet(this.credentials, "tokens", tokens);
     await this.stateStore.setJson("token-metadata", { savedAt: new Date().toISOString() });
+  }
+
+  async tokenMetadata(): Promise<TokenMetadata | undefined> {
+    return this.stateStore.getJson<TokenMetadata>("token-metadata");
   }
 
   async redirectToAuthorization(authorizationUrl: URL): Promise<void> {

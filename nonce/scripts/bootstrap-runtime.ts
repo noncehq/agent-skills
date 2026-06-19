@@ -10,6 +10,11 @@ import { getCliArgv } from "./argv.js";
 
 export const bootstrapCommandName = "nonce bootstrap-runtime";
 
+export const runtimeCheckExitCode = (result: {
+  supported: boolean;
+  vpEnvCurrentOk: boolean;
+}): 0 | 1 => (result.supported && result.vpEnvCurrentOk ? 0 : 1);
+
 const resolveVpCommand = (): string => {
   const executable = platform() === "win32" ? "vp.cmd" : "vp";
   const home = process.env.VP_HOME ?? join(homedir(), ".vite-plus");
@@ -70,9 +75,11 @@ const main = async (): Promise<void> => {
     },
     vpEnvCurrentOk: envCurrent.code === 0,
   };
+  const exitCode = runtimeCheckExitCode(result);
 
   if (options.json) {
     console.log(JSON.stringify(result, null, 2));
+    process.exitCode = exitCode;
     return;
   }
 
@@ -83,6 +90,7 @@ const main = async (): Promise<void> => {
   console.log(`Vite+: ${result.vp || "not found"}`);
   console.log(`Node: ${result.node} (${result.nodePath})`);
   console.log(`vp env current: ${result.vpEnvCurrentOk ? "ok" : "failed"}`);
+  process.exitCode = exitCode;
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {

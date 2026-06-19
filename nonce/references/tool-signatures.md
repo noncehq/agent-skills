@@ -10,14 +10,15 @@ This file is a compact index. Before writing task code, open `assets/runtime/src
 
 Do not call the OpenAPI endpoint for business operations. OpenAPI is only used here to supplement missing schema metadata; runtime calls must go through the local SDK.
 
-Import the SDK from the runtime entrypoint and use the generated interfaces for input and output shapes.
+The example below assumes the task file is `.nonce-skill/tasks/query.ts`. Runner task code should receive profile, endpoint, and credential-storage selection from `nonce:run` flags rather than hardcoding them.
 
 ```ts
 import { createNonceClient } from "../../assets/runtime/src/index.ts";
 
-const client = await createNonceClient({ profile: "default" });
+const client = await createNonceClient();
 try {
   const farms = await client.listFarms({ workspace_id: "..." });
+  console.log(JSON.stringify({ farms }));
 } finally {
   await client.close();
 }

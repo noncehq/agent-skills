@@ -11,7 +11,7 @@ Use MCP OAuth with a local `OAuthClientProvider`.
 - Verify the saved token with `vp run nonce:auth -- verify`; this initializes MCP and lists tools, but does not call any business tool.
 - Clear tokens with `vp run nonce:auth -- logout`; use `--all` to remove client registration and discovery state too.
 - macOS uses Keychain by default unless `--file-credentials` is passed.
-- Windows uses the user-only local file fallback in this version.
+- Windows uses current-user DPAPI credential encryption by default unless `--file-credentials` is passed.
 - Store discovery state and client registration metadata separately from tokens.
 - Never print access tokens, refresh tokens, PKCE verifiers, or authorization codes.
 - Support browser launch and manual callback paste flows.

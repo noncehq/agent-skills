@@ -5,6 +5,7 @@ import type { Socket } from "node:net";
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import type { OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
 import { Command } from "commander";
 
 import {
@@ -15,10 +16,12 @@ import {
 } from "../assets/runtime/src/constants.js";
 import {
   createOAuthProvider,
+  type TokenMetadata,
   type LocalNonceOAuthProvider,
 } from "../assets/runtime/src/oauth-provider.js";
 import { normalizeProfile } from "../assets/runtime/src/profile.js";
 import { getCliArgv } from "./argv.js";
+import { parseTimeoutMs } from "./cli-options.js";
 
 export const authCommandName = "nonce auth";
 
@@ -29,17 +32,19 @@ interface SharedAuthOptions {
 }
 
 const createProviderFromOptions = (
-  options: SharedAuthOptions & { noOpen?: boolean; port?: string },
+  options: SharedAuthOptions & { open?: boolean; port?: string },
 ): LocalNonceOAuthProvider => {
   const port = Number(options.port ?? DEFAULT_CALLBACK_PORT);
   return createOAuthProvider({
     endpoint: options.endpoint ?? DEFAULT_MCP_ENDPOINT,
-    openBrowser: !options.noOpen,
+    openBrowser: shouldOpenBrowser(options),
     preferFileCredentials: options.fileCredentials,
     profile: normalizeProfile(options.profile ?? DEFAULT_PROFILE),
     redirectUrl: `http://127.0.0.1:${port}${OAUTH_CALLBACK_PATH}`,
   });
 };
+
+export const shouldOpenBrowser = (options: { open?: boolean }): boolean => options.open !== false;
 
 export const parseCallback = (value: string): { code: string; state?: string } => {
   if (!value.includes("://")) return { code: value };
@@ -145,13 +150,39 @@ const assertState = async (
   }
 };
 
+interface TokenWaitBaseline {
+  savedAfter: number;
+  tokenFingerprint: string;
+}
+
+const tokenFingerprint = (tokens: OAuthTokens | undefined): string =>
+  tokens
+    ? JSON.stringify({
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+        scope: tokens.scope,
+        token_type: tokens.token_type,
+      })
+    : "";
+
+export const hasCurrentLoginTokens = (
+  tokens: OAuthTokens | undefined,
+  metadata: TokenMetadata | undefined,
+  baseline: TokenWaitBaseline,
+): boolean => {
+  if (!tokens?.access_token && !tokens?.refresh_token) return false;
+  const savedAt = Date.parse(metadata?.savedAt ?? "");
+  if (Number.isFinite(savedAt) && savedAt >= baseline.savedAfter) return true;
+  return tokenFingerprint(tokens) !== baseline.tokenFingerprint;
+};
+
 const waitForSavedTokens = async (
   provider: LocalNonceOAuthProvider,
   timeoutMs: number,
   signal: AbortSignal,
+  baseline: TokenWaitBaseline,
 ): Promise<void> =>
   new Promise((resolve, reject) => {
-    const startedAt = Date.now();
     let timer: NodeJS.Timeout | undefined;
 
     const cleanup = (): void => {
@@ -174,12 +205,13 @@ const waitForSavedTokens = async (
       }
       try {
         const tokens = await provider.tokens();
-        if (tokens?.access_token || tokens?.refresh_token) {
+        const metadata = await provider.tokenMetadata();
+        if (hasCurrentLoginTokens(tokens, metadata, baseline)) {
           cleanup();
           resolve();
           return;
         }
-        if (Date.now() - startedAt >= timeoutMs) {
+        if (Date.now() - baseline.savedAfter >= timeoutMs) {
           cleanup();
           reject(new Error("Timed out waiting for OAuth callback"));
           return;
@@ -212,20 +244,15 @@ const status = async (options: SharedAuthOptions): Promise<void> => {
 };
 
 const login = async (
-  options: SharedAuthOptions & { noOpen?: boolean; port?: string; timeoutMs?: string },
+  options: SharedAuthOptions & { open?: boolean; port?: string; timeoutMs?: string },
 ): Promise<void> => {
   const provider = createProviderFromOptions(options);
-  const existingTokens = await provider.tokens();
-  if (existingTokens?.refresh_token) {
-    const existing = await auth(provider, { serverUrl: provider.endpoint });
-    if (existing === "AUTHORIZED") {
-      await status(options);
-      return;
-    }
-  }
-
-  const timeoutMs = Number(options.timeoutMs ?? 180_000);
+  const timeoutMs = parseTimeoutMs(options.timeoutMs, "--timeout-ms", 180_000);
   const listener = await createCallbackListener(provider, timeoutMs);
+  const baseline: TokenWaitBaseline = {
+    savedAfter: Date.now(),
+    tokenFingerprint: tokenFingerprint(await provider.tokens()),
+  };
   let first: "AUTHORIZED" | "REDIRECT";
   try {
     first = await auth(provider, { serverUrl: provider.endpoint });
@@ -244,7 +271,9 @@ const login = async (
   try {
     const callback = await Promise.race([
       listener.wait(),
-      waitForSavedTokens(provider, timeoutMs, savedTokenWaiter.signal).then(() => undefined),
+      waitForSavedTokens(provider, timeoutMs, savedTokenWaiter.signal, baseline).then(
+        () => undefined,
+      ),
     ]);
     if (callback) {
       await assertState(provider, callback.state);

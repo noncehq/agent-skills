@@ -7,6 +7,7 @@ import { Command } from "commander";
 import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE } from "../assets/runtime/src/constants.js";
 import { normalizeProfile } from "../assets/runtime/src/profile.js";
 import { getCliArgv } from "./argv.js";
+import { parseTimeoutMs } from "./cli-options.js";
 
 export const runTaskCommandName = "nonce run-task";
 
@@ -43,12 +44,10 @@ const runTask = async (taskFile: string, options: RunTaskOptions): Promise<void>
     stdio: "inherit",
   });
 
-  const timeout = Number(options.timeoutMs ?? 60_000);
-  const timer = Number.isFinite(timeout)
-    ? setTimeout(() => {
-        child.kill();
-      }, timeout)
-    : undefined;
+  const timeout = parseTimeoutMs(options.timeoutMs, "--timeout-ms", 60_000);
+  const timer = setTimeout(() => {
+    child.kill();
+  }, timeout);
 
   const code = await new Promise<number>((resolveCode, reject) => {
     child.on("error", reject);

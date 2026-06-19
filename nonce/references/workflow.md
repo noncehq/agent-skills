@@ -25,4 +25,4 @@ Run commands from the skill directory.
 8. Do not mutate `NONCE_*` environment variables or spawn alternate SDK/MCP processes from task code to change runner behavior.
 9. Use compact JSON stdout as the only model-facing data surface.
 
-Host applications should call the local runner or import the local SDK. They should not depend on their own MCP client token cache.
+Host applications should call the local runner or import the local SDK. They should not depend on their own MCP client token cache. Direct SDK integrations may pass profile, endpoint, or credential-storage options to `createNonceClient`; runner task code should receive those values from runner flags.

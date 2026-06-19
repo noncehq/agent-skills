@@ -7,8 +7,10 @@ import { OAUTH_SERVICE_NAME } from "./constants.js";
 import { normalizeProfile } from "./profile.js";
 import { getStateBaseDir } from "./state-store.js";
 
+export type CredentialStoreKind = "local-file" | "macos-keychain" | "windows-dpapi";
+
 export interface CredentialStore {
-  readonly kind: string;
+  readonly kind: CredentialStoreKind;
   delete(key: string): Promise<void>;
   get(key: string): Promise<string | undefined>;
   set(key: string, value: string): Promise<void>;
@@ -88,17 +90,62 @@ export class MacOSKeychainCredentialStore implements CredentialStore {
   }
 }
 
-const credentialPath = (profile: string, key: string): string => {
+const credentialPath = (profile: string, key: string, extension = "secret"): string => {
   const safeProfile = normalizeProfile(profile);
   const safeKey = key.replaceAll(/[^a-zA-Z0-9_.-]/g, "-");
-  return join(getStateBaseDir(), safeProfile, "credentials", `${safeKey}.secret`);
+  return join(getStateBaseDir(), safeProfile, "credentials", `${safeKey}.${extension}`);
 };
 
 const restrictWindowsFileToCurrentUser = async (file: string): Promise<void> => {
   const username = userInfo().username;
   if (!username) return;
-  await run("icacls", [file, "/inheritance:r", "/grant:r", `${username}:F`]);
+  const result = await run("icacls", [file, "/inheritance:r", "/grant:r", `${username}:F`]);
+  if (result.code !== 0) {
+    throw new Error(
+      `Failed to restrict Windows credential file permissions: ${result.stderr.trim()}`,
+    );
+  }
 };
+
+const runWindowsPowerShell = async (script: string, input?: string): Promise<string> => {
+  const result = await run(
+    "powershell.exe",
+    ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", script],
+    input,
+  );
+  if (result.code !== 0) {
+    throw new Error(
+      `Windows DPAPI credential operation failed: ${result.stderr.trim() || result.stdout.trim()}`,
+    );
+  }
+  return result.stdout;
+};
+
+const protectWindowsSecret = async (value: string): Promise<string> =>
+  (
+    await runWindowsPowerShell(
+      [
+        "$ErrorActionPreference = 'Stop'",
+        "$plain = [Console]::In.ReadToEnd()",
+        "$bytes = [System.Text.Encoding]::UTF8.GetBytes($plain)",
+        "$protected = [System.Security.Cryptography.ProtectedData]::Protect($bytes, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)",
+        "[Console]::Out.Write([Convert]::ToBase64String($protected))",
+      ].join("\n"),
+      value,
+    )
+  ).trim();
+
+const unprotectWindowsSecret = async (value: string): Promise<string> =>
+  runWindowsPowerShell(
+    [
+      "$ErrorActionPreference = 'Stop'",
+      "$encoded = [Console]::In.ReadToEnd().Trim()",
+      "$protected = [Convert]::FromBase64String($encoded)",
+      "$bytes = [System.Security.Cryptography.ProtectedData]::Unprotect($protected, $null, [System.Security.Cryptography.DataProtectionScope]::CurrentUser)",
+      "[Console]::Out.Write([System.Text.Encoding]::UTF8.GetString($bytes))",
+    ].join("\n"),
+    value,
+  );
 
 export class FileCredentialStore implements CredentialStore {
   readonly kind = "local-file";
@@ -130,17 +177,61 @@ export class FileCredentialStore implements CredentialStore {
   }
 }
 
+export class WindowsDpapiCredentialStore implements CredentialStore {
+  readonly kind = "windows-dpapi";
+
+  constructor(private readonly profile: string) {}
+
+  async delete(key: string): Promise<void> {
+    await rm(credentialPath(this.profile, key, "dpapi"), { force: true });
+  }
+
+  async get(key: string): Promise<string | undefined> {
+    try {
+      return await unprotectWindowsSecret(
+        await readFile(credentialPath(this.profile, key, "dpapi"), "utf8"),
+      );
+    } catch (error) {
+      if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+        return undefined;
+      }
+      throw error;
+    }
+  }
+
+  async set(key: string, value: string): Promise<void> {
+    const file = credentialPath(this.profile, key, "dpapi");
+    await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+    await writeFile(file, `${await protectWindowsSecret(value)}\n`, { mode: 0o600 });
+    await restrictWindowsFileToCurrentUser(file);
+  }
+}
+
 export interface CreateCredentialStoreOptions {
   profile?: string;
   preferFile?: boolean;
 }
 
+export const credentialStoreKindForPlatform = (
+  os: NodeJS.Platform,
+  preferFile = false,
+): CredentialStoreKind => {
+  if (preferFile) return "local-file";
+  if (os === "darwin") return "macos-keychain";
+  if (os === "win32") return "windows-dpapi";
+  return "local-file";
+};
+
 export const createCredentialStore = (
   options: CreateCredentialStoreOptions = {},
 ): CredentialStore => {
   const profile = normalizeProfile(options.profile);
-  if (!options.preferFile && platform() === "darwin") {
-    return new MacOSKeychainCredentialStore(profile);
+  switch (credentialStoreKindForPlatform(platform(), options.preferFile)) {
+    case "macos-keychain":
+      return new MacOSKeychainCredentialStore(profile);
+    case "windows-dpapi":
+      return new WindowsDpapiCredentialStore(profile);
+    case "local-file":
+      return new FileCredentialStore(profile);
   }
-  return new FileCredentialStore(profile);
 };

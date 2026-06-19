@@ -28,7 +28,7 @@ Use this skill to work with those resources through the local typed SDK/runner. 
 
 ## Safety
 
-- `CreateTaskBatch_*` affects physical ASIC devices, even read-like calls.
+- Treat every `CreateTaskBatch_*` method as destructive because it can affect physical miners or operational/inventory state, even when the action appears read-like.
 - Before any `CreateTaskBatch_*` call, explain the target and expected effect and obtain explicit user confirmation.
 - Treat the local runner as a guardrail for generated task code, not as a sandbox for untrusted code.
 - Read `references/safety.md` before implementing or running task-batch operations.
