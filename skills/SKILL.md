@@ -1,6 +1,7 @@
 ---
 name: nonce
-description: Use this skill when the user needs to query, inspect, or operate Nonce mining resources: workspaces, farms, miners, agents, task batches, miner tasks, metrics, history, or operational actions. Also use it when the user asks for JavaScript automation against Nonce resources. Do not use it for generic Bitcoin mining questions or unrelated Node/API work.
+description: >-
+  Use this skill when the user needs to query, inspect, or operate Nonce mining resources: workspaces, farms, miners, agents, task batches, miner tasks, metrics, history, or operational actions. Also use it when the user asks for JavaScript automation against Nonce resources. Do not use it for generic Bitcoin mining questions or unrelated Node/API work.
 ---
 
 # Nonce

@@ -19,9 +19,19 @@ interface TriggerEvalFixture {
 const readText = (path: string) => readFile(new URL(path, import.meta.url), "utf8");
 
 const extractFrontmatterValue = (markdown: string, key: string): string => {
-  const match = markdown.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
-  if (!match?.[1]) throw new Error(`Missing ${key} in frontmatter`);
-  return match[1].trim();
+  const frontmatter = markdown.match(/^---\n([\s\S]*?)\n---\n/)?.[1];
+  if (!frontmatter) throw new Error("Missing frontmatter");
+
+  const inlineMatch = frontmatter.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
+  if (inlineMatch?.[1] && !inlineMatch[1].startsWith(">-")) return inlineMatch[1].trim();
+
+  const blockMatch = frontmatter.match(new RegExp(`^${key}:\\s*>-\\n((?:  .+\\n?)+)`, "m"));
+  if (!blockMatch?.[1]) throw new Error(`Missing ${key} in frontmatter`);
+  return blockMatch[1]
+    .split("\n")
+    .map((line) => line.replace(/^  /, "").trim())
+    .filter(Boolean)
+    .join(" ");
 };
 
 const countByExpectedTrigger = (queries: TriggerEvalQuery[], shouldTrigger: boolean): number =>
