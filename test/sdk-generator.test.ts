@@ -111,6 +111,9 @@ describe("SDK generator helpers", () => {
 
     expect(artifacts.tools[0]?.inputSchemaSource).toBe("mcp");
     expect(artifacts.tools[0]?.outputSchemaSource).toBe("openapi");
+    expect(artifacts.manifest).not.toHaveProperty("generatedBy");
+    expect(artifacts.schemas).not.toHaveProperty("generatedBy");
+    expect(artifacts.signatures).not.toContain("scripts/generate-nonce-sdk.ts");
     expect(artifacts.signatures).toContain("listFarms(input: ListFarmsInput");
     expect(artifacts.signatures).toContain("export interface ListFarmsOutput");
     expect(artifacts.referenceMarkdown).toContain("compact index");

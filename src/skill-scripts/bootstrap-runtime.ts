@@ -79,18 +79,13 @@ const main = async (): Promise<void> => {
     envCurrent.code === 0
       ? (JSON.parse(envCurrent.stdout) as { node_path?: string; version?: string })
       : {};
-  const currentNodeVersion = process.version.replace(/^v/, "");
 
   const result = {
     command: bootstrapCommandName,
     endpoint: DEFAULT_MCP_ENDPOINT,
     node: process.version,
     nodePath: process.execPath,
-    nodeVersionOk: Boolean(
-      expectedNodeVersion &&
-      currentNodeVersion === expectedNodeVersion &&
-      envInfo.version === expectedNodeVersion,
-    ),
+    nodeVersionOk: Boolean(expectedNodeVersion && envInfo.version === expectedNodeVersion),
     platform: os,
     supported,
     vp: vpVersion.stdout.trim(),

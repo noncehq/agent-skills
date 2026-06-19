@@ -2,7 +2,10 @@
 
 Use this skill as a local-code execution layer for Nonce resources.
 
-Run commands from the skill directory.
+Run commands with the installed skill root as the working directory. The skill root is the directory containing `SKILL.md`; do not assume any fixed filesystem path.
+
+- macOS examples use `$NONCE_SKILL_HOME` for the installed skill root. Run `cd "$NONCE_SKILL_HOME"` first.
+- Windows PowerShell examples use `$NonceSkillHome` for the installed skill root. Run `Set-Location $NonceSkillHome` first.
 
 ## Runtime gate
 
@@ -17,9 +20,9 @@ Run commands from the skill directory.
 ## Task flow
 
 1. Authenticate with `vp node -- scripts/auth.mjs login` before business queries.
-2. Inspect the checked-in generated tool signatures before writing code. Regenerating signatures is a repository maintenance action, not an installed-skill runtime step.
-3. Write a JavaScript module task file under an ignored skill-local path such as `.nonce-skill/tasks/query.mjs`.
-4. Import the runtime SDK from the task file, for example `import { createNonceClient } from "../../scripts/skill-runtime.mjs";` when using `.nonce-skill/tasks/query.mjs`.
+2. Inspect the bundled tool signatures before writing code. Regenerating signatures is not an installed-skill runtime step.
+3. Write a JavaScript module task file under an ignored path inside the installed skill root, such as `.nonce-skill/tasks/query.mjs`.
+4. Import the runtime SDK relative to the task file. From `<installed skill root>/.nonce-skill/tasks/query.mjs`, use `import { createNonceClient } from "../../scripts/skill-runtime.mjs";`.
 5. Run the task through `vp node -- scripts/run-task.mjs ".nonce-skill/tasks/query.mjs"`.
 6. Pass `--profile` and `--endpoint` to the runner instead of hardcoding those values in task code.
 7. For destructive task-batch methods, use `vp node -- scripts/run-task.mjs --allow-destructive "<task-file>"` only after explicit user confirmation, and still pass the SDK destructive confirmation options in code.

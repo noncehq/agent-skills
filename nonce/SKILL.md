@@ -11,6 +11,7 @@ Use this skill to work with those resources through the local SDK/runner. Determ
 
 ## Before Use
 
+- Resolve every relative path in this skill from the installed skill root, the directory containing this `SKILL.md`. Do not assume any fixed filesystem path.
 - If the local SDK/runner environment is missing or broken, initialize or repair it before authentication or business queries. Read `references/workflow.md` for the concrete commands.
 - If credentials are missing or expired, complete Nonce authentication before business queries. Read `references/auth.md` for status, login, callback, and logout flows.
 - Support macOS and Windows.

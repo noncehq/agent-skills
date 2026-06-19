@@ -1,5 +1,4 @@
 {
-  "generatedBy": "scripts/generate-nonce-sdk.ts",
   "mcpEndpoint": "https://mcp.nonce.app/mcp",
   "openapiOperationCount": 17,
   "openapiUrl": "https://docs.nonce.app/api-reference/openapi.json",
@@ -9,7 +8,11 @@
     "version": "0.2.0",
     "description": "MCP server for the Nonce mining management API (API spec v1.0.0)"
   },
-  "sourcePriority": ["mcp-tools-list", "openapi-supplement", "observed-readonly-mcp-output"],
+  "sourcePriority": [
+    "mcp-tools-list",
+    "openapi-supplement",
+    "observed-readonly-mcp-output"
+  ],
   "toolCount": 27,
   "tools": [
     {
