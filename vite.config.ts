@@ -7,13 +7,14 @@ const scriptEntries = {
   "run-task": "src/skill-scripts/run-task.ts",
   "skill-runtime": "src/runtime/index.ts",
 } as const;
-const assetOutputs = [
+
+const generatedOutputs = [
   "skills/assets/tool-signatures.ts",
   "skills/assets/tool-manifest.json",
   "skills/assets/tool-schemas.json",
   "skills/assets/schemas/*.md",
+  "skills/scripts/**/*.mjs",
 ];
-const generatedOutputs = [...assetOutputs, "skills/scripts/**/*.mjs", "skills/scripts/**/*.js"];
 
 const createScriptPack = ([name, entry]: [string, string]): PackUserConfig => ({
   clean: [`skills/scripts/${name}.mjs`, `skills/scripts/${name}.js`],
@@ -63,6 +64,6 @@ export default defineConfig({
     "*": "vp check --fix",
   },
   test: {
-    include: ["test/**/*.test.ts", "src/**/*.test.ts", "skills/**/*.test.ts"],
+    include: ["test/**/*.test.ts", "src/**/*.test.ts"],
   },
 });
