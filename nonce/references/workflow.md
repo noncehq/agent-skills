@@ -10,3 +10,5 @@ Use this skill as a local-code execution layer for Nonce MCP.
 6. Use compact JSON stdout as the only model-facing data surface.
 
 Desktop apps should call the local runner or import the local SDK. They should not depend on their own MCP client token cache.
+
+Use `vp run nonce:bootstrap -- --json` to inspect the current runtime. Use `scripts/bootstrap-runtime.sh` on macOS and `scripts/bootstrap-runtime.ps1` on Windows to install or repair Vite+, Node.js, and dependencies.

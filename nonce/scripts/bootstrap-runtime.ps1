@@ -1,5 +1,12 @@
 $ErrorActionPreference = "Stop"
 
-Write-Output "bootstrap-runtime.ps1 is not implemented yet"
-Write-Output "Planned behavior: install or verify Vite+, Node.js, and runtime dependencies on Windows."
+if (-not (Get-Command vp -ErrorAction SilentlyContinue)) {
+  irm https://vite.plus/ps1 | iex
+  $env:Path = "$env:USERPROFILE\.vite-plus\bin;$env:Path"
+}
+
+vp env setup
+vp env install
+vp env doctor
+vp install
 

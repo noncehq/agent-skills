@@ -12,7 +12,7 @@ Use the bundled local TypeScript runner and SDK to call Nonce MCP. Prepare runti
 ## Workflow
 
 1. Ensure the local runtime is ready. Use `scripts/bootstrap-runtime.sh` on macOS or `scripts/bootstrap-runtime.ps1` on Windows when Node.js, Vite+, or dependencies are missing.
-2. Ensure OAuth credentials exist. Use `scripts/auth.ts` through the repository package script before making business queries.
+2. Ensure OAuth credentials exist. Use `vp run nonce:auth -- status` and `vp run nonce:auth -- login` before making business queries.
 3. Inspect the generated SDK surface before writing task code. Read `references/tool-signatures.md` for compact method signatures or import from `assets/runtime/src/generated/tool-signatures.ts`.
 4. Write TypeScript task code that imports `createNonceClient` from the bundled runtime and calls typed SDK methods.
 5. Run the task through `scripts/run-task.ts`; do not call Nonce MCP tools directly from the agent tool interface.
@@ -23,6 +23,8 @@ Use the bundled local TypeScript runner and SDK to call Nonce MCP. Prepare runti
 Support macOS and Windows. Linux is not required for the first version.
 
 Use Vite+ as the runtime manager. Keep runtime state in the skill cache or runtime folder, not in the user's project unless the user explicitly asks for project integration.
+
+The default MCP endpoint is `https://mcp.nonce.app/mcp`.
 
 ## Authentication
 
