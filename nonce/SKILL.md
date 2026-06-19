@@ -1,6 +1,6 @@
 ---
 name: nonce
-description: Use when a task, agent, or host application needs to query or operate Nonce resources such as workspaces, farms, miners, agents, task batches, or miner tasks through the local JavaScript SDK/runner.
+description: Use this skill when the user needs to query, inspect, or operate Nonce mining resources: workspaces, farms, miners, agents, task batches, miner tasks, metrics, history, or operational actions. Also use it when the user asks for JavaScript automation against Nonce resources. Do not use it for generic Bitcoin mining questions or unrelated Node/API work.
 ---
 
 # Nonce
@@ -25,6 +25,12 @@ Use this skill to work with those resources through the local SDK/runner. Determ
 - Prefer the narrowest method and scope that satisfy the user's request.
 - Most operations need `workspace_id`; farm and miner operations usually also need `farm_id` or `miner_id`.
 - For permission errors, report the role or scope limit. Do not broaden the operation to bypass the limit.
+
+## Gotchas
+
+- Run path setup first. The task-code examples assume commands run from the installed skill root and task files live under `.nonce-skill/tasks/`.
+- Search `assets/tool-signatures.ts` for the specific method or interface names you need instead of loading the whole file into context.
+- Credentials are stored as local profile files.
 
 ## Safety
 

@@ -43,7 +43,7 @@ Test-Path .\scripts\skill-runtime.mjs
 ## Task flow
 
 1. Authenticate with `vp node -- scripts/auth.mjs login` before business queries.
-2. Inspect the bundled tool signatures before writing code. Regenerating signatures is not an installed-skill runtime step.
+2. Inspect the bundled tool signatures before writing code. Search for the method or interface names you need; regenerating signatures is not an installed-skill runtime step.
 3. Write a JavaScript module task file under an ignored path inside the installed skill root, such as `.nonce-skill/tasks/query.mjs`.
 4. Import the runtime SDK relative to the task file. From `<installed skill root>/.nonce-skill/tasks/query.mjs`, use `import { createNonceClient } from "../../scripts/skill-runtime.mjs";`.
 5. Run the task through `vp node -- scripts/run-task.mjs ".nonce-skill/tasks/query.mjs"`.
@@ -52,4 +52,12 @@ Test-Path .\scripts\skill-runtime.mjs
 8. Do not mutate `NONCE_*` environment variables or spawn alternate SDK processes from task code to change runner behavior.
 9. Use compact JSON stdout as the only model-facing data surface.
 
-Host applications should call the local runner or import the local SDK. They should not depend on a separate token cache. Direct SDK integrations may pass profile or endpoint options to `createNonceClient`.
+## Destructive task flow
+
+1. Use read-only discovery calls to resolve the exact `workspace_id`, `farm_id`, `miner_id`, and task target set.
+2. Present a concise plan with workspace, farm, miner count or IDs, task type, parameters, and expected effect.
+3. Ask for explicit confirmation before writing or running the destructive task file.
+4. Execute with both runner approval (`--allow-destructive`) and SDK approval (`confirmDestructive: true` plus a non-empty `confirmation` string).
+5. Return compact JSON with the created task batch or failure details.
+
+External integrations should call the local runner or import the local SDK. They should not depend on a separate token cache. Direct SDK integrations may pass profile or endpoint options to `createNonceClient`.

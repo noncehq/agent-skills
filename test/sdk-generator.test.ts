@@ -118,7 +118,7 @@ describe("SDK generator helpers", () => {
     expect(artifacts.signatures).toContain("export interface ListFarmsOutput");
     expect(artifacts.referenceMarkdown).toContain("compact index");
     expect(artifacts.referenceMarkdown).toContain(
-      "read the exact `<MethodType>Input` and `<MethodType>Output` interfaces",
+      "search `assets/tool-signatures.ts` from the installed skill root",
     );
     expect(artifacts.referenceMarkdown).toContain("required: workspace_id");
     expect(artifacts.referenceMarkdown).toContain("Runtime calls must go through the local SDK");

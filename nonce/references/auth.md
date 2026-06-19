@@ -5,7 +5,7 @@ Use the local auth runner for Nonce authentication.
 - Default endpoint: `https://mcp.nonce.app/mcp`.
 - Run commands with the installed skill root as the working directory. The skill root is the directory containing `SKILL.md`; do not assume any fixed filesystem path.
 - Complete the path setup in `references/workflow.md` first, and keep the printed `NONCE_SKILL_HOME` or `$NonceSkillHome` value visible for later commands.
-- Credentials are saved in the local profile.
+- Credentials are saved as local profile files.
 - Check status with `vp node -- scripts/auth.mjs status`.
 - Start browser login with `vp node -- scripts/auth.mjs login`; it exits after the local callback completes.
 - For manual browser launch, run `vp node -- scripts/auth.mjs login --no-open`, open the printed authorization URL, and let the redirect reach the local callback server.

@@ -228,7 +228,7 @@ const renderReferenceMarkdown = (
     `- Default endpoint: \`${options.mcpEndpoint}\``,
     `- Method count: ${tools.length}`,
     "",
-    "This file is a compact index. Before writing JavaScript task code, open `assets/tool-signatures.ts` from the installed skill root recorded during path setup and read the exact `<MethodType>Input` and `<MethodType>Output` interfaces for every method you call.",
+    "This file is a compact index. Before writing JavaScript task code, search `assets/tool-signatures.ts` from the installed skill root recorded during path setup for the exact method names and `<MethodType>Input` / `<MethodType>Output` interfaces you call.",
     "",
     "Do not call schema/reference endpoints for business operations. Runtime calls must go through the local SDK.",
     "",
