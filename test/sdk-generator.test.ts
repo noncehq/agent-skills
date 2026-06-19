@@ -154,8 +154,9 @@ describe("SDK generator helpers", () => {
     );
     expect(artifacts.referenceMarkdown).toContain("required: workspace_id");
     expect(artifacts.referenceMarkdown).toContain("Runtime calls must go through the local SDK");
+    expect(artifacts.referenceMarkdown).toContain("taskDirWritable: true");
     expect(artifacts.referenceMarkdown).toContain(
-      'import { createNonceClient } from "../../scripts/skill-runtime.mjs"',
+      "await import(process.env.NONCE_SKILL_RUNTIME_URL)",
     );
     expect(artifacts.referenceMarkdown).toContain("const client = await createNonceClient()");
     expect(artifacts.referenceMarkdown).toContain("console.log(JSON.stringify({ farms }))");

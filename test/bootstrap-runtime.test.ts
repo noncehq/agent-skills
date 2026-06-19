@@ -5,6 +5,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   EXPECTED_NODE_VERSION,
   MINIMUM_NODE_MAJOR_VERSION,
+  buildSandboxWriteDiagnostics,
   isNodeVersionSupported,
   isSupportedPlatform,
   runtimeCheckExitCode,
@@ -32,6 +33,44 @@ describe("bootstrap runtime helpers", () => {
     expect(runtimeCheckExitCode({ nodeVersionOk: false, supported: true })).toBe(1);
   });
 
+  it("recommends an external task directory when the installed skill root is not writable", () => {
+    const diagnostics = buildSandboxWriteDiagnostics({
+      fallbackTaskDir: { path: "/tmp/nonce-skill-tasks", writable: true },
+      skillRoot: "/readonly/nonce",
+      skillRootProbe: {
+        error: "EACCES",
+        path: "/readonly/nonce/.nonce-skill/diagnostics",
+        writable: false,
+      },
+      stateDirProbe: { path: "/state/nonce-skill", writable: true },
+      taskDirProbe: {
+        error: "EROFS",
+        path: "/readonly/nonce/.nonce-skill/tasks",
+        writable: false,
+      },
+    });
+
+    expect(diagnostics).toMatchObject({
+      recommendedTaskDir: "/tmp/nonce-skill-tasks",
+      skillRootWritable: false,
+      stateDirWritable: true,
+      taskDirWritable: false,
+    });
+    expect(diagnostics.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "/readonly/nonce/.nonce-skill/diagnostics",
+          severity: "warning",
+        }),
+        expect.objectContaining({
+          path: "/readonly/nonce/.nonce-skill/tasks",
+          remediation: expect.stringContaining("/tmp/nonce-skill-tasks"),
+          severity: "warning",
+        }),
+      ]),
+    );
+  });
+
   it("pins and installs the Vite+ managed Node LTS runtime", async () => {
     const posixScript = await readFile("skills/scripts/bootstrap-runtime.sh", "utf8");
     const windowsScript = await readFile("skills/scripts/bootstrap-runtime.ps1", "utf8");
@@ -55,7 +94,7 @@ describe("bootstrap runtime helpers", () => {
 
     expect(authReference).toContain("node scripts/auth.mjs login");
     expect(workflowReference).toContain("node scripts/bootstrap-runtime.mjs --json");
-    expect(workflowReference).toContain('node scripts/run-task.mjs ".nonce-skill/tasks/query.mjs"');
+    expect(workflowReference).toContain("NONCE_SKILL_RUNTIME_URL");
     expect(`${authReference}\n${workflowReference}`).not.toContain("vp node --");
   });
 });

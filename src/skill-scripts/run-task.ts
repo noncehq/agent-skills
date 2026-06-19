@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { access } from "node:fs/promises";
-import { isAbsolute, resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { Command } from "commander";
 
@@ -22,6 +23,7 @@ const resolveTaskPath = (taskFile: string, cwd: string): string =>
   isAbsolute(taskFile) ? taskFile : resolve(cwd, taskFile);
 
 const runnerPreloadUrl = new URL("./skill-runtime.mjs", import.meta.url).href;
+const skillRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 const runTask = async (taskFile: string, options: RunTaskOptions): Promise<void> => {
   const cwd = resolve(options.cwd ?? process.cwd());
@@ -36,6 +38,8 @@ const runTask = async (taskFile: string, options: RunTaskOptions): Promise<void>
       NONCE_MCP_ENDPOINT: options.endpoint ?? DEFAULT_MCP_ENDPOINT,
       NONCE_PROFILE: normalizeProfile(options.profile ?? DEFAULT_PROFILE),
       NONCE_RUNNER_MODE: "1",
+      NONCE_SKILL_HOME: skillRoot,
+      NONCE_SKILL_RUNTIME_URL: runnerPreloadUrl,
     },
     stdio: "inherit",
   });

@@ -122,8 +122,11 @@ describe("nonce client destructive allowance", () => {
         "console.log(JSON.stringify({",
         "  allowDestructive: process.env.NONCE_ALLOW_DESTRUCTIVE,",
         "  endpoint: process.env.NONCE_MCP_ENDPOINT,",
+        "  hasRuntimeImport: typeof (await import(process.env.NONCE_SKILL_RUNTIME_URL)).createNonceClient === 'function',",
         "  profile: process.env.NONCE_PROFILE,",
         "  runnerMode: process.env.NONCE_RUNNER_MODE,",
+        "  skillHome: process.env.NONCE_SKILL_HOME,",
+        "  runtimeUrl: process.env.NONCE_SKILL_RUNTIME_URL,",
         "}));",
       ].join("\n"),
     );
@@ -157,8 +160,11 @@ describe("nonce client destructive allowance", () => {
       expect(JSON.parse(jsonLine ?? "{}")).toEqual({
         allowDestructive: "0",
         endpoint: "https://example.test/mcp",
+        hasRuntimeImport: true,
         profile: "test-local",
+        runtimeUrl: pathToFileURL(resolve("skills/scripts/skill-runtime.mjs")).toString(),
         runnerMode: "1",
+        skillHome: resolve("skills"),
       });
     } finally {
       await rm(tempDir, { force: true, recursive: true });

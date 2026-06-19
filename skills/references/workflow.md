@@ -39,14 +39,22 @@ Test-Path .\scripts\skill-runtime.mjs
 3. The bootstrap script installs Vite+ if needed, enables managed Node mode, installs the skill-pinned LTS Node runtime, and runs `vp env doctor`.
 4. After bootstrap, inspect the runtime with `node scripts/bootstrap-runtime.mjs --json`. This command checks the runtime; it does not install missing pieces by itself.
 5. Proceed only when the runtime check reports a supported platform and `nodeVersionOk: true`. Treat a failed `vpEnvDoctorOk` or `vpManagedNodeVersionOk` as a repair recommendation, not a hard block when direct `node` is already version 22 or newer.
+6. Inspect write diagnostics before writing task files or authenticating:
+   - `stateDirWritable: false` means auth state or credential writes will fail. Set `XDG_STATE_HOME` to a writable directory on macOS/Linux, or `APPDATA` on Windows, then rerun the runtime check.
+   - `taskDirWritable: false` means the default installed-skill task directory is not writable. Write task files under `recommendedTaskDir` or another writable directory.
 
 ## Task flow
 
 1. Authenticate with `node scripts/auth.mjs login` before business queries.
 2. Read `references/tool-signatures.md` for the method index, then read the specific method's schema file under `assets/schemas/` for full Input and Output interfaces. Regenerating schemas is not an installed-skill runtime step.
-3. Write a JavaScript module task file under an ignored path inside the installed skill root, such as `.nonce-skill/tasks/query.mjs`.
-4. Import the runtime SDK relative to the task file. From `<installed skill root>/.nonce-skill/tasks/query.mjs`, use `import { createNonceClient } from "../../scripts/skill-runtime.mjs";`.
-5. Run the task through `node scripts/run-task.mjs ".nonce-skill/tasks/query.mjs"`.
+3. Write a JavaScript module task file under `.nonce-skill/tasks/` when `taskDirWritable` is true. If it is false, write the task under `recommendedTaskDir` or another writable directory.
+4. Import the runtime SDK from the runner-provided URL so task files can live outside the installed skill root:
+
+```js
+const { createNonceClient } = await import(process.env.NONCE_SKILL_RUNTIME_URL);
+```
+
+5. Run the task through `node scripts/run-task.mjs "<task-file>"`. Use an absolute task path, or pass `--cwd "<writable-task-dir>"` when the task path is relative to an external writable directory.
 6. Pass `--profile` and `--endpoint` to the runner instead of hardcoding those values in task code.
 7. For destructive task-batch methods, use `node scripts/run-task.mjs --allow-destructive "<task-file>"` only after explicit user confirmation, and still pass the SDK destructive confirmation options in code.
 8. Do not mutate `NONCE_*` environment variables or spawn alternate SDK processes from task code to change runner behavior.

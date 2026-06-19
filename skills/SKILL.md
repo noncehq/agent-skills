@@ -29,7 +29,8 @@ Use this skill to work with those resources through the local SDK/runner. Determ
 
 ## Gotchas
 
-- Run path setup first. The task-code examples assume commands run from the installed skill root and task files live under `.nonce-skill/tasks/`.
+- Run path setup and runtime check first. If the installed skill root is not writable, write task files under the runtime check's `recommendedTaskDir` or another writable directory.
+- Task files should import the SDK from the runner-provided `NONCE_SKILL_RUNTIME_URL`, not from a hardcoded relative path.
 - Credentials are stored as local profile files.
 
 ## Safety
