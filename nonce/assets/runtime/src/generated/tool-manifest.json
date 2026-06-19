@@ -1,4 +1,565 @@
 {
-  "generated": false,
-  "tools": []
+  "generatedBy": "nonce/scripts/generate-sdk.ts",
+  "mcpEndpoint": "https://mcp.nonce.app/mcp",
+  "openapiOperationCount": 17,
+  "openapiUrl": "https://docs.nonce.app/api-reference/openapi.json",
+  "server": {
+    "name": "nonce-mcp",
+    "title": "Nonce MCP",
+    "version": "0.2.0",
+    "description": "MCP server for the Nonce mining management API (API spec v1.0.0)"
+  },
+  "sourcePriority": ["mcp-tools-list", "openapi-supplement"],
+  "toolCount": 27,
+  "tools": [
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Farms",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "listFarms",
+      "name": "ListFarms",
+      "openapi": {
+        "match": "exact",
+        "method": "GET",
+        "operationId": "ListFarms",
+        "path": "/private-api/v1/{workspace_id}/farms"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": true,
+      "typeBase": "ListFarms"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Miners",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "listMiners",
+      "name": "ListMiners",
+      "openapi": {
+        "match": "exact",
+        "method": "GET",
+        "operationId": "ListMiners",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/miner/latest"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": true,
+      "typeBase": "ListMiners"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Search Miners",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "searchMiners",
+      "name": "SearchMiners",
+      "openapi": {
+        "match": "exact",
+        "method": "POST",
+        "operationId": "SearchMiners",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/miner/search"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": true,
+      "typeBase": "SearchMiners"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Metrics History",
+      "destructive": false,
+      "inputSchemaSource": "mcp+openapi",
+      "methodName": "listFarmMetricsHistory",
+      "name": "ListFarmMetricsHistory",
+      "openapi": {
+        "match": "exact",
+        "method": "GET",
+        "operationId": "ListFarmMetricsHistory",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/metrics/history"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": true,
+      "typeBase": "ListFarmMetricsHistory"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Miner History",
+      "destructive": false,
+      "inputSchemaSource": "mcp+openapi",
+      "methodName": "listMinerHistory",
+      "name": "ListMinerHistory",
+      "openapi": {
+        "match": "exact",
+        "method": "GET",
+        "operationId": "ListMinerHistory",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/miners/{miner_id}/history"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": true,
+      "typeBase": "ListMinerHistory"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Miner Tasks",
+      "destructive": false,
+      "inputSchemaSource": "mcp+openapi",
+      "methodName": "getMinerTasks",
+      "name": "GetMinerTasks",
+      "openapi": {
+        "match": "exact",
+        "method": "GET",
+        "operationId": "GetMinerTasks",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/miners/{miner_id}/tasks"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": true,
+      "typeBase": "GetMinerTasks"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Miner Reboot Events",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "listMinerRebootEvents",
+      "name": "ListMinerRebootEvents",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "ListMinerRebootEvents"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Pool Diffs",
+      "destructive": false,
+      "inputSchemaSource": "mcp+openapi",
+      "methodName": "listMinerPoolDiffs",
+      "name": "ListMinerPoolDiffs",
+      "openapi": {
+        "match": "exact",
+        "method": "GET",
+        "operationId": "ListMinerPoolDiffs",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/miner-pool-diff"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": true,
+      "typeBase": "ListMinerPoolDiffs"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Agents",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "listAgents",
+      "name": "ListAgents",
+      "openapi": {
+        "match": "exact",
+        "method": "GET",
+        "operationId": "ListAgents",
+        "path": "/private-api/v1/{workspace_id}/agents"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": true,
+      "typeBase": "ListAgents"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Search Agents",
+      "destructive": false,
+      "inputSchemaSource": "mcp+openapi",
+      "methodName": "searchAgents",
+      "name": "SearchAgents",
+      "openapi": {
+        "match": "exact",
+        "method": "POST",
+        "operationId": "SearchAgents",
+        "path": "/private-api/v1/{workspace_id}/agents/search"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": true,
+      "typeBase": "SearchAgents"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Task Batches",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "listTaskBatches",
+      "name": "ListTaskBatches",
+      "openapi": {
+        "match": "exact",
+        "method": "GET",
+        "operationId": "ListTaskBatches",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": true,
+      "typeBase": "ListTaskBatches"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Reboot miner ASIC. Brief downtime. Use after firmware update or when miner is unresponsive.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchMinerSystemReboot",
+      "name": "CreateTaskBatch_MinerSystemReboot",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchMinerSystemReboot"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Collect diagnostic logs from miner ASIC. Dispatches a command to the device; a signed download URL is returned on task success.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchMinerLogGet",
+      "name": "CreateTaskBatch_MinerLogGet",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchMinerLogGet"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Toggle miner LED indicator. Use for physical identification on the rack.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchMinerLightUpdate",
+      "name": "CreateTaskBatch_MinerLightUpdate",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchMinerLightUpdate"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Switch miner mining power mode. Affects hashrate and power consumption.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchMinerPowerModeUpdate",
+      "name": "CreateTaskBatch_MinerPower_modeUpdate",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchMinerPowerModeUpdate"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Flash firmware to miner. Extended downtime; miner reboots after install.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchMinerFirmwareUpdate",
+      "name": "CreateTaskBatch_MinerFirmwareUpdate",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchMinerFirmwareUpdate"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Lock or unlock miner pool configuration via auth package. Prevents unauthorized pool changes while locked.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchMinerPoolLock",
+      "name": "CreateTaskBatch_MinerPoolLock",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchMinerPoolLock"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Trigger agent network scan to discover miners. Long-running; populates miner inventory on completion.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchAgentScanCreate",
+      "name": "CreateTaskBatch_AgentScanCreate",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchAgentScanCreate"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Trigger agent IP diagnosis and upload a CSV report. Uses local diagnostic context first unless refresh is requested.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchAgentIpDiagnosisCreate",
+      "name": "CreateTaskBatch_AgentIp_diagnosisCreate",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchAgentIpDiagnosisCreate"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Trigger agent to self-upgrade to a newer binary. Agent restarts after install; brief control-plane downtime, no miner impact.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchAgentSelfUpdate",
+      "name": "CreateTaskBatch_AgentSelfUpdate",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchAgentSelfUpdate"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Update miner lifecycle status in inventory. Metadata-only; does not affect mining operation.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchMinerAssetUpdate",
+      "name": "CreateTaskBatch_MinerAssetUpdate",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchMinerAssetUpdate"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Mark miner as deleted in inventory. Reversible only via database operation. Use after physical decommission.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchMinerAssetDelete",
+      "name": "CreateTaskBatch_MinerAssetDelete",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchMinerAssetDelete"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Update miner rack / position metadata in inventory. Metadata-only; does not affect mining operation.",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTaskBatchMinerRackLocationUpdate",
+      "name": "CreateTaskBatch_MinerRack_locationUpdate",
+      "openapi": {
+        "match": "create-task-batch-family",
+        "method": "POST",
+        "operationId": "CreateTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": false,
+      "typeBase": "CreateTaskBatchMinerRackLocationUpdate"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Search Task Batches",
+      "destructive": false,
+      "inputSchemaSource": "mcp+openapi",
+      "methodName": "searchTaskBatches",
+      "name": "SearchTaskBatches",
+      "openapi": {
+        "match": "exact",
+        "method": "POST",
+        "operationId": "SearchTaskBatches",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/search"
+      },
+      "outputSchemaSource": "mcp+openapi",
+      "readOnly": true,
+      "typeBase": "SearchTaskBatches"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Get Task Batch",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "getTaskBatch",
+      "name": "GetTaskBatch",
+      "openapi": {
+        "match": "exact",
+        "method": "GET",
+        "operationId": "GetTaskBatch",
+        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches/{batch_id}"
+      },
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "GetTaskBatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Task Batch Tasks",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "getTaskBatchTasks",
+      "name": "GetTaskBatchTasks",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "GetTaskBatchTasks"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Workspaces",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "listWorkspaces",
+      "name": "ListWorkspaces",
+      "outputSchemaSource": "unknown",
+      "readOnly": true,
+      "typeBase": "ListWorkspaces"
+    }
+  ]
 }

@@ -13,10 +13,11 @@ Use the bundled local TypeScript runner and SDK to call Nonce MCP. Prepare runti
 
 1. Ensure the local runtime is ready. Use `scripts/bootstrap-runtime.sh` on macOS or `scripts/bootstrap-runtime.ps1` on Windows when Node.js, Vite+, or dependencies are missing.
 2. Ensure OAuth credentials exist. Use `vp run nonce:auth -- status` and `vp run nonce:auth -- login` before making business queries.
-3. Inspect the generated SDK surface before writing task code. Read `references/tool-signatures.md` for compact method signatures or import from `assets/runtime/src/generated/tool-signatures.ts`.
-4. Write TypeScript task code that imports `createNonceClient` from the bundled runtime and calls typed SDK methods.
-5. Run the task through `scripts/run-task.ts`; do not call Nonce MCP tools directly from the agent tool interface.
-6. Parse the task stdout as JSON and continue reasoning from that result.
+3. Refresh the SDK surface when tools may have changed. Run `vp run nonce:generate-sdk -- --profile <profile>`; it reads MCP `tools/list` first and only uses OpenAPI to fill missing schema metadata.
+4. Inspect the generated SDK surface before writing task code. Read `references/tool-signatures.md` for compact method signatures or import from `assets/runtime/src/generated/tool-signatures.ts`.
+5. Write TypeScript task code that imports `createNonceClient` from the bundled runtime and calls typed SDK methods.
+6. Run the task through `scripts/run-task.ts`; do not call Nonce MCP tools directly from the agent tool interface.
+7. Parse the task stdout as JSON and continue reasoning from that result.
 
 ## Runtime
 
