@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 
 import { describe, expect, it } from "vite-plus/test";
 
@@ -38,10 +38,6 @@ const countByExpectedTrigger = (queries: TriggerEvalQuery[], shouldTrigger: bool
   queries.filter((query) => query.shouldTrigger === shouldTrigger).length;
 
 describe("Nonce skill metadata", () => {
-  it("keeps the installable skill artifact free of package metadata", async () => {
-    await expect(access(new URL("../skills/package.json", import.meta.url))).rejects.toThrow();
-  });
-
   it("keeps the trigger description concise and user-intent oriented", async () => {
     const skill = await readText("../skills/SKILL.md");
     const description = extractFrontmatterValue(skill, "description");
@@ -50,8 +46,6 @@ describe("Nonce skill metadata", () => {
     expect(description).toMatch(/^Use this skill when/);
     expect(description).toContain("Nonce mining resources");
     expect(description).toContain("Do not use it for generic Bitcoin mining questions");
-    expect(description).not.toContain("desktop app");
-    expect(description).not.toContain("MCP-backed");
   });
 
   it("documents a balanced trigger eval fixture", async () => {

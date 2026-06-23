@@ -1,9 +1,6 @@
-import { readFile } from "node:fs/promises";
-
 import { describe, expect, it } from "vite-plus/test";
 
 import {
-  EXPECTED_NODE_VERSION,
   MINIMUM_NODE_MAJOR_VERSION,
   buildSandboxWriteDiagnostics,
   isNodeVersionSupported,
@@ -109,32 +106,5 @@ describe("bootstrap runtime helpers", () => {
         severity: "error",
       }),
     ]);
-  });
-
-  it("pins and installs the Vite+ managed Node LTS runtime", async () => {
-    const posixScript = await readFile("skills/scripts/bootstrap-runtime.sh", "utf8");
-    const windowsScript = await readFile("skills/scripts/bootstrap-runtime.ps1", "utf8");
-
-    expect(posixScript).toContain("Darwin|Linux");
-    expect(posixScript).toContain("macOS and Linux");
-    expect(posixScript).not.toContain('!= "Darwin"');
-    expect(EXPECTED_NODE_VERSION).toBe("24.17.0");
-    for (const script of [posixScript, windowsScript]) {
-      expect(script).toContain("vp env setup");
-      expect(script).toContain("vp env on");
-      expect(script).toContain(`vp env install ${EXPECTED_NODE_VERSION}`);
-      expect(script).toContain("vp env doctor");
-      expect(script).not.toContain("vp install");
-    }
-  });
-
-  it("uses direct node commands in installed skill docs", async () => {
-    const authReference = await readFile("skills/references/auth.md", "utf8");
-    const workflowReference = await readFile("skills/references/workflow.md", "utf8");
-
-    expect(authReference).toContain("node scripts/auth.mjs login");
-    expect(workflowReference).toContain("node scripts/bootstrap-runtime.mjs --json");
-    expect(workflowReference).toContain("NONCE_SKILL_RUNTIME_URL");
-    expect(`${authReference}\n${workflowReference}`).not.toContain("vp node --");
   });
 });

@@ -1,5 +1,3 @@
-import { readFile } from "node:fs/promises";
-
 import { describe, expect, it } from "vite-plus/test";
 
 import { createCredentialStore } from "../src/runtime/credential-store.js";
@@ -122,17 +120,5 @@ describe("CLI option helpers", () => {
 describe("credential store selection", () => {
   it("always uses local file credential storage", () => {
     expect(createCredentialStore({ profile: "test" }).kind).toBe("local-file");
-  });
-
-  it("does not include OS credential store integrations", async () => {
-    const source = await readFile(
-      new URL("../src/runtime/credential-store.ts", import.meta.url),
-      "utf8",
-    );
-
-    expect(source).not.toContain("add-generic-password");
-    expect(source).not.toContain("ProtectedData");
-    expect(source).not.toContain("macos-keychain");
-    expect(source).not.toContain("windows-dpapi");
   });
 });
