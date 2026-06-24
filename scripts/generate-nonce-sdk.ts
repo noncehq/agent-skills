@@ -1,13 +1,19 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
+import {
+  discoverOAuthServerInfo,
+  refreshAuthorization,
+  registerClient,
+  selectResourceURL,
+} from "@modelcontextprotocol/sdk/client/auth.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { Tool } from "@modelcontextprotocol/sdk/types.js";
 import { Command } from "commander";
 
 import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE } from "../src/runtime/constants.js";
-import { createOAuthProvider } from "../src/runtime/oauth-provider.js";
+import { createOAuthProvider, type NonceOAuthProvider } from "../src/runtime/oauth-provider.js";
 import { normalizeProfile } from "../src/runtime/profile.js";
 import { generateArtifacts } from "../src/sdk-generator/artifacts.js";
 import {
@@ -92,6 +98,78 @@ const shouldObserveOutputSchema = (tool: Tool, openApiIndex: OpenApiIndex): bool
   return !openApiIndex.operations.has(tool.name);
 };
 
+interface AuthorizationRefreshDependencies {
+  discoverOAuthServerInfo: typeof discoverOAuthServerInfo;
+  refreshAuthorization: typeof refreshAuthorization;
+  registerClient: typeof registerClient;
+  selectResourceURL: typeof selectResourceURL;
+}
+
+const authorizationRefreshDependencies: AuthorizationRefreshDependencies = {
+  discoverOAuthServerInfo,
+  refreshAuthorization,
+  registerClient,
+  selectResourceURL,
+};
+
+const authLoginHint =
+  "Run `vp node -- skills/scripts/auth.mjs login` from the repository root first.";
+
+export const refreshNonceAccessToken = async (
+  provider: NonceOAuthProvider,
+  dependencies: AuthorizationRefreshDependencies = authorizationRefreshDependencies,
+): Promise<void> => {
+  const tokens = await provider.tokens();
+  if (!tokens?.refresh_token) {
+    throw new Error(`Not authenticated with a refresh token. ${authLoginHint}`);
+  }
+
+  const serverInfo = await dependencies.discoverOAuthServerInfo(provider.endpoint);
+  await provider.saveDiscoveryState?.({
+    authorizationServerMetadata: serverInfo.authorizationServerMetadata,
+    authorizationServerUrl: serverInfo.authorizationServerUrl,
+    resourceMetadata: serverInfo.resourceMetadata,
+  });
+
+  const resource = await dependencies.selectResourceURL(
+    provider.endpoint,
+    provider,
+    serverInfo.resourceMetadata,
+  );
+  const scope =
+    serverInfo.resourceMetadata?.scopes_supported?.join(" ") || provider.clientMetadata.scope;
+  let clientInformation = await provider.clientInformation();
+  if (!clientInformation) {
+    if (!provider.saveClientInformation) {
+      throw new Error("OAuth client information is missing and cannot be saved.");
+    }
+    clientInformation = await dependencies.registerClient(serverInfo.authorizationServerUrl, {
+      clientMetadata: provider.clientMetadata,
+      metadata: serverInfo.authorizationServerMetadata,
+      scope,
+    });
+    await provider.saveClientInformation(clientInformation);
+  }
+
+  try {
+    const refreshedTokens = await dependencies.refreshAuthorization(
+      serverInfo.authorizationServerUrl,
+      {
+        addClientAuthentication: provider.addClientAuthentication,
+        clientInformation,
+        metadata: serverInfo.authorizationServerMetadata,
+        refreshToken: tokens.refresh_token,
+        resource,
+      },
+    );
+    await provider.saveTokens(refreshedTokens);
+  } catch (error) {
+    throw new Error(`Saved Nonce OAuth refresh token is invalid or expired. ${authLoginHint}`, {
+      cause: error,
+    });
+  }
+};
+
 const observeOutputSchemas = async (
   client: Client,
   tools: Tool[],
@@ -123,12 +201,7 @@ const inspectMcp = async (
     openBrowser: false,
     profile: normalizeProfile(options.profile),
   });
-  const tokens = await provider.tokens();
-  if (!tokens?.access_token && !tokens?.refresh_token) {
-    throw new Error(
-      "Not authenticated. Run `vp node -- skills/scripts/auth.mjs login` from the repository root first.",
-    );
-  }
+  await refreshNonceAccessToken(provider);
 
   const client = new Client({ name: "nonce-sdk-generator", version: "0.0.0" });
   const transport = new StreamableHTTPClientTransport(new URL(provider.endpoint), {

@@ -1,5 +1,11 @@
+import type {
+  OAuthClientInformationMixed,
+  OAuthTokens,
+} from "@modelcontextprotocol/sdk/shared/auth.js";
 import { describe, expect, it } from "vite-plus/test";
 
+import { refreshNonceAccessToken } from "../scripts/generate-nonce-sdk.js";
+import type { NonceOAuthProvider } from "../src/runtime/oauth-provider.js";
 import { generateArtifacts } from "../src/sdk-generator/artifacts.js";
 import { buildOpenApiIndex, type OpenApiDocument } from "../src/sdk-generator/openapi.js";
 import {
@@ -34,7 +40,104 @@ const semicolonLines = (source: string): string[] =>
 
 const occurrences = (source: string, needle: string): number => source.split(needle).length - 1;
 
+const createRefreshProvider = (
+  initialTokens: OAuthTokens | undefined,
+  initialClientInformation: OAuthClientInformationMixed | undefined = { client_id: "client-id" },
+): { provider: NonceOAuthProvider; savedTokens: () => OAuthTokens | undefined } => {
+  let clientInformation: OAuthClientInformationMixed | undefined = initialClientInformation;
+  let tokens = initialTokens;
+
+  const provider: NonceOAuthProvider = {
+    clientMetadata: {
+      client_name: "Nonce Skill Test",
+      grant_types: ["authorization_code", "refresh_token"],
+      redirect_uris: ["http://127.0.0.1:33418/callback"],
+      response_types: ["code"],
+      token_endpoint_auth_method: "none",
+    },
+    credentialStoreKind: "memory",
+    endpoint: "https://mcp.nonce.app/mcp",
+    redirectUrl: "http://127.0.0.1:33418/callback",
+    clearAll: async () => {
+      tokens = undefined;
+      clientInformation = undefined;
+    },
+    clearTokens: async () => {
+      tokens = undefined;
+    },
+    clientInformation: async () => clientInformation,
+    codeVerifier: async () => "verifier",
+    redirectToAuthorization: async () => {
+      throw new Error("unexpected authorization redirect");
+    },
+    saveClientInformation: async (value) => {
+      clientInformation = value;
+    },
+    saveCodeVerifier: async () => {},
+    saveTokens: async (value) => {
+      tokens = value;
+    },
+    tokenMetadata: async () => undefined,
+    tokens: async () => tokens,
+  };
+
+  return {
+    provider,
+    savedTokens: () => tokens,
+  };
+};
+
 describe("SDK generator helpers", () => {
+  it("refreshes saved OAuth tokens before live SDK inspection", async () => {
+    const { provider, savedTokens } = createRefreshProvider({
+      access_token: "old-access-token",
+      refresh_token: "saved-refresh-token",
+      token_type: "Bearer",
+    });
+
+    await refreshNonceAccessToken(provider, {
+      discoverOAuthServerInfo: async () => ({
+        authorizationServerUrl: "https://auth.nonce.test",
+      }),
+      refreshAuthorization: async (_authorizationServerUrl, options) => {
+        expect(options.refreshToken).toBe("saved-refresh-token");
+        return {
+          access_token: "fresh-access-token",
+          refresh_token: options.refreshToken,
+          token_type: "Bearer",
+        };
+      },
+      registerClient: async () => {
+        throw new Error("client registration should not run when client information is cached");
+      },
+      selectResourceURL: async () => new URL("https://mcp.nonce.app/mcp"),
+    });
+
+    expect(savedTokens()?.access_token).toBe("fresh-access-token");
+  });
+
+  it("requires a refresh token before live SDK inspection", async () => {
+    const { provider } = createRefreshProvider({
+      access_token: "old-access-token",
+      token_type: "Bearer",
+    });
+
+    await expect(
+      refreshNonceAccessToken(provider, {
+        discoverOAuthServerInfo: async () => {
+          throw new Error("discovery should not run without a refresh token");
+        },
+        refreshAuthorization: async () => {
+          throw new Error("refresh should not run without a refresh token");
+        },
+        registerClient: async () => {
+          throw new Error("registration should not run without a refresh token");
+        },
+        selectResourceURL: async () => undefined,
+      }),
+    ).rejects.toThrow("refresh token");
+  });
+
   it("normalizes MCP tool names into SDK method names", () => {
     expect(methodNameForTool("CreateTaskBatch_MinerPower_modeUpdate")).toBe(
       "createTaskBatchMinerPowerModeUpdate",
