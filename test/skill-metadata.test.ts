@@ -1,4 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vite-plus/test";
 
@@ -17,6 +19,7 @@ interface TriggerEvalFixture {
 }
 
 const readText = (path: string) => readFile(new URL(path, import.meta.url), "utf8");
+const repoRoot = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
 
 const extractFrontmatterValue = (markdown: string, key: string): string => {
   const frontmatter = markdown.match(/^---\n([\s\S]*?)\n---\n/)?.[1];
@@ -68,5 +71,16 @@ describe("Nonce skill metadata", () => {
         expect(query.reason.length).toBeGreaterThan(0);
       }
     }
+  });
+
+  it("points OpenAI skill icons at bundled assets", async () => {
+    const metadata = await readText("../skills/agents/openai.yaml");
+    const iconPaths = [...metadata.matchAll(/^\s+icon_(?:small|large):\s+"(.+)"$/gm)]
+      .map((match) => match[1])
+      .filter((path): path is string => path !== undefined);
+
+    expect(iconPaths).toEqual(["./assets/nonce-logo.svg", "./assets/nonce-logo.svg"]);
+
+    await Promise.all(iconPaths.map((iconPath) => access(join(repoRoot, "skills", iconPath))));
   });
 });
