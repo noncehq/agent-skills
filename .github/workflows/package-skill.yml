@@ -1,0 +1,35 @@
+name: Package Skill
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.3
+
+      - name: Package current skill directory
+        run: |
+          set -euo pipefail
+
+          test -f skills/SKILL.md
+          mkdir -p dist
+
+          zip -r dist/nonce-skills.zip skills \
+            -x '*/.DS_Store' \
+            -x '*/__MACOSX/*'
+
+          unzip -t dist/nonce-skills.zip
+
+      - name: Upload packaged skill
+        uses: actions/upload-artifact@v4
+        with:
+          name: nonce-skills
+          path: dist/nonce-skills.zip
+          if-no-files-found: error
