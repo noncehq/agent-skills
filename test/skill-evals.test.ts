@@ -4,12 +4,13 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 
 import {
-  detectOrganicTrigger,
+  detectOrganicTrigger as detectClaudeOrganicTrigger,
   passesClaudeEvalThresholds,
   summarizeClaudeEvalCases,
   type ClaudeEvalResult,
 } from "../scripts/run-claude-evals.js";
 import {
+  detectOrganicTrigger as detectCodexOrganicTrigger,
   passesCodexEvalThresholds,
   summarizeCodexEvalCases,
   type CodexEvalResult,
@@ -98,7 +99,7 @@ describe("Nonce skill eval flow", () => {
     ) as {
       caseSetPath: string;
       outputSchemaPath: string;
-      runner: { runsPerCase: number; type: string };
+      runner: { mode: string; runsPerCase: number; type: string };
       targetProvisioning: { mode: string };
       thresholds: { minimumMeanMethodPrecision: number };
     };
@@ -110,11 +111,38 @@ describe("Nonce skill eval flow", () => {
     };
 
     expect(config.runner.type).toBe("codex-cli");
+    expect(config.runner.mode).toBe("organic");
     expect(config.runner.runsPerCase).toBeGreaterThanOrEqual(3);
     expect(config.targetProvisioning.mode).toBe("isolated-skill-home");
     expect(config.thresholds.minimumMeanMethodPrecision).toBeGreaterThan(0.5);
     expect(caseSet.cases).toHaveLength(20);
     expect(outputSchema.required).toContain("should_use_nonce_skill");
+  });
+
+  it("detects organic skill triggering from Codex command events", () => {
+    const triggeredStream = [
+      JSON.stringify({
+        item: {
+          command: "sed -n '1,120p' /tmp/home/.codex/skills/nonce/SKILL.md",
+          type: "command_execution",
+        },
+        type: "item.completed",
+      }),
+      JSON.stringify({ type: "turn.completed" }),
+    ].join("\n");
+    const untriggeredStream = [
+      JSON.stringify({
+        item: {
+          command: "sed -n '1,120p' /tmp/workspace/README.md",
+          type: "command_execution",
+        },
+        type: "item.completed",
+      }),
+      JSON.stringify({ type: "turn.completed" }),
+    ].join("\n");
+
+    expect(detectCodexOrganicTrigger(triggeredStream)).toHaveLength(1);
+    expect(detectCodexOrganicTrigger(untriggeredStream)).toHaveLength(0);
   });
 
   it("scores the Claude Code eval summary with per-class thresholds", () => {
@@ -217,8 +245,8 @@ describe("Nonce skill eval flow", () => {
       JSON.stringify({ result: "done", subtype: "success", type: "result" }),
     ].join("\n");
 
-    expect(detectOrganicTrigger(triggeredStream)).toHaveLength(2);
-    expect(detectOrganicTrigger(untriggeredStream)).toHaveLength(0);
+    expect(detectClaudeOrganicTrigger(triggeredStream)).toHaveLength(2);
+    expect(detectClaudeOrganicTrigger(untriggeredStream)).toHaveLength(0);
   });
 
   it("keeps the local Claude Code eval config wired to the full case set", async () => {
@@ -239,7 +267,7 @@ describe("Nonce skill eval flow", () => {
     };
 
     expect(config.runner.type).toBe("claude-cli");
-    expect(config.runner.mode).toBe("instructed");
+    expect(config.runner.mode).toBe("organic");
     expect(config.runner.runsPerCase).toBeGreaterThanOrEqual(3);
     expect(config.runner.tools).toContain("Read");
     expect(config.targetProvisioning.mode).toBe("isolated-project-skill");

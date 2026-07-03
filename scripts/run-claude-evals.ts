@@ -462,7 +462,7 @@ const extractEvalOutput = (stdoutText: string): { actual?: ClaudeEvalOutput; err
 
 const buildPrompt = (
   evalCase: EvalCase,
-): string => `You are running a local routing eval for the installed Claude Code skill named "nonce".
+): string => `Decide whether the installed Claude Code skill named "nonce" should handle the user's request.
 
 Do not complete the user's operational request. Decide what a normal Claude Code run should do.
 Use the nonce skill's own instructions and deferred references as the source of truth.
@@ -1134,7 +1134,7 @@ const parseArgs = (argv: string[]): CliOptions => {
         [
           "Usage: vp run evals:claude -- [--json] [--mode instructed|organic] [--case <id>] [--limit <n>] [--runs <n>]",
           "",
-          "Runs the full local Claude Code routing eval suite for the installed nonce skill.",
+          "Runs the full local Claude Code eval suite for the installed nonce skill.",
           "In organic mode the raw user query is sent unmodified and triggering is detected",
           "from tool events instead of asking the model to classify the request.",
         ].join("\n"),

@@ -6,7 +6,7 @@
   "runner": {
     "type": "claude-cli",
     "model": "claude-sonnet-4-6",
-    "mode": "instructed",
+    "mode": "organic",
     "permissionMode": "default",
     "tools": ["Read", "Glob", "Grep", "Skill"],
     "timeoutMs": 240000,

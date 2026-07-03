@@ -6,6 +6,7 @@
   "runner": {
     "type": "codex-cli",
     "model": "gpt-5.4-mini",
+    "mode": "organic",
     "sandbox": "read-only",
     "approvalPolicy": "never",
     "timeoutMs": 240000,

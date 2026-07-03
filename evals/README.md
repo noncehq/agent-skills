@@ -7,12 +7,13 @@ The loop follows the OpenAI skill-eval pattern:
 1. Define a small prompt set with clear success criteria.
 2. Run deterministic checks first.
 3. Run all prompt cases through a local, isolated agent harness (`codex exec` or
-   `claude -p`) for real skill-routing behavior.
+   `claude -p`) using the raw user query as the prompt.
 4. Feed the observed usage log back into plugin-eval when token calibration is useful.
 
-Both harnesses share the same case set (`nonce-skill.cases.json`), output contract
-(`nonce-skill-eval.output.schema.json`), scoring checks, and thresholds, so their
-reports are directly comparable.
+Both harnesses share the same case set (`nonce-skill.cases.json`), scoring
+checks, and thresholds, so their trigger reports are directly comparable. The
+structured output contract (`nonce-skill-eval.output.schema.json`) is used only
+by the explicit instructed planning mode.
 
 Shared scoring conventions:
 
@@ -54,7 +55,9 @@ vp run evals -- --json --output evals/artifacts/last-run.json
 ## Full local Codex run
 
 Run every case through Codex with the current skill installed into a temporary
-`CODEX_HOME`:
+`CODEX_HOME`. The default mode sends the raw `query` from each case without eval
+framing and detects triggering from Codex command events that read the installed
+`nonce` skill:
 
 ```bash
 vp run evals:codex
@@ -63,7 +66,7 @@ vp run evals:codex
 The runner follows the same local-first shape as `plugin-eval benchmark`:
 
 - install the local skill into an isolated `CODEX_HOME`
-- run `codex exec --json --output-schema` once for each case
+- run `codex exec --json` once for each case
 - keep raw Codex JSONL, stderr, final JSON, and a normalized report under
   `evals/artifacts/codex-runs/<timestamp>/`
 - write `observed-usage.jsonl` in the plugin-eval observed-usage shape
@@ -74,16 +77,19 @@ Useful debugging flags:
 vp run evals:codex -- --case trigger.zh.workspace.list
 vp run evals:codex -- --limit 3 --model gpt-5.4-mini
 vp run evals:codex -- --json --output evals/artifacts/codex-runs/latest.json
+vp run evals:codex:instructed
 ```
 
-The local Codex run scores routing, method planning, reference planning, schema
-planning, and destructive confirmation. It does not execute the user's business
-request; live Nonce access remains a separate smoke test.
+Organic Codex mode scores activation only. The optional instructed mode is a
+planning harness: it uses structured output to score method planning, reference
+planning, schema planning, and destructive confirmation after activation has
+already been evaluated with raw prompts.
 
 ## Full local Claude Code run
 
 Run every case through Claude Code with the current skill installed as a
-project-level skill inside a temporary workspace:
+project-level skill inside a temporary workspace. The default mode also sends
+the raw `query` from each case without additional instructions:
 
 ```bash
 vp run evals:claude
@@ -92,7 +98,7 @@ vp run evals:claude
 The runner mirrors the Codex harness with Claude Code equivalents:
 
 - copy the local skill into `<temp-workspace>/.claude/skills/nonce`
-- run `claude -p --output-format stream-json --json-schema` once for each case,
+- run `claude -p --output-format stream-json` once for each case,
   with `--setting-sources project` and `--strict-mcp-config` so user-level
   skills, plugins, CLAUDE.md, and MCP servers stay out of the eval environment
 - restrict the built-in toolset to `Read,Glob,Grep,Skill` (the read-only analog
@@ -111,32 +117,31 @@ Useful debugging flags:
 vp run evals:claude -- --case trigger.zh.workspace.list
 vp run evals:claude -- --limit 3 --model claude-haiku-4-5 --runs 1
 vp run evals:claude -- --json --output evals/artifacts/claude-runs/latest.json
+vp run evals:claude:instructed
 ```
 
-### Organic trigger mode
+### Trigger And Planning Modes
 
-The default (`instructed`) mode asks the model to classify each request, which
-measures routing and planning but not whether the skill would activate on its own
-in a real session. Organic mode closes that gap, following the same approach as
-the official skill-creator trigger eval: the raw user query is sent unmodified,
-and triggering is detected from tool events (a `Skill` invocation of `nonce` or
-any read of `.claude/skills/nonce/...`). The run is stopped as soon as triggering
-is detected, so positive cases stay cheap.
+Organic mode follows the same approach as the official skill-creator trigger
+eval: the raw user query is sent unmodified, and triggering is detected from
+tool or command events. The run is stopped as soon as triggering is detected, so
+positive cases stay cheap.
 
 ```bash
 vp run evals:claude:organic
+vp run evals:codex:organic -- --case trigger.zh.workspace.list
 vp run evals:claude -- --mode organic --case trigger.zh.workspace.list
 ```
 
 Organic mode scores routing only (trigger vs no-trigger per case); planning and
 safety metrics are not measured because the model is not asked to produce them.
-Run both modes to cover both questions: does the skill activate when it should
-(organic), and does it plan the right workflow once active (instructed)?
+Run instructed mode only when you want a planning score after organic activation
+has already been validated:
 
-The Codex harness currently has no organic mode — Codex reads skill files through
-shell commands, which gives a much weaker trigger signal than Claude's typed tool
-events. Treat the Claude organic numbers as the activation signal for the shared
-skill description.
+```bash
+vp run evals:codex:instructed
+vp run evals:claude:instructed
+```
 
 ## Plugin Eval
 

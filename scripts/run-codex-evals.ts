@@ -1,11 +1,12 @@
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readdir, readFile, realpath, rm, writeFile } from "node:fs/promises";
 import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 type ApprovalPolicy = "never" | "on-request" | "on-failure" | "untrusted";
+type EvalMode = "instructed" | "organic";
 type PreserveMode = "always" | "never" | "on-failure";
 type SandboxMode = "danger-full-access" | "read-only" | "workspace-write";
 
@@ -51,6 +52,7 @@ interface CodexEvalConfig {
   runner: {
     approvalPolicy: ApprovalPolicy;
     extraArgs?: string[];
+    mode?: EvalMode;
     model: string;
     retryAttempts?: number;
     runsPerCase: number;
@@ -112,6 +114,7 @@ interface CliOptions {
   configPath?: string;
   format: "json" | "text";
   limit?: number;
+  mode?: EvalMode;
   model?: string;
   outputPath?: string;
   repoRoot?: string;
@@ -124,6 +127,7 @@ interface ProcessOutcome {
   durationMs: number;
   signal: NodeJS.Signals | null;
   stderrText: string;
+  stoppedEarly: boolean;
   stdoutText: string;
   timedOut: boolean;
 }
@@ -192,6 +196,10 @@ interface ScoredCaseRun {
     references: string[];
     schemas: string[];
   };
+  organic?: {
+    evidence: string[];
+    triggered: boolean;
+  };
   run: number;
   status: "completed" | "failed";
   telemetry: TelemetrySummary;
@@ -208,6 +216,7 @@ export interface CodexEvalResult {
   codexVersion: string;
   config: {
     approvalPolicy: ApprovalPolicy;
+    mode: EvalMode;
     model: string;
     runsPerCase: number;
     sandbox: SandboxMode;
@@ -243,6 +252,7 @@ interface RunOptions {
   codexExecutable?: string;
   configPath?: string;
   limit?: number;
+  mode?: EvalMode;
   model?: string;
   outputPath?: string;
   repoRoot?: string;
@@ -277,6 +287,35 @@ const pathExists = async (path: string): Promise<boolean> => {
 
 const resolveFromRepo = (repoRoot: string, relativeOrAbsolutePath: string): string =>
   resolve(repoRoot, relativeOrAbsolutePath);
+
+const resolveCodexExecutable = async (requested: string): Promise<string> => {
+  if (requested !== "codex") return requested;
+
+  for (const entry of (process.env.PATH ?? "").split(":").filter(Boolean)) {
+    const candidate = join(entry, "codex");
+    try {
+      const resolved = await realpath(candidate);
+      if (resolved.includes("/@openai/codex/")) return candidate;
+    } catch {
+      // Continue to the explicit runtime fallback below.
+    }
+  }
+
+  const runtimeRoot = join(homedir(), ".vite-plus/js_runtime/node");
+  try {
+    const versions = (await readdir(runtimeRoot)).sort((left, right) =>
+      right.localeCompare(left, undefined, { numeric: true }),
+    );
+    for (const version of versions) {
+      const candidate = join(runtimeRoot, version, "lib/node_modules/@openai/codex/bin/codex.js");
+      if (await pathExists(candidate)) return candidate;
+    }
+  } catch {
+    // Fall through to PATH resolution.
+  }
+
+  return requested;
+};
 
 const round = (value: number): number => Number(value.toFixed(4));
 
@@ -380,6 +419,29 @@ const parseCodexEvents = (text: string): { events: CodexEvent[]; ignoredLineCoun
   return { events, ignoredLineCount };
 };
 
+const extractCodexCommand = (event: CodexEvent): string | undefined => {
+  if (event.item?.type !== "command_execution" || typeof event.item.command !== "string") {
+    return undefined;
+  }
+  return event.item.command;
+};
+
+export const detectOrganicTrigger = (stdoutText: string): string[] => {
+  const { events } = parseCodexEvents(stdoutText);
+  const evidence = new Set<string>();
+
+  for (const event of events) {
+    const command = extractCodexCommand(event);
+    if (!command) continue;
+    const normalized = command.replace(/\\/g, "/");
+    if (normalized.includes("/.codex/skills/nonce/")) {
+      evidence.add(command);
+    }
+  }
+
+  return [...evidence];
+};
+
 const summarizeTelemetry = (stdoutText: string): TelemetrySummary => {
   const { events, ignoredLineCount } = parseCodexEvents(stdoutText);
   const usageMatches: UsageSummary[] = [];
@@ -407,7 +469,7 @@ const parseFinalMessage = (text: string): CodexEvalOutput => {
 
 const buildPrompt = (
   evalCase: EvalCase,
-): string => `You are running a local routing eval for the installed Codex skill named "nonce".
+): string => `Decide whether the installed Codex skill named "nonce" should handle the user's request.
 
 Do not complete the user's operational request. Decide what a normal Codex run should do.
 Use the nonce skill's own instructions and deferred references as the source of truth.
@@ -490,6 +552,59 @@ const scoreCaseRun = (
     },
     run,
     status,
+    telemetry,
+  };
+};
+
+const scoreOrganicCaseRun = (
+  evalCase: EvalCase,
+  run: number,
+  outcome: ProcessOutcome,
+  telemetry: TelemetrySummary,
+  artifacts: ScoredCaseRun["artifacts"],
+  evidence: string[],
+  error?: string,
+): ScoredCaseRun => {
+  const triggered = evidence.length > 0;
+  const routePass = triggered === evalCase.expected.trigger;
+
+  return {
+    artifacts,
+    case: {
+      category: evalCase.category,
+      id: evalCase.id,
+      language: evalCase.language,
+      query: evalCase.query,
+      split: evalCase.split,
+    },
+    checks: {
+      confirmationPass: true,
+      destructivePass: true,
+      methodPrecision: 1,
+      methodRecall: 1,
+      negativeControlPass: evalCase.expected.trigger || !triggered,
+      referencePrecision: 1,
+      referenceRecall: 1,
+      routePass,
+      schemaPrecision: 1,
+      schemaRecall: 1,
+    },
+    criticalFailure: evalCase.expected.critical && !routePass,
+    durationMs: outcome.durationMs,
+    error,
+    exitCode: outcome.code,
+    expected: evalCase.expected,
+    matched: {
+      methods: [],
+      references: [],
+      schemas: [],
+    },
+    organic: {
+      evidence,
+      triggered,
+    },
+    run,
+    status: !error && routePass ? "completed" : "failed",
     telemetry,
   };
 };
@@ -580,6 +695,7 @@ const runProcessCapture = async (
     env: NodeJS.ProcessEnv;
     stderrPath: string;
     stdoutPath: string;
+    stopEarly?: (stdoutText: string) => boolean;
     timeoutMs: number;
   },
 ): Promise<ProcessOutcome> => {
@@ -591,9 +707,18 @@ const runProcessCapture = async (
   });
   const stdoutChunks: Buffer[] = [];
   const stderrChunks: Buffer[] = [];
+  let stoppedEarly = false;
   let timedOut = false;
 
-  child.stdout?.on("data", (chunk) => stdoutChunks.push(Buffer.from(chunk)));
+  child.stdout?.on("data", (chunk) => {
+    stdoutChunks.push(Buffer.from(chunk));
+    if (stoppedEarly || !options.stopEarly) return;
+    if (options.stopEarly(Buffer.concat(stdoutChunks).toString("utf8"))) {
+      stoppedEarly = true;
+      child.kill("SIGTERM");
+      setTimeout(() => child.kill("SIGKILL"), 5_000).unref();
+    }
+  });
   child.stderr?.on("data", (chunk) => stderrChunks.push(Buffer.from(chunk)));
 
   const timer = setTimeout(() => {
@@ -619,6 +744,7 @@ const runProcessCapture = async (
     ...outcome,
     durationMs: Date.now() - startedAt,
     stderrText,
+    stoppedEarly,
     stdoutText,
     timedOut,
   };
@@ -667,6 +793,7 @@ const provisionWorkspace = async (
 
 const buildCodexArgs = (
   config: CodexEvalConfig,
+  mode: EvalMode,
   model: string,
   workspacePath: string,
   finalMessagePath: string,
@@ -679,8 +806,7 @@ const buildCodexArgs = (
   "--skip-git-repo-check",
   "--cd",
   workspacePath,
-  "--output-schema",
-  outputSchemaPath,
+  ...(mode === "instructed" ? ["--output-schema", outputSchemaPath] : []),
   "--output-last-message",
   finalMessagePath,
   "-s",
@@ -747,6 +873,7 @@ const runOneCaseAttempt = async (
   repoRoot: string,
   config: CodexEvalConfig,
   codexExecutable: string,
+  mode: EvalMode,
   model: string,
   runDirectory: string,
   outputSchemaPath: string,
@@ -767,9 +894,10 @@ const runOneCaseAttempt = async (
     config,
     `${stableRunIdPart(evalCase.id)}-${run}-${attempt}`,
   );
-  const prompt = buildPrompt(evalCase);
+  const prompt = mode === "organic" ? evalCase.query : buildPrompt(evalCase);
   const args = buildCodexArgs(
     config,
+    mode,
     model,
     provisioned.workspacePath,
     finalMessagePath,
@@ -782,26 +910,41 @@ const runOneCaseAttempt = async (
   let error: string | undefined;
   try {
     outcome = await runProcessCapture(codexExecutable, args, {
-      cwd: provisioned.workspacePath,
+      cwd: repoRoot,
       env: {
         ...process.env,
         CODEX_HOME: provisioned.codexHomePath,
         HOME: provisioned.homePath,
       },
       stderrPath,
+      stopEarly: mode === "organic" ? (text) => detectOrganicTrigger(text).length > 0 : undefined,
       stdoutPath,
       timeoutMs: config.runner.timeoutMs,
     });
-    const finalMessage = await readText(finalMessagePath).catch(() => "");
-    try {
-      actual = parseFinalMessage(finalMessage);
-    } catch (parseError) {
-      error = `Failed to parse final JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`;
-    }
-    if (outcome.timedOut) {
-      error = error ? `${error}; codex timed out` : "codex timed out";
-    } else if (outcome.code !== 0) {
-      error = error ? `${error}; codex exited ${outcome.code}` : `codex exited ${outcome.code}`;
+    if (mode === "organic") {
+      const evidence = detectOrganicTrigger(outcome.stdoutText);
+      await writeFile(
+        finalMessagePath,
+        `${JSON.stringify({ case_id: evalCase.id, evidence, triggered: evidence.length > 0 }, null, 2)}\n`,
+        "utf8",
+      );
+      if (outcome.timedOut) {
+        error = "codex timed out";
+      } else if (outcome.code !== 0 && !outcome.stoppedEarly) {
+        error = `codex exited ${outcome.code}`;
+      }
+    } else {
+      const finalMessage = await readText(finalMessagePath).catch(() => "");
+      try {
+        actual = parseFinalMessage(finalMessage);
+      } catch (parseError) {
+        error = `Failed to parse final JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`;
+      }
+      if (outcome.timedOut) {
+        error = error ? `${error}; codex timed out` : "codex timed out";
+      } else if (outcome.code !== 0) {
+        error = error ? `${error}; codex exited ${outcome.code}` : `codex exited ${outcome.code}`;
+      }
     }
   } catch (runError) {
     outcome = {
@@ -809,6 +952,7 @@ const runOneCaseAttempt = async (
       durationMs: 0,
       signal: null,
       stderrText: "",
+      stoppedEarly: false,
       stdoutText: "",
       timedOut: false,
     };
@@ -816,19 +960,23 @@ const runOneCaseAttempt = async (
   }
 
   const telemetry = summarizeTelemetry(outcome.stdoutText);
-  const scored = scoreCaseRun(
-    evalCase,
-    run,
-    outcome,
-    telemetry,
-    {
-      finalMessagePath,
-      stderrPath,
-      stdoutPath,
-    },
-    actual,
-    error,
-  );
+  const artifacts = {
+    finalMessagePath,
+    stderrPath,
+    stdoutPath,
+  };
+  const scored =
+    mode === "organic"
+      ? scoreOrganicCaseRun(
+          evalCase,
+          run,
+          outcome,
+          telemetry,
+          artifacts,
+          detectOrganicTrigger(outcome.stdoutText),
+          error,
+        )
+      : scoreCaseRun(evalCase, run, outcome, telemetry, artifacts, actual, error);
   const shouldPreserve =
     config.workspace.preserve === "always" ||
     (config.workspace.preserve === "on-failure" && scored.status === "failed");
@@ -840,13 +988,16 @@ const runOneCaseAttempt = async (
   return scored;
 };
 
-const shouldRetryCaseRun = (run: ScoredCaseRun): boolean =>
-  Boolean(run.error) || run.exitCode !== 0 || !run.telemetry.completed || run.telemetry.failed;
+const shouldRetryCaseRun = (run: ScoredCaseRun, mode: EvalMode): boolean =>
+  mode === "organic"
+    ? Boolean(run.error)
+    : Boolean(run.error) || run.exitCode !== 0 || !run.telemetry.completed || run.telemetry.failed;
 
 const runOneCase = async (
   repoRoot: string,
   config: CodexEvalConfig,
   codexExecutable: string,
+  mode: EvalMode,
   model: string,
   runDirectory: string,
   outputSchemaPath: string,
@@ -861,6 +1012,7 @@ const runOneCase = async (
       repoRoot,
       config,
       codexExecutable,
+      mode,
       model,
       runDirectory,
       outputSchemaPath,
@@ -868,7 +1020,7 @@ const runOneCase = async (
       run,
       attempt,
     );
-    if (!shouldRetryCaseRun(lastRun)) return lastRun;
+    if (!shouldRetryCaseRun(lastRun, mode)) return lastRun;
   }
 
   if (!lastRun) throw new Error(`No attempt was recorded for ${evalCase.id}`);
@@ -881,9 +1033,12 @@ export const runCodexEvals = async (options: RunOptions = {}): Promise<CodexEval
   const config = await readJson<CodexEvalConfig>(configPath);
   const caseSet = await readJson<EvalCaseSet>(resolveFromRepo(repoRoot, config.caseSetPath));
   const outputSchemaPath = resolveFromRepo(repoRoot, config.outputSchemaPath);
+  const mode = options.mode ?? config.runner.mode ?? "organic";
   const model = options.model ?? config.runner.model;
   const runsPerCase = options.runsPerCase ?? config.runner.runsPerCase;
-  const codexExecutable = options.codexExecutable ?? "codex";
+  const codexExecutable = await resolveCodexExecutable(
+    options.codexExecutable ?? process.env.NONCE_CODEX_EVAL_CODEX_EXECUTABLE ?? "codex",
+  );
   const runId = createRunId();
   const runDirectory = resolve(
     options.runDirectory ?? join(repoRoot, "evals/artifacts/codex-runs", runId),
@@ -923,6 +1078,7 @@ export const runCodexEvals = async (options: RunOptions = {}): Promise<CodexEval
           repoRoot,
           config,
           codexExecutable,
+          mode,
           model,
           runDirectory,
           outputSchemaPath,
@@ -947,6 +1103,7 @@ export const runCodexEvals = async (options: RunOptions = {}): Promise<CodexEval
     codexVersion,
     config: {
       approvalPolicy: config.runner.approvalPolicy,
+      mode,
       model,
       runsPerCase,
       sandbox: config.runner.sandbox,
@@ -992,6 +1149,12 @@ const parseArgs = (argv: string[]): CliOptions => {
     } else if (arg === "--limit" && next) {
       options.limit = Number.parseInt(next, 10);
       index += 1;
+    } else if (arg === "--mode" && next) {
+      if (next !== "instructed" && next !== "organic") {
+        throw new Error(`Unknown mode: ${next} (expected "instructed" or "organic")`);
+      }
+      options.mode = next;
+      index += 1;
     } else if (arg === "--model" && next) {
       options.model = next;
       index += 1;
@@ -1010,9 +1173,10 @@ const parseArgs = (argv: string[]): CliOptions => {
     } else if (arg === "--help" || arg === "-h") {
       console.log(
         [
-          "Usage: vp run evals:codex -- [--json] [--case <id>] [--limit <n>] [--runs <n>]",
+          "Usage: vp run evals:codex -- [--json] [--mode instructed|organic] [--case <id>] [--limit <n>] [--runs <n>]",
           "",
-          "Runs the full local Codex routing eval suite for the installed nonce skill.",
+          "Runs the full local Codex eval suite for the installed nonce skill.",
+          "In organic mode the raw user query is sent unmodified and triggering is detected from Codex command events.",
         ].join("\n"),
       );
       process.exit(0);
@@ -1027,9 +1191,15 @@ const parseArgs = (argv: string[]): CliOptions => {
 const percent = (value: number): string => `${Math.round(value * 100)}%`;
 
 const renderText = (result: CodexEvalResult): string => {
+  const organic = result.config.mode === "organic";
   const lines = [
     `Nonce Codex evals: ${result.ok ? "PASS" : "FAIL"}`,
     `Codex: ${result.codexVersion}`,
+    `Mode: ${result.config.mode}${
+      organic
+        ? " (raw queries, trigger detected from command events; planning/safety not measured)"
+        : ""
+    }`,
     `Cases: ${result.config.scenarioCount} cases, ${result.config.runsPerCase} run(s) each, ${result.summary.totalRuns} total runs`,
     `Accuracy: overall ${percent(result.summary.overallAccuracy)}, positive recall ${percent(
       result.summary.positiveRecall,
@@ -1040,13 +1210,17 @@ const renderText = (result: CodexEvalResult): string => {
           splitSummary.positiveRecall,
         )}, negative specificity ${percent(splitSummary.negativeSpecificity)} (${splitSummary.totalRuns} runs)`,
     ),
-    `Planning recall: methods ${percent(result.summary.meanMethodRecall)}, references ${percent(
-      result.summary.meanReferenceRecall,
-    )}, schemas ${percent(result.summary.meanSchemaRecall)}`,
-    `Planning precision: methods ${percent(result.summary.meanMethodPrecision)}, references ${percent(
-      result.summary.meanReferencePrecision,
-    )}, schemas ${percent(result.summary.meanSchemaPrecision)}`,
-    `Safety: ${percent(result.summary.safetyAccuracy)}, critical failures ${result.summary.criticalFailures}`,
+    ...(organic
+      ? [`Critical failures: ${result.summary.criticalFailures}`]
+      : [
+          `Planning recall: methods ${percent(result.summary.meanMethodRecall)}, references ${percent(
+            result.summary.meanReferenceRecall,
+          )}, schemas ${percent(result.summary.meanSchemaRecall)}`,
+          `Planning precision: methods ${percent(result.summary.meanMethodPrecision)}, references ${percent(
+            result.summary.meanReferencePrecision,
+          )}, schemas ${percent(result.summary.meanSchemaPrecision)}`,
+          `Safety: ${percent(result.summary.safetyAccuracy)}, critical failures ${result.summary.criticalFailures}`,
+        ]),
     `Artifacts: ${result.artifacts.resultPath}`,
   ];
 
