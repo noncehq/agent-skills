@@ -5,16 +5,18 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+type EvalMode = "instructed" | "organic";
 type PermissionMode = "acceptEdits" | "auto" | "bypassPermissions" | "default" | "dontAsk" | "plan";
 type PreserveMode = "always" | "never" | "on-failure";
+type ExpectedItem = string | string[];
 
 interface EvalExpected {
   critical: boolean;
   destructive: boolean;
-  methods: string[];
-  mustRead: string[];
+  methods: ExpectedItem[];
+  mustRead: ExpectedItem[];
   requiresConfirmation: boolean;
-  schemaFiles: string[];
+  schemaFiles: ExpectedItem[];
   trigger: boolean;
 }
 
@@ -47,6 +49,7 @@ interface ClaudeEvalConfig {
   outputSchemaPath: string;
   runner: {
     extraArgs?: string[];
+    mode?: EvalMode;
     model: string;
     permissionMode: PermissionMode;
     retryAttempts?: number;
@@ -62,6 +65,7 @@ interface ClaudeEvalConfig {
   };
   thresholds: {
     criticalFailuresAllowed: number;
+    minimumMeanMethodPrecision: number;
     minimumMeanMethodRecall: number;
     minimumMeanReferenceRecall: number;
     minimumNegativeSpecificity: number;
@@ -72,6 +76,21 @@ interface ClaudeEvalConfig {
   workspace: {
     preserve: PreserveMode;
   };
+}
+
+interface SplitSummary {
+  negativeSpecificity: number;
+  overallAccuracy: number;
+  positiveRecall: number;
+  totalRuns: number;
+}
+
+interface CaseSummary {
+  criticalFailures: number;
+  id: string;
+  routePassRate: number;
+  runs: number;
+  split: string;
 }
 
 interface ClaudeEvalOutput {
@@ -93,6 +112,7 @@ interface CliOptions {
   configPath?: string;
   format: "json" | "text";
   limit?: number;
+  mode?: EvalMode;
   model?: string;
   outputPath?: string;
   repoRoot?: string;
@@ -106,6 +126,7 @@ interface ProcessOutcome {
   signal: NodeJS.Signals | null;
   stderrText: string;
   stdoutText: string;
+  stoppedEarly: boolean;
   timedOut: boolean;
 }
 
@@ -154,10 +175,13 @@ interface ScoredCaseRun {
   checks: {
     confirmationPass: boolean;
     destructivePass: boolean;
+    methodPrecision: number;
     methodRecall: number;
     negativeControlPass: boolean;
+    referencePrecision: number;
     referenceRecall: number;
     routePass: boolean;
+    schemaPrecision: number;
     schemaRecall: number;
   };
   criticalFailure: boolean;
@@ -170,6 +194,10 @@ interface ScoredCaseRun {
     references: string[];
     schemas: string[];
   };
+  organic?: {
+    evidence: string[];
+    triggered: boolean;
+  };
   run: number;
   status: "completed" | "failed";
   telemetry: TelemetrySummary;
@@ -181,9 +209,11 @@ export interface ClaudeEvalResult {
     runDirectory: string;
     usageLogPath?: string;
   };
+  caseSummaries: CaseSummary[];
   cases: ScoredCaseRun[];
   claudeVersion: string;
   config: {
+    mode: EvalMode;
     model: string;
     permissionMode: PermissionMode;
     runsPerCase: number;
@@ -199,13 +229,17 @@ export interface ClaudeEvalResult {
     completedRuns: number;
     criticalFailures: number;
     failedRuns: number;
+    meanMethodPrecision: number;
     meanMethodRecall: number;
+    meanReferencePrecision: number;
     meanReferenceRecall: number;
+    meanSchemaPrecision: number;
     meanSchemaRecall: number;
     negativeSpecificity: number;
     overallAccuracy: number;
     positiveRecall: number;
     safetyAccuracy: number;
+    splits: Record<string, SplitSummary>;
     totalCostUsd: number;
     totalRuns: number;
     usageSamples: number;
@@ -217,6 +251,7 @@ interface RunOptions {
   claudeExecutable?: string;
   configPath?: string;
   limit?: number;
+  mode?: EvalMode;
   model?: string;
   outputPath?: string;
   repoRoot?: string;
@@ -274,14 +309,30 @@ const normalizeList = (values: unknown): string[] => {
   return values.filter((value): value is string => typeof value === "string").map(normalizeToken);
 };
 
-const matchExpected = (expected: string[], actual: unknown): string[] => {
+const groupAlternates = (item: ExpectedItem): string[] => (Array.isArray(item) ? item : [item]);
+
+const matchExpected = (expected: ExpectedItem[], actual: unknown): string[] => {
   const actualValues = new Set(normalizeList(actual));
-  return expected.filter((value) => actualValues.has(normalizeToken(value)));
+  return expected.flatMap((item) => {
+    const alternates = groupAlternates(item);
+    return alternates.some((value) => actualValues.has(normalizeToken(value)))
+      ? alternates.slice(0, 1)
+      : [];
+  });
 };
 
-const recall = (expected: string[], matched: string[], actual: unknown): number => {
+const recall = (expected: ExpectedItem[], matched: string[], actual: unknown): number => {
   if (expected.length > 0) return round(matched.length / expected.length);
   return normalizeList(actual).length === 0 ? 1 : 0;
+};
+
+const precision = (expected: ExpectedItem[], actual: unknown): number => {
+  const actualValues = normalizeList(actual);
+  if (actualValues.length === 0) return 1;
+  const allowed = new Set(
+    expected.flatMap((item) => groupAlternates(item).map((value) => normalizeToken(value))),
+  );
+  return round(actualValues.filter((value) => allowed.has(value)).length / actualValues.length);
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -324,14 +375,36 @@ const parseClaudeEvents = (text: string): { events: ClaudeEvent[]; ignoredLineCo
   return { events, ignoredLineCount };
 };
 
-const toolUseNames = (event: ClaudeEvent): string[] => {
-  if (!isRecord(event.message)) return [];
+const toolUseBlocks = (event: ClaudeEvent): { input: unknown; name: string }[] => {
+  if (event.type !== "assistant" || !isRecord(event.message)) return [];
   const content = event.message.content;
   if (!Array.isArray(content)) return [];
   return content
     .filter(isRecord)
     .filter((block) => block.type === "tool_use")
-    .map((block) => (typeof block.name === "string" ? block.name : "unknown"));
+    .map((block) => ({
+      input: block.input,
+      name: typeof block.name === "string" ? block.name : "unknown",
+    }));
+};
+
+const toolUseNames = (event: ClaudeEvent): string[] =>
+  toolUseBlocks(event).map((block) => block.name);
+
+export const detectOrganicTrigger = (stdoutText: string): string[] => {
+  const { events } = parseClaudeEvents(stdoutText);
+  const evidence: string[] = [];
+  for (const event of events) {
+    for (const block of toolUseBlocks(event)) {
+      const inputText = JSON.stringify(block.input ?? {});
+      if (block.name === "Skill" && inputText.includes('"nonce"')) {
+        evidence.push(`Skill: ${inputText.slice(0, 160)}`);
+      } else if (inputText.includes(".claude/skills/nonce")) {
+        evidence.push(`${block.name}: ${inputText.slice(0, 160)}`);
+      }
+    }
+  }
+  return evidence;
 };
 
 const findResultEvent = (events: ClaudeEvent[]): ClaudeEvent | undefined =>
@@ -451,10 +524,13 @@ const scoreCaseRun = (
     checks: {
       confirmationPass,
       destructivePass,
+      methodPrecision: precision(evalCase.expected.methods, actual?.methods),
       methodRecall: recall(evalCase.expected.methods, matchedMethods, actual?.methods),
       negativeControlPass,
+      referencePrecision: precision(evalCase.expected.mustRead, actual?.references),
       referenceRecall: recall(evalCase.expected.mustRead, matchedReferences, actual?.references),
       routePass,
+      schemaPrecision: precision(evalCase.expected.schemaFiles, actual?.schemas),
       schemaRecall: recall(evalCase.expected.schemaFiles, matchedSchemas, actual?.schemas),
     },
     criticalFailure,
@@ -473,21 +549,63 @@ const scoreCaseRun = (
   };
 };
 
-export const summarizeClaudeEvalCases = (runs: ScoredCaseRun[]): ClaudeEvalResult["summary"] => {
-  const positives = runs.filter((run) => run.expected.trigger);
-  const negatives = runs.filter((run) => !run.expected.trigger);
-  const safetyChecks = runs.flatMap((run) => [
-    run.checks.destructivePass,
-    run.checks.confirmationPass,
-  ]);
+const scoreOrganicCaseRun = (
+  evalCase: EvalCase,
+  run: number,
+  outcome: ProcessOutcome,
+  telemetry: TelemetrySummary,
+  artifacts: ScoredCaseRun["artifacts"],
+  evidence: string[],
+  error?: string,
+): ScoredCaseRun => {
+  const triggered = evidence.length > 0;
+  const routePass = triggered === evalCase.expected.trigger;
 
   return {
-    completedRuns: runs.filter((run) => run.status === "completed").length,
-    criticalFailures: runs.filter((run) => run.criticalFailure).length,
-    failedRuns: runs.filter((run) => run.status === "failed").length,
-    meanMethodRecall: average(runs.map((run) => run.checks.methodRecall)),
-    meanReferenceRecall: average(runs.map((run) => run.checks.referenceRecall)),
-    meanSchemaRecall: average(runs.map((run) => run.checks.schemaRecall)),
+    artifacts,
+    case: {
+      category: evalCase.category,
+      id: evalCase.id,
+      language: evalCase.language,
+      query: evalCase.query,
+      split: evalCase.split,
+    },
+    checks: {
+      confirmationPass: true,
+      destructivePass: true,
+      methodPrecision: 1,
+      methodRecall: 1,
+      negativeControlPass: evalCase.expected.trigger || !triggered,
+      referencePrecision: 1,
+      referenceRecall: 1,
+      routePass,
+      schemaPrecision: 1,
+      schemaRecall: 1,
+    },
+    criticalFailure: evalCase.expected.critical && !routePass,
+    durationMs: outcome.durationMs,
+    error,
+    exitCode: outcome.code,
+    expected: evalCase.expected,
+    matched: {
+      methods: [],
+      references: [],
+      schemas: [],
+    },
+    organic: {
+      evidence,
+      triggered,
+    },
+    run,
+    status: !error && routePass ? "completed" : "failed",
+    telemetry,
+  };
+};
+
+const summarizeSplit = (runs: ScoredCaseRun[]): SplitSummary => {
+  const positives = runs.filter((run) => run.expected.trigger);
+  const negatives = runs.filter((run) => !run.expected.trigger);
+  return {
     negativeSpecificity: negatives.length
       ? round(negatives.filter((run) => run.checks.routePass).length / negatives.length)
       : 1,
@@ -497,11 +615,54 @@ export const summarizeClaudeEvalCases = (runs: ScoredCaseRun[]): ClaudeEvalResul
     positiveRecall: positives.length
       ? round(positives.filter((run) => run.checks.routePass).length / positives.length)
       : 1,
+    totalRuns: runs.length,
+  };
+};
+
+const summarizeSplits = (runs: ScoredCaseRun[]): Record<string, SplitSummary> => {
+  const splits: Record<string, SplitSummary> = {};
+  for (const split of [...new Set(runs.map((run) => run.case.split))].sort()) {
+    splits[split] = summarizeSplit(runs.filter((run) => run.case.split === split));
+  }
+  return splits;
+};
+
+export const summarizeClaudeEvalCaseStability = (runs: ScoredCaseRun[]): CaseSummary[] => {
+  const ids = [...new Set(runs.map((run) => run.case.id))];
+  return ids.map((id) => {
+    const caseRuns = runs.filter((run) => run.case.id === id);
+    return {
+      criticalFailures: caseRuns.filter((run) => run.criticalFailure).length,
+      id,
+      routePassRate: round(caseRuns.filter((run) => run.checks.routePass).length / caseRuns.length),
+      runs: caseRuns.length,
+      split: caseRuns[0]?.case.split ?? "unknown",
+    };
+  });
+};
+
+export const summarizeClaudeEvalCases = (runs: ScoredCaseRun[]): ClaudeEvalResult["summary"] => {
+  const safetyChecks = runs.flatMap((run) => [
+    run.checks.destructivePass,
+    run.checks.confirmationPass,
+  ]);
+
+  return {
+    ...summarizeSplit(runs),
+    completedRuns: runs.filter((run) => run.status === "completed").length,
+    criticalFailures: runs.filter((run) => run.criticalFailure).length,
+    failedRuns: runs.filter((run) => run.status === "failed").length,
+    meanMethodPrecision: average(runs.map((run) => run.checks.methodPrecision)),
+    meanMethodRecall: average(runs.map((run) => run.checks.methodRecall)),
+    meanReferencePrecision: average(runs.map((run) => run.checks.referencePrecision)),
+    meanReferenceRecall: average(runs.map((run) => run.checks.referenceRecall)),
+    meanSchemaPrecision: average(runs.map((run) => run.checks.schemaPrecision)),
+    meanSchemaRecall: average(runs.map((run) => run.checks.schemaRecall)),
     safetyAccuracy: safetyChecks.length
       ? round(safetyChecks.filter(Boolean).length / safetyChecks.length)
       : 1,
+    splits: summarizeSplits(runs),
     totalCostUsd: round(runs.reduce((sum, run) => sum + (run.telemetry.costUsd ?? 0), 0)),
-    totalRuns: runs.length,
     usageSamples: runs.filter((run) => run.telemetry.usage).length,
   };
 };
@@ -516,6 +677,7 @@ export const passesClaudeEvalThresholds = (
   summary.negativeSpecificity >= thresholds.minimumNegativeSpecificity &&
   summary.safetyAccuracy >= thresholds.minimumSafetyAccuracy &&
   summary.meanMethodRecall >= thresholds.minimumMeanMethodRecall &&
+  summary.meanMethodPrecision >= thresholds.minimumMeanMethodPrecision &&
   summary.meanReferenceRecall >= thresholds.minimumMeanReferenceRecall &&
   summary.criticalFailures <= thresholds.criticalFailuresAllowed;
 
@@ -527,6 +689,7 @@ const runProcessCapture = async (
     env: NodeJS.ProcessEnv;
     stderrPath: string;
     stdoutPath: string;
+    stopEarly?: (stdoutText: string) => boolean;
     timeoutMs: number;
   },
 ): Promise<ProcessOutcome> => {
@@ -539,8 +702,17 @@ const runProcessCapture = async (
   const stdoutChunks: Buffer[] = [];
   const stderrChunks: Buffer[] = [];
   let timedOut = false;
+  let stoppedEarly = false;
 
-  child.stdout?.on("data", (chunk) => stdoutChunks.push(Buffer.from(chunk)));
+  child.stdout?.on("data", (chunk) => {
+    stdoutChunks.push(Buffer.from(chunk));
+    if (stoppedEarly || !options.stopEarly) return;
+    if (options.stopEarly(Buffer.concat(stdoutChunks).toString("utf8"))) {
+      stoppedEarly = true;
+      child.kill("SIGTERM");
+      setTimeout(() => child.kill("SIGKILL"), 5_000).unref();
+    }
+  });
   child.stderr?.on("data", (chunk) => stderrChunks.push(Buffer.from(chunk)));
 
   const timer = setTimeout(() => {
@@ -567,6 +739,7 @@ const runProcessCapture = async (
     durationMs: Date.now() - startedAt,
     stderrText,
     stdoutText,
+    stoppedEarly,
     timedOut,
   };
 };
@@ -596,6 +769,7 @@ const provisionWorkspace = async (
 
 const buildClaudeArgs = (
   config: ClaudeEvalConfig,
+  mode: EvalMode,
   model: string,
   outputSchemaText: string,
   prompt: string,
@@ -604,8 +778,7 @@ const buildClaudeArgs = (
   "--output-format",
   "stream-json",
   "--verbose",
-  "--json-schema",
-  outputSchemaText,
+  ...(mode === "instructed" ? ["--json-schema", outputSchemaText] : []),
   "--model",
   model,
   "--permission-mode",
@@ -670,6 +843,7 @@ const runOneCaseAttempt = async (
   repoRoot: string,
   config: ClaudeEvalConfig,
   claudeExecutable: string,
+  mode: EvalMode,
   model: string,
   runDirectory: string,
   outputSchemaText: string,
@@ -690,8 +864,8 @@ const runOneCaseAttempt = async (
     config,
     `${stableRunIdPart(evalCase.id)}-${run}-${attempt}`,
   );
-  const prompt = buildPrompt(evalCase);
-  const args = buildClaudeArgs(config, model, outputSchemaText, prompt);
+  const prompt = mode === "organic" ? evalCase.query : buildPrompt(evalCase);
+  const args = buildClaudeArgs(config, mode, model, outputSchemaText, prompt);
 
   let outcome: ProcessOutcome;
   let actual: ClaudeEvalOutput | undefined;
@@ -702,16 +876,35 @@ const runOneCaseAttempt = async (
       env: { ...process.env },
       stderrPath,
       stdoutPath,
+      stopEarly: mode === "organic" ? (text) => detectOrganicTrigger(text).length > 0 : undefined,
       timeoutMs: config.runner.timeoutMs,
     });
-    const extracted = extractEvalOutput(outcome.stdoutText);
-    actual = extracted.actual;
-    error = extracted.error;
-    await writeFile(finalMessagePath, actual ? `${JSON.stringify(actual, null, 2)}\n` : "", "utf8");
-    if (outcome.timedOut) {
-      error = error ? `${error}; claude timed out` : "claude timed out";
-    } else if (outcome.code !== 0) {
-      error = error ? `${error}; claude exited ${outcome.code}` : `claude exited ${outcome.code}`;
+    if (mode === "organic") {
+      const evidence = detectOrganicTrigger(outcome.stdoutText);
+      await writeFile(
+        finalMessagePath,
+        `${JSON.stringify({ case_id: evalCase.id, evidence, triggered: evidence.length > 0 }, null, 2)}\n`,
+        "utf8",
+      );
+      if (outcome.timedOut) {
+        error = "claude timed out";
+      } else if (outcome.code !== 0 && !outcome.stoppedEarly) {
+        error = `claude exited ${outcome.code}`;
+      }
+    } else {
+      const extracted = extractEvalOutput(outcome.stdoutText);
+      actual = extracted.actual;
+      error = extracted.error;
+      await writeFile(
+        finalMessagePath,
+        actual ? `${JSON.stringify(actual, null, 2)}\n` : "",
+        "utf8",
+      );
+      if (outcome.timedOut) {
+        error = error ? `${error}; claude timed out` : "claude timed out";
+      } else if (outcome.code !== 0) {
+        error = error ? `${error}; claude exited ${outcome.code}` : `claude exited ${outcome.code}`;
+      }
     }
   } catch (runError) {
     outcome = {
@@ -720,25 +913,30 @@ const runOneCaseAttempt = async (
       signal: null,
       stderrText: "",
       stdoutText: "",
+      stoppedEarly: false,
       timedOut: false,
     };
     error = runError instanceof Error ? runError.message : String(runError);
   }
 
   const telemetry = summarizeTelemetry(outcome.stdoutText);
-  const scored = scoreCaseRun(
-    evalCase,
-    run,
-    outcome,
-    telemetry,
-    {
-      finalMessagePath,
-      stderrPath,
-      stdoutPath,
-    },
-    actual,
-    error,
-  );
+  const artifacts = {
+    finalMessagePath,
+    stderrPath,
+    stdoutPath,
+  };
+  const scored =
+    mode === "organic"
+      ? scoreOrganicCaseRun(
+          evalCase,
+          run,
+          outcome,
+          telemetry,
+          artifacts,
+          detectOrganicTrigger(outcome.stdoutText),
+          error,
+        )
+      : scoreCaseRun(evalCase, run, outcome, telemetry, artifacts, actual, error);
   const shouldPreserve =
     config.workspace.preserve === "always" ||
     (config.workspace.preserve === "on-failure" && scored.status === "failed");
@@ -750,13 +948,16 @@ const runOneCaseAttempt = async (
   return scored;
 };
 
-const shouldRetryCaseRun = (run: ScoredCaseRun): boolean =>
-  Boolean(run.error) || run.exitCode !== 0 || !run.telemetry.completed || run.telemetry.failed;
+const shouldRetryCaseRun = (run: ScoredCaseRun, mode: EvalMode): boolean =>
+  mode === "organic"
+    ? Boolean(run.error)
+    : Boolean(run.error) || run.exitCode !== 0 || !run.telemetry.completed || run.telemetry.failed;
 
 const runOneCase = async (
   repoRoot: string,
   config: ClaudeEvalConfig,
   claudeExecutable: string,
+  mode: EvalMode,
   model: string,
   runDirectory: string,
   outputSchemaText: string,
@@ -771,6 +972,7 @@ const runOneCase = async (
       repoRoot,
       config,
       claudeExecutable,
+      mode,
       model,
       runDirectory,
       outputSchemaText,
@@ -778,7 +980,7 @@ const runOneCase = async (
       run,
       attempt,
     );
-    if (!shouldRetryCaseRun(lastRun)) return lastRun;
+    if (!shouldRetryCaseRun(lastRun, mode)) return lastRun;
   }
 
   if (!lastRun) throw new Error(`No attempt was recorded for ${evalCase.id}`);
@@ -791,6 +993,7 @@ export const runClaudeEvals = async (options: RunOptions = {}): Promise<ClaudeEv
   const config = await readJson<ClaudeEvalConfig>(configPath);
   const caseSet = await readJson<EvalCaseSet>(resolveFromRepo(repoRoot, config.caseSetPath));
   const outputSchemaPath = resolveFromRepo(repoRoot, config.outputSchemaPath);
+  const mode = options.mode ?? config.runner.mode ?? "instructed";
   const model = options.model ?? config.runner.model;
   const runsPerCase = options.runsPerCase ?? config.runner.runsPerCase;
   const claudeExecutable = options.claudeExecutable ?? "claude";
@@ -834,6 +1037,7 @@ export const runClaudeEvals = async (options: RunOptions = {}): Promise<ClaudeEv
           repoRoot,
           config,
           claudeExecutable,
+          mode,
           model,
           runDirectory,
           outputSchemaText,
@@ -853,9 +1057,11 @@ export const runClaudeEvals = async (options: RunOptions = {}): Promise<ClaudeEv
       runDirectory,
       usageLogPath,
     },
+    caseSummaries: summarizeClaudeEvalCaseStability(runs),
     cases: runs,
     claudeVersion,
     config: {
+      mode,
       model,
       permissionMode: config.runner.permissionMode,
       runsPerCase,
@@ -902,6 +1108,12 @@ const parseArgs = (argv: string[]): CliOptions => {
     } else if (arg === "--limit" && next) {
       options.limit = Number.parseInt(next, 10);
       index += 1;
+    } else if (arg === "--mode" && next) {
+      if (next !== "instructed" && next !== "organic") {
+        throw new Error(`Unknown mode: ${next} (expected "instructed" or "organic")`);
+      }
+      options.mode = next;
+      index += 1;
     } else if (arg === "--model" && next) {
       options.model = next;
       index += 1;
@@ -920,9 +1132,11 @@ const parseArgs = (argv: string[]): CliOptions => {
     } else if (arg === "--help" || arg === "-h") {
       console.log(
         [
-          "Usage: vp run evals:claude -- [--json] [--case <id>] [--limit <n>] [--runs <n>]",
+          "Usage: vp run evals:claude -- [--json] [--mode instructed|organic] [--case <id>] [--limit <n>] [--runs <n>]",
           "",
           "Runs the full local Claude Code routing eval suite for the installed nonce skill.",
+          "In organic mode the raw user query is sent unmodified and triggering is detected",
+          "from tool events instead of asking the model to classify the request.",
         ].join("\n"),
       );
       process.exit(0);
@@ -937,20 +1151,52 @@ const parseArgs = (argv: string[]): CliOptions => {
 const percent = (value: number): string => `${Math.round(value * 100)}%`;
 
 const renderText = (result: ClaudeEvalResult): string => {
+  const organic = result.config.mode === "organic";
   const lines = [
     `Nonce Claude Code evals: ${result.ok ? "PASS" : "FAIL"}`,
     `Claude Code: ${result.claudeVersion}`,
+    `Mode: ${result.config.mode}${
+      organic
+        ? " (raw queries, trigger detected from tool events; planning/safety not measured)"
+        : ""
+    }`,
     `Cases: ${result.config.scenarioCount} cases, ${result.config.runsPerCase} run(s) each, ${result.summary.totalRuns} total runs`,
     `Accuracy: overall ${percent(result.summary.overallAccuracy)}, positive recall ${percent(
       result.summary.positiveRecall,
     )}, negative specificity ${percent(result.summary.negativeSpecificity)}`,
-    `Planning: method recall ${percent(result.summary.meanMethodRecall)}, reference recall ${percent(
-      result.summary.meanReferenceRecall,
-    )}, schema recall ${percent(result.summary.meanSchemaRecall)}`,
-    `Safety: ${percent(result.summary.safetyAccuracy)}, critical failures ${result.summary.criticalFailures}`,
+    ...Object.entries(result.summary.splits).map(
+      ([split, splitSummary]) =>
+        `Split ${split}: overall ${percent(splitSummary.overallAccuracy)}, positive recall ${percent(
+          splitSummary.positiveRecall,
+        )}, negative specificity ${percent(splitSummary.negativeSpecificity)} (${splitSummary.totalRuns} runs)`,
+    ),
+    ...(organic
+      ? []
+      : [
+          `Planning recall: methods ${percent(result.summary.meanMethodRecall)}, references ${percent(
+            result.summary.meanReferenceRecall,
+          )}, schemas ${percent(result.summary.meanSchemaRecall)}`,
+          `Planning precision: methods ${percent(result.summary.meanMethodPrecision)}, references ${percent(
+            result.summary.meanReferencePrecision,
+          )}, schemas ${percent(result.summary.meanSchemaPrecision)}`,
+          `Safety: ${percent(result.summary.safetyAccuracy)}, critical failures ${result.summary.criticalFailures}`,
+        ]),
+    ...(organic ? [`Critical failures: ${result.summary.criticalFailures}`] : []),
     `Cost: $${result.summary.totalCostUsd.toFixed(4)} across ${result.summary.usageSamples} run(s) with usage data`,
     `Artifacts: ${result.artifacts.resultPath}`,
   ];
+
+  const unstable = result.caseSummaries.filter((caseSummary) => caseSummary.routePassRate < 1);
+  if (unstable.length > 0) {
+    lines.push("", "Unstable cases:");
+    for (const caseSummary of unstable) {
+      lines.push(
+        `- ${caseSummary.id} [${caseSummary.split}]: route pass ${percent(
+          caseSummary.routePassRate,
+        )} over ${caseSummary.runs} run(s)`,
+      );
+    }
+  }
 
   const failed = result.cases.filter((run) => run.status === "failed" || run.criticalFailure);
   if (failed.length > 0) {

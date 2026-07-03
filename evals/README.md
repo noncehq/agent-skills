@@ -14,6 +14,19 @@ Both harnesses share the same case set (`nonce-skill.cases.json`), output contra
 (`nonce-skill-eval.output.schema.json`), scoring checks, and thresholds, so their
 reports are directly comparable.
 
+Shared scoring conventions:
+
+- Each case runs `runsPerCase` times (default 3) so single-run flakes do not flip
+  the suite; the report includes per-case route pass rates and flags unstable cases.
+- Results are also broken down by `split` (`train` vs `validation`). When you edit
+  the skill description based on eval failures, judge the change by the validation
+  split to avoid overfitting to the train prompts.
+- `expected.methods` and `expected.schemaFiles` entries can be a string or an
+  array of equivalent alternatives (for example `["listMiners", "searchMiners"]`);
+  any alternative counts as a hit for recall.
+- Planning is scored with recall AND precision. Recall alone is gameable — listing
+  every method would score 100% — so precision penalizes over-reporting.
+
 ## Local deterministic run
 
 ```bash
@@ -96,9 +109,34 @@ Useful debugging flags:
 
 ```bash
 vp run evals:claude -- --case trigger.zh.workspace.list
-vp run evals:claude -- --limit 3 --model claude-haiku-4-5
+vp run evals:claude -- --limit 3 --model claude-haiku-4-5 --runs 1
 vp run evals:claude -- --json --output evals/artifacts/claude-runs/latest.json
 ```
+
+### Organic trigger mode
+
+The default (`instructed`) mode asks the model to classify each request, which
+measures routing and planning but not whether the skill would activate on its own
+in a real session. Organic mode closes that gap, following the same approach as
+the official skill-creator trigger eval: the raw user query is sent unmodified,
+and triggering is detected from tool events (a `Skill` invocation of `nonce` or
+any read of `.claude/skills/nonce/...`). The run is stopped as soon as triggering
+is detected, so positive cases stay cheap.
+
+```bash
+vp run evals:claude:organic
+vp run evals:claude -- --mode organic --case trigger.zh.workspace.list
+```
+
+Organic mode scores routing only (trigger vs no-trigger per case); planning and
+safety metrics are not measured because the model is not asked to produce them.
+Run both modes to cover both questions: does the skill activate when it should
+(organic), and does it plan the right workflow once active (instructed)?
+
+The Codex harness currently has no organic mode — Codex reads skill files through
+shell commands, which gives a much weaker trigger signal than Claude's typed tool
+events. Treat the Claude organic numbers as the activation signal for the shared
+skill description.
 
 ## Plugin Eval
 

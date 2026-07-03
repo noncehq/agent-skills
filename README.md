@@ -102,7 +102,16 @@ an isolated temporary workspace, runs every case through
 customization excluded, and writes the same normalized report plus usage log
 under `evals/artifacts/claude-runs/`. Both agent suites share the case set in
 `evals/nonce-skill.cases.json` and the output contract in
-`evals/nonce-skill-eval.output.schema.json`.
+`evals/nonce-skill-eval.output.schema.json`, run each case 3 times, report
+train/validation splits separately, and score planning with both recall and
+precision.
+
+To measure organic skill activation (raw queries, no eval framing, triggering
+detected from tool events):
+
+```bash
+vp run evals:claude:organic
+```
 
 ## Generating Artifacts
 

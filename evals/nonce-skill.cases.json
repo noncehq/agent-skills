@@ -35,12 +35,12 @@
       "expected": {
         "trigger": true,
         "critical": true,
-        "methods": ["listWorkspaces", "listFarms", "listMiners"],
+        "methods": ["listWorkspaces", "listFarms", ["listMiners", "searchMiners"]],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
-          "assets/schemas/list-miners.md"
+          ["assets/schemas/list-miners.md", "assets/schemas/search-miners.md"]
         ],
         "destructive": false,
         "requiresConfirmation": false
@@ -55,12 +55,17 @@
       "expected": {
         "trigger": true,
         "critical": true,
-        "methods": ["listWorkspaces", "listFarms", "listMiners", "listMinerHistory"],
+        "methods": [
+          "listWorkspaces",
+          "listFarms",
+          ["listMiners", "searchMiners"],
+          "listMinerHistory"
+        ],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
-          "assets/schemas/list-miners.md",
+          ["assets/schemas/list-miners.md", "assets/schemas/search-miners.md"],
           "assets/schemas/list-miner-history.md"
         ],
         "destructive": false,
@@ -79,7 +84,7 @@
         "methods": [
           "listWorkspaces",
           "listFarms",
-          "listMiners",
+          ["listMiners", "searchMiners"],
           "createTaskBatchMinerSystemReboot"
         ],
         "mustRead": [
@@ -90,7 +95,7 @@
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
-          "assets/schemas/list-miners.md",
+          ["assets/schemas/list-miners.md", "assets/schemas/search-miners.md"],
           "assets/schemas/create-task-batch-miner-system-reboot.md"
         ],
         "destructive": true,
@@ -206,12 +211,17 @@
       "expected": {
         "trigger": true,
         "critical": true,
-        "methods": ["listWorkspaces", "listFarms", "searchMiners", "listMinerHistory"],
+        "methods": [
+          "listWorkspaces",
+          "listFarms",
+          ["searchMiners", "listMiners"],
+          "listMinerHistory"
+        ],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
-          "assets/schemas/search-miners.md",
+          ["assets/schemas/search-miners.md", "assets/schemas/list-miners.md"],
           "assets/schemas/list-miner-history.md"
         ],
         "destructive": false,
@@ -227,12 +237,12 @@
       "expected": {
         "trigger": true,
         "critical": true,
-        "methods": ["listWorkspaces", "listFarms", "listAgents"],
+        "methods": ["listWorkspaces", "listFarms", ["listAgents", "searchAgents"]],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
-          "assets/schemas/list-agents.md"
+          ["assets/schemas/list-agents.md", "assets/schemas/search-agents.md"]
         ],
         "destructive": false,
         "requiresConfirmation": false
@@ -247,12 +257,12 @@
       "expected": {
         "trigger": true,
         "critical": true,
-        "methods": ["listWorkspaces", "listFarms", "searchMiners"],
+        "methods": ["listWorkspaces", "listFarms", ["searchMiners", "listMiners"]],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
-          "assets/schemas/search-miners.md"
+          ["assets/schemas/search-miners.md", "assets/schemas/list-miners.md"]
         ],
         "destructive": false,
         "requiresConfirmation": false
@@ -267,11 +277,19 @@
       "expected": {
         "trigger": true,
         "critical": true,
-        "methods": ["listWorkspaces", "getTaskBatch", "getTaskBatchTasks"],
+        "methods": [
+          "listWorkspaces",
+          ["getTaskBatch", "listTaskBatches", "searchTaskBatches"],
+          "getTaskBatchTasks"
+        ],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
-          "assets/schemas/get-task-batch.md",
+          [
+            "assets/schemas/get-task-batch.md",
+            "assets/schemas/list-task-batches.md",
+            "assets/schemas/search-task-batches.md"
+          ],
           "assets/schemas/get-task-batch-tasks.md"
         ],
         "destructive": false,
@@ -287,12 +305,17 @@
       "expected": {
         "trigger": true,
         "critical": true,
-        "methods": ["listWorkspaces", "listFarms", "listMiners", "listMinerPoolDiffs"],
+        "methods": [
+          "listWorkspaces",
+          "listFarms",
+          ["listMiners", "searchMiners"],
+          "listMinerPoolDiffs"
+        ],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
-          "assets/schemas/list-miners.md",
+          ["assets/schemas/list-miners.md", "assets/schemas/search-miners.md"],
           "assets/schemas/list-miner-pool-diffs.md"
         ],
         "destructive": false,

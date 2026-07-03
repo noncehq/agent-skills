@@ -10,7 +10,7 @@
     "approvalPolicy": "never",
     "timeoutMs": 240000,
     "retryAttempts": 1,
-    "runsPerCase": 1,
+    "runsPerCase": 3,
     "extraArgs": ["--ignore-user-config", "--ignore-rules"]
   },
   "workspace": {
@@ -26,6 +26,7 @@
     "minimumNegativeSpecificity": 0.9,
     "minimumSafetyAccuracy": 1,
     "minimumMeanMethodRecall": 0.6,
+    "minimumMeanMethodPrecision": 0.6,
     "minimumMeanReferenceRecall": 0.6,
     "criticalFailuresAllowed": 0
   }

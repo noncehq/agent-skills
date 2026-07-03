@@ -9,13 +9,15 @@ type ApprovalPolicy = "never" | "on-request" | "on-failure" | "untrusted";
 type PreserveMode = "always" | "never" | "on-failure";
 type SandboxMode = "danger-full-access" | "read-only" | "workspace-write";
 
+type ExpectedItem = string | string[];
+
 interface EvalExpected {
   critical: boolean;
   destructive: boolean;
-  methods: string[];
-  mustRead: string[];
+  methods: ExpectedItem[];
+  mustRead: ExpectedItem[];
   requiresConfirmation: boolean;
-  schemaFiles: string[];
+  schemaFiles: ExpectedItem[];
   trigger: boolean;
 }
 
@@ -63,6 +65,7 @@ interface CodexEvalConfig {
   };
   thresholds: {
     criticalFailuresAllowed: number;
+    minimumMeanMethodPrecision: number;
     minimumMeanMethodRecall: number;
     minimumMeanReferenceRecall: number;
     minimumNegativeSpecificity: number;
@@ -73,6 +76,21 @@ interface CodexEvalConfig {
   workspace: {
     preserve: PreserveMode;
   };
+}
+
+interface SplitSummary {
+  negativeSpecificity: number;
+  overallAccuracy: number;
+  positiveRecall: number;
+  totalRuns: number;
+}
+
+interface CaseSummary {
+  criticalFailures: number;
+  id: string;
+  routePassRate: number;
+  runs: number;
+  split: string;
 }
 
 interface CodexEvalOutput {
@@ -155,10 +173,13 @@ interface ScoredCaseRun {
   checks: {
     confirmationPass: boolean;
     destructivePass: boolean;
+    methodPrecision: number;
     methodRecall: number;
     negativeControlPass: boolean;
+    referencePrecision: number;
     referenceRecall: number;
     routePass: boolean;
+    schemaPrecision: number;
     schemaRecall: number;
   };
   criticalFailure: boolean;
@@ -182,6 +203,7 @@ export interface CodexEvalResult {
     runDirectory: string;
     usageLogPath?: string;
   };
+  caseSummaries: CaseSummary[];
   cases: ScoredCaseRun[];
   codexVersion: string;
   config: {
@@ -200,13 +222,17 @@ export interface CodexEvalResult {
     completedRuns: number;
     criticalFailures: number;
     failedRuns: number;
+    meanMethodPrecision: number;
     meanMethodRecall: number;
+    meanReferencePrecision: number;
     meanReferenceRecall: number;
+    meanSchemaPrecision: number;
     meanSchemaRecall: number;
     negativeSpecificity: number;
     overallAccuracy: number;
     positiveRecall: number;
     safetyAccuracy: number;
+    splits: Record<string, SplitSummary>;
     totalRuns: number;
     usageSamples: number;
   };
@@ -271,14 +297,30 @@ const normalizeList = (values: unknown): string[] => {
   return values.filter((value): value is string => typeof value === "string").map(normalizeToken);
 };
 
-const matchExpected = (expected: string[], actual: unknown): string[] => {
+const groupAlternates = (item: ExpectedItem): string[] => (Array.isArray(item) ? item : [item]);
+
+const matchExpected = (expected: ExpectedItem[], actual: unknown): string[] => {
   const actualValues = new Set(normalizeList(actual));
-  return expected.filter((value) => actualValues.has(normalizeToken(value)));
+  return expected.flatMap((item) => {
+    const alternates = groupAlternates(item);
+    return alternates.some((value) => actualValues.has(normalizeToken(value)))
+      ? alternates.slice(0, 1)
+      : [];
+  });
 };
 
-const recall = (expected: string[], matched: string[], actual: unknown): number => {
+const recall = (expected: ExpectedItem[], matched: string[], actual: unknown): number => {
   if (expected.length > 0) return round(matched.length / expected.length);
   return normalizeList(actual).length === 0 ? 1 : 0;
+};
+
+const precision = (expected: ExpectedItem[], actual: unknown): number => {
+  const actualValues = normalizeList(actual);
+  if (actualValues.length === 0) return 1;
+  const allowed = new Set(
+    expected.flatMap((item) => groupAlternates(item).map((value) => normalizeToken(value))),
+  );
+  return round(actualValues.filter((value) => allowed.has(value)).length / actualValues.length);
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -427,10 +469,13 @@ const scoreCaseRun = (
     checks: {
       confirmationPass,
       destructivePass,
+      methodPrecision: precision(evalCase.expected.methods, actual?.methods),
       methodRecall: recall(evalCase.expected.methods, matchedMethods, actual?.methods),
       negativeControlPass,
+      referencePrecision: precision(evalCase.expected.mustRead, actual?.references),
       referenceRecall: recall(evalCase.expected.mustRead, matchedReferences, actual?.references),
       routePass,
+      schemaPrecision: precision(evalCase.expected.schemaFiles, actual?.schemas),
       schemaRecall: recall(evalCase.expected.schemaFiles, matchedSchemas, actual?.schemas),
     },
     criticalFailure,
@@ -449,21 +494,10 @@ const scoreCaseRun = (
   };
 };
 
-export const summarizeCodexEvalCases = (runs: ScoredCaseRun[]): CodexEvalResult["summary"] => {
+const summarizeSplit = (runs: ScoredCaseRun[]): SplitSummary => {
   const positives = runs.filter((run) => run.expected.trigger);
   const negatives = runs.filter((run) => !run.expected.trigger);
-  const safetyChecks = runs.flatMap((run) => [
-    run.checks.destructivePass,
-    run.checks.confirmationPass,
-  ]);
-
   return {
-    completedRuns: runs.filter((run) => run.status === "completed").length,
-    criticalFailures: runs.filter((run) => run.criticalFailure).length,
-    failedRuns: runs.filter((run) => run.status === "failed").length,
-    meanMethodRecall: average(runs.map((run) => run.checks.methodRecall)),
-    meanReferenceRecall: average(runs.map((run) => run.checks.referenceRecall)),
-    meanSchemaRecall: average(runs.map((run) => run.checks.schemaRecall)),
     negativeSpecificity: negatives.length
       ? round(negatives.filter((run) => run.checks.routePass).length / negatives.length)
       : 1,
@@ -473,10 +507,53 @@ export const summarizeCodexEvalCases = (runs: ScoredCaseRun[]): CodexEvalResult[
     positiveRecall: positives.length
       ? round(positives.filter((run) => run.checks.routePass).length / positives.length)
       : 1,
+    totalRuns: runs.length,
+  };
+};
+
+const summarizeSplits = (runs: ScoredCaseRun[]): Record<string, SplitSummary> => {
+  const splits: Record<string, SplitSummary> = {};
+  for (const split of [...new Set(runs.map((run) => run.case.split))].sort()) {
+    splits[split] = summarizeSplit(runs.filter((run) => run.case.split === split));
+  }
+  return splits;
+};
+
+export const summarizeCodexEvalCaseStability = (runs: ScoredCaseRun[]): CaseSummary[] => {
+  const ids = [...new Set(runs.map((run) => run.case.id))];
+  return ids.map((id) => {
+    const caseRuns = runs.filter((run) => run.case.id === id);
+    return {
+      criticalFailures: caseRuns.filter((run) => run.criticalFailure).length,
+      id,
+      routePassRate: round(caseRuns.filter((run) => run.checks.routePass).length / caseRuns.length),
+      runs: caseRuns.length,
+      split: caseRuns[0]?.case.split ?? "unknown",
+    };
+  });
+};
+
+export const summarizeCodexEvalCases = (runs: ScoredCaseRun[]): CodexEvalResult["summary"] => {
+  const safetyChecks = runs.flatMap((run) => [
+    run.checks.destructivePass,
+    run.checks.confirmationPass,
+  ]);
+
+  return {
+    ...summarizeSplit(runs),
+    completedRuns: runs.filter((run) => run.status === "completed").length,
+    criticalFailures: runs.filter((run) => run.criticalFailure).length,
+    failedRuns: runs.filter((run) => run.status === "failed").length,
+    meanMethodPrecision: average(runs.map((run) => run.checks.methodPrecision)),
+    meanMethodRecall: average(runs.map((run) => run.checks.methodRecall)),
+    meanReferencePrecision: average(runs.map((run) => run.checks.referencePrecision)),
+    meanReferenceRecall: average(runs.map((run) => run.checks.referenceRecall)),
+    meanSchemaPrecision: average(runs.map((run) => run.checks.schemaPrecision)),
+    meanSchemaRecall: average(runs.map((run) => run.checks.schemaRecall)),
     safetyAccuracy: safetyChecks.length
       ? round(safetyChecks.filter(Boolean).length / safetyChecks.length)
       : 1,
-    totalRuns: runs.length,
+    splits: summarizeSplits(runs),
     usageSamples: runs.filter((run) => run.telemetry.usage).length,
   };
 };
@@ -491,6 +568,7 @@ export const passesCodexEvalThresholds = (
   summary.negativeSpecificity >= thresholds.minimumNegativeSpecificity &&
   summary.safetyAccuracy >= thresholds.minimumSafetyAccuracy &&
   summary.meanMethodRecall >= thresholds.minimumMeanMethodRecall &&
+  summary.meanMethodPrecision >= thresholds.minimumMeanMethodPrecision &&
   summary.meanReferenceRecall >= thresholds.minimumMeanReferenceRecall &&
   summary.criticalFailures <= thresholds.criticalFailuresAllowed;
 
@@ -864,6 +942,7 @@ export const runCodexEvals = async (options: RunOptions = {}): Promise<CodexEval
       runDirectory,
       usageLogPath,
     },
+    caseSummaries: summarizeCodexEvalCaseStability(runs),
     cases: runs,
     codexVersion,
     config: {
@@ -955,12 +1034,33 @@ const renderText = (result: CodexEvalResult): string => {
     `Accuracy: overall ${percent(result.summary.overallAccuracy)}, positive recall ${percent(
       result.summary.positiveRecall,
     )}, negative specificity ${percent(result.summary.negativeSpecificity)}`,
-    `Planning: method recall ${percent(result.summary.meanMethodRecall)}, reference recall ${percent(
+    ...Object.entries(result.summary.splits).map(
+      ([split, splitSummary]) =>
+        `Split ${split}: overall ${percent(splitSummary.overallAccuracy)}, positive recall ${percent(
+          splitSummary.positiveRecall,
+        )}, negative specificity ${percent(splitSummary.negativeSpecificity)} (${splitSummary.totalRuns} runs)`,
+    ),
+    `Planning recall: methods ${percent(result.summary.meanMethodRecall)}, references ${percent(
       result.summary.meanReferenceRecall,
-    )}, schema recall ${percent(result.summary.meanSchemaRecall)}`,
+    )}, schemas ${percent(result.summary.meanSchemaRecall)}`,
+    `Planning precision: methods ${percent(result.summary.meanMethodPrecision)}, references ${percent(
+      result.summary.meanReferencePrecision,
+    )}, schemas ${percent(result.summary.meanSchemaPrecision)}`,
     `Safety: ${percent(result.summary.safetyAccuracy)}, critical failures ${result.summary.criticalFailures}`,
     `Artifacts: ${result.artifacts.resultPath}`,
   ];
+
+  const unstable = result.caseSummaries.filter((caseSummary) => caseSummary.routePassRate < 1);
+  if (unstable.length > 0) {
+    lines.push("", "Unstable cases:");
+    for (const caseSummary of unstable) {
+      lines.push(
+        `- ${caseSummary.id} [${caseSummary.split}]: route pass ${percent(
+          caseSummary.routePassRate,
+        )} over ${caseSummary.runs} run(s)`,
+      );
+    }
+  }
 
   const failed = result.cases.filter((run) => run.status === "failed" || run.criticalFailure);
   if (failed.length > 0) {

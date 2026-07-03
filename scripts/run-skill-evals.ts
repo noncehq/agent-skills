@@ -14,13 +14,15 @@ interface EvalThresholds {
   minimumPositiveRecall: number;
 }
 
+type ExpectedItem = string | string[];
+
 interface EvalExpected {
   critical: boolean;
   destructive: boolean;
-  methods: string[];
-  mustRead: string[];
+  methods: ExpectedItem[];
+  mustRead: ExpectedItem[];
   requiresConfirmation: boolean;
-  schemaFiles: string[];
+  schemaFiles: ExpectedItem[];
   trigger: boolean;
 }
 
@@ -280,7 +282,9 @@ const evaluateCaseSet = (caseSet: EvalCaseSet, repoRoot: string, checks: CheckRe
   );
 
   const referencedFiles = uniqueValues(
-    cases.flatMap((evalCase) => [...evalCase.expected.mustRead, ...evalCase.expected.schemaFiles]),
+    cases
+      .flatMap((evalCase) => [...evalCase.expected.mustRead, ...evalCase.expected.schemaFiles])
+      .flatMap((item) => (Array.isArray(item) ? item : [item])),
   );
   const missingFiles = referencedFiles.filter(
     (relativePath) => !existsSync(join(repoRoot, "skills", relativePath)),
