@@ -1,23 +1,23 @@
 {
-  "kind": "nonce-codex-eval",
+  "kind": "nonce-claude-eval",
   "schemaVersion": 1,
   "caseSetPath": "evals/nonce-skill.cases.json",
   "outputSchemaPath": "evals/nonce-skill-eval.output.schema.json",
   "runner": {
-    "type": "codex-cli",
-    "model": "gpt-5.4-mini",
-    "sandbox": "read-only",
-    "approvalPolicy": "never",
+    "type": "claude-cli",
+    "model": "claude-sonnet-4-6",
+    "permissionMode": "default",
+    "tools": ["Read", "Glob", "Grep", "Skill"],
     "timeoutMs": 240000,
     "retryAttempts": 1,
     "runsPerCase": 1,
-    "extraArgs": ["--ignore-user-config", "--ignore-rules"]
+    "extraArgs": ["--setting-sources", "project", "--strict-mcp-config", "--no-session-persistence"]
   },
   "workspace": {
     "preserve": "on-failure"
   },
   "targetProvisioning": {
-    "mode": "isolated-skill-home",
+    "mode": "isolated-project-skill",
     "skillSourcePath": "skills"
   },
   "thresholds": {

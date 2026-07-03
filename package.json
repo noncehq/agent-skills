@@ -6,7 +6,8 @@
   "scripts": {
     "check": "vp check",
     "evals": "node --import tsx/esm scripts/run-skill-evals.ts",
-    "evals:all": "vp run evals && vp run evals:codex",
+    "evals:all": "vp run evals && vp run evals:codex && vp run evals:claude",
+    "evals:claude": "node --import tsx/esm scripts/run-claude-evals.ts",
     "evals:codex": "node --import tsx/esm scripts/run-codex-evals.ts",
     "lint": "vp lint",
     "format": "vp fmt",

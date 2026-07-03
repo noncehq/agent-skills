@@ -46,6 +46,7 @@ vp check
 vp test
 vp run evals
 vp run evals:codex
+vp run evals:claude
 vp fmt --check
 ```
 
@@ -88,6 +89,20 @@ This provisions the current `skills/` directory into an isolated temporary
 `CODEX_HOME`, runs every case through `codex exec --json --output-schema`, and
 writes a normalized report plus plugin-eval-compatible usage log under
 `evals/artifacts/codex-runs/`.
+
+Run the full local Claude Code eval suite:
+
+```bash
+vp run evals:claude
+```
+
+This provisions the current `skills/` directory as a project-level skill inside
+an isolated temporary workspace, runs every case through
+`claude -p --output-format stream-json --json-schema` with user-level
+customization excluded, and writes the same normalized report plus usage log
+under `evals/artifacts/claude-runs/`. Both agent suites share the case set in
+`evals/nonce-skill.cases.json` and the output contract in
+`evals/nonce-skill-eval.output.schema.json`.
 
 ## Generating Artifacts
 

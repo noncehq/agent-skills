@@ -6,9 +6,13 @@ The loop follows the OpenAI skill-eval pattern:
 
 1. Define a small prompt set with clear success criteria.
 2. Run deterministic checks first.
-3. Run all prompt cases through a local, isolated `codex exec` harness for real
-   skill-routing behavior.
+3. Run all prompt cases through a local, isolated agent harness (`codex exec` or
+   `claude -p`) for real skill-routing behavior.
 4. Feed the observed usage log back into plugin-eval when token calibration is useful.
+
+Both harnesses share the same case set (`nonce-skill.cases.json`), output contract
+(`nonce-skill-eval.output.schema.json`), scoring checks, and thresholds, so their
+reports are directly comparable.
 
 ## Local deterministic run
 
@@ -62,6 +66,39 @@ vp run evals:codex -- --json --output evals/artifacts/codex-runs/latest.json
 The local Codex run scores routing, method planning, reference planning, schema
 planning, and destructive confirmation. It does not execute the user's business
 request; live Nonce access remains a separate smoke test.
+
+## Full local Claude Code run
+
+Run every case through Claude Code with the current skill installed as a
+project-level skill inside a temporary workspace:
+
+```bash
+vp run evals:claude
+```
+
+The runner mirrors the Codex harness with Claude Code equivalents:
+
+- copy the local skill into `<temp-workspace>/.claude/skills/nonce`
+- run `claude -p --output-format stream-json --json-schema` once for each case,
+  with `--setting-sources project` and `--strict-mcp-config` so user-level
+  skills, plugins, CLAUDE.md, and MCP servers stay out of the eval environment
+- restrict the built-in toolset to `Read,Glob,Grep,Skill` (the read-only analog
+  of the Codex sandbox)
+- keep raw stream JSONL, stderr, final JSON, and a normalized report under
+  `evals/artifacts/claude-runs/<timestamp>/`
+- write `observed-usage.jsonl` in the plugin-eval observed-usage shape
+
+Authentication reuses the machine's normal Claude Code login (keychain OAuth,
+`ANTHROPIC_API_KEY`, or `CLAUDE_CODE_OAUTH_TOKEN`); the harness never copies or
+relocates credentials.
+
+Useful debugging flags:
+
+```bash
+vp run evals:claude -- --case trigger.zh.workspace.list
+vp run evals:claude -- --limit 3 --model claude-haiku-4-5
+vp run evals:claude -- --json --output evals/artifacts/claude-runs/latest.json
+```
 
 ## Plugin Eval
 
