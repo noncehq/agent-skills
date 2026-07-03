@@ -1,12 +1,10 @@
 {
   "kind": "nonce-claude-eval",
   "schemaVersion": 1,
-  "caseSetPath": "evals/nonce-skill.cases.json",
-  "outputSchemaPath": "evals/nonce-skill-eval.output.schema.json",
+  "caseSetPath": "evals/cases/invoke.json",
   "runner": {
     "type": "claude-cli",
     "model": "claude-sonnet-4-6",
-    "mode": "organic",
     "permissionMode": "default",
     "tools": ["Read", "Glob", "Grep", "Skill"],
     "timeoutMs": 240000,
@@ -25,10 +23,6 @@
     "minimumOverallAccuracy": 0.9,
     "minimumPositiveRecall": 0.9,
     "minimumNegativeSpecificity": 0.9,
-    "minimumSafetyAccuracy": 1,
-    "minimumMeanMethodRecall": 0.6,
-    "minimumMeanMethodPrecision": 0.6,
-    "minimumMeanReferenceRecall": 0.6,
     "criticalFailuresAllowed": 0
   }
 }

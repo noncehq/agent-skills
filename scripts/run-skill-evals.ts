@@ -3,6 +3,14 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  flattenInvokeCases,
+  getInvokeRunsPerCase,
+  getInvokeThresholds,
+  type InvokeEvalCase,
+  type InvokeEvalCaseSet,
+} from "./invoke-eval-cases.js";
+
 type Severity = "error" | "warning" | "info";
 type Split = "train" | "validation";
 type Language = "en" | "zh";
@@ -68,10 +76,12 @@ export interface SkillEvalResult {
   generatedAt: string;
   ok: boolean;
   summary: {
-    categories: number;
+    behaviorCases: number;
+    behaviorCategories: number;
     checks: number;
     criticalCases: number;
     destructiveCases: number;
+    invokeCases: number;
     errors: number;
     languages: string[];
     negativeCases: number;
@@ -84,7 +94,9 @@ export interface SkillEvalResult {
 }
 
 interface RunOptions {
+  behaviorCasesPath?: string;
   casesPath?: string;
+  invokeCasesPath?: string;
   repoRoot?: string;
   tracePath?: string;
 }
@@ -108,7 +120,8 @@ interface TraceEvent {
 }
 
 const defaultRepoRoot = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
-const defaultCasesPath = join(defaultRepoRoot, "evals/nonce-skill.cases.json");
+const defaultBehaviorCasesPath = join(defaultRepoRoot, "evals/cases/behavior.json");
+const defaultInvokeCasesPath = join(defaultRepoRoot, "evals/cases/invoke.json");
 
 const readText = (path: string) => readFile(path, "utf8");
 
@@ -116,7 +129,7 @@ const readJson = async <T>(path: string): Promise<T> => JSON.parse(await readTex
 
 const uniqueValues = <T>(values: T[]): T[] => [...new Set(values)];
 
-const countCases = (cases: EvalCase[], predicate: (evalCase: EvalCase) => boolean): number =>
+const countCases = <T>(cases: T[], predicate: (evalCase: T) => boolean): number =>
   cases.filter(predicate).length;
 
 const addCheck = (
@@ -149,6 +162,49 @@ const implementationJargon = [
   /\bminer task\b/i,
   /\bJSON\b/i,
 ];
+
+const evalFramingJargon = [
+  /\beval\b/i,
+  /\bbenchmark\b/i,
+  /\btest case\b/i,
+  /\bshould (?:invoke|trigger|use)\b/i,
+  /\bdecide whether\b/i,
+  /评测/,
+  /测试用例/,
+  /判断是否/,
+  /是否应该调用/,
+  /路由/,
+];
+
+const evaluatePromptText = (
+  cases: Array<{ id: string; query: string }>,
+  prefix: string,
+  checks: CheckResult[],
+) => {
+  const jargonLeaks = cases
+    .filter((evalCase) => implementationJargon.some((pattern) => pattern.test(evalCase.query)))
+    .map((evalCase) => evalCase.id);
+  addCheck(
+    checks,
+    `${prefix}.natural-language-prompts`,
+    jargonLeaks.length === 0,
+    "case prompts stay in operator-facing language instead of implementation jargon",
+    "error",
+    jargonLeaks.join(", "),
+  );
+
+  const evalFramingLeaks = cases
+    .filter((evalCase) => evalFramingJargon.some((pattern) => pattern.test(evalCase.query)))
+    .map((evalCase) => evalCase.id);
+  addCheck(
+    checks,
+    `${prefix}.no-eval-framing`,
+    evalFramingLeaks.length === 0,
+    "case prompts must read like real user requests, not evaluation instructions",
+    "error",
+    evalFramingLeaks.join(", "),
+  );
+};
 
 const evaluateCaseSet = (caseSet: EvalCaseSet, repoRoot: string, checks: CheckResult[]) => {
   const { cases, thresholds } = caseSet;
@@ -213,17 +269,7 @@ const evaluateCaseSet = (caseSet: EvalCaseSet, repoRoot: string, checks: CheckRe
     languages.includes("zh") && languages.includes("en"),
     "cases cover zh and en",
   );
-  const jargonLeaks = cases
-    .filter((evalCase) => implementationJargon.some((pattern) => pattern.test(evalCase.query)))
-    .map((evalCase) => evalCase.id);
-  addCheck(
-    checks,
-    "cases.natural-language-prompts",
-    jargonLeaks.length === 0,
-    "case prompts stay in operator-facing language instead of implementation jargon",
-    "error",
-    jargonLeaks.join(", "),
-  );
+  evaluatePromptText(cases, "behavior-cases", checks);
   addCheck(
     checks,
     "cases.split-balance",
@@ -297,6 +343,109 @@ const evaluateCaseSet = (caseSet: EvalCaseSet, repoRoot: string, checks: CheckRe
     "error",
     missingFiles.join(", "),
   );
+};
+
+const evaluateInvokeCaseSet = (
+  caseSet: InvokeEvalCaseSet,
+  checks: CheckResult[],
+): InvokeEvalCase[] => {
+  const cases = flattenInvokeCases(caseSet);
+  const thresholds = getInvokeThresholds(caseSet);
+  const ids = cases.map((evalCase) => evalCase.id);
+  const uniqueIds = uniqueValues(ids);
+  const positiveCases = cases.filter((evalCase) => evalCase.shouldTrigger);
+  const negativeCases = cases.filter((evalCase) => !evalCase.shouldTrigger);
+  const trainCases = cases.filter((evalCase) => evalCase.split === "train");
+  const validationCases = cases.filter((evalCase) => evalCase.split === "validation");
+  const languages = uniqueValues(cases.map((evalCase) => evalCase.language));
+
+  addCheck(
+    checks,
+    "invoke-cases.schema-version",
+    caseSet.schemaVersion === 1,
+    "invoke case set uses schemaVersion 1",
+  );
+  addCheck(
+    checks,
+    "invoke-cases.kind",
+    caseSet.kind === "nonce-skill-invoke-cases",
+    "invoke case set declares its purpose",
+  );
+  addCheck(checks, "invoke-cases.skill", caseSet.skill === "nonce", "invoke cases target nonce");
+  addCheck(
+    checks,
+    "invoke-cases.size",
+    cases.length >= 10 && cases.length <= 40,
+    "invoke case set stays small and targeted",
+  );
+  addCheck(
+    checks,
+    "invoke-cases.unique-ids",
+    uniqueIds.length === ids.length,
+    "invoke case ids are unique",
+  );
+  addCheck(
+    checks,
+    "invoke-cases.runs-per-case",
+    getInvokeRunsPerCase(caseSet) >= 3,
+    "invoke evals run each query multiple times",
+  );
+  addCheck(
+    checks,
+    "invoke-cases.threshold.overall",
+    thresholds.minimumOverallAccuracy > 0.5,
+    "invoke overall threshold is stricter than a degenerate baseline",
+  );
+  addCheck(
+    checks,
+    "invoke-cases.threshold.positive-recall",
+    thresholds.minimumPositiveRecall > 0.5,
+    "invoke positive recall threshold is stricter than never-trigger behavior",
+  );
+  addCheck(
+    checks,
+    "invoke-cases.threshold.negative-specificity",
+    thresholds.minimumNegativeSpecificity > 0.5,
+    "invoke negative specificity threshold is stricter than always-trigger behavior",
+  );
+  addCheck(
+    checks,
+    "invoke-cases.threshold.critical",
+    thresholds.criticalFailuresAllowed === 0,
+    "invoke critical cases require zero failures",
+  );
+  addCheck(
+    checks,
+    "invoke-cases.language-coverage",
+    languages.includes("zh") && languages.includes("en"),
+    "invoke cases cover zh and en",
+  );
+  evaluatePromptText(cases, "invoke-cases", checks);
+  addCheck(
+    checks,
+    "invoke-cases.split-balance",
+    trainCases.length > 0 &&
+      validationCases.length > 0 &&
+      countCases(trainCases, (evalCase) => evalCase.shouldTrigger) > 0 &&
+      countCases(trainCases, (evalCase) => !evalCase.shouldTrigger) > 0 &&
+      countCases(validationCases, (evalCase) => evalCase.shouldTrigger) > 0 &&
+      countCases(validationCases, (evalCase) => !evalCase.shouldTrigger) > 0,
+    "invoke train and validation splits both include trigger and negative controls",
+  );
+  addCheck(
+    checks,
+    "invoke-cases.class-balance",
+    positiveCases.length === negativeCases.length,
+    "invoke cases keep trigger and negative controls balanced",
+  );
+  addCheck(
+    checks,
+    "invoke-cases.reasons",
+    cases.every((evalCase) => evalCase.reason.trim().length > 0),
+    "invoke cases explain why each query should or should not activate the skill",
+  );
+
+  return cases;
 };
 
 const evaluateStaticSkillContract = async (repoRoot: string, checks: CheckResult[]) => {
@@ -409,10 +558,15 @@ const summarizeTrace = async (tracePath: string): Promise<TraceSummary> => {
 
 export const runSkillEvals = async (options: RunOptions = {}): Promise<SkillEvalResult> => {
   const repoRoot = resolve(options.repoRoot ?? defaultRepoRoot);
-  const casesPath = resolve(options.casesPath ?? defaultCasesPath);
+  const behaviorCasesPath = resolve(
+    options.behaviorCasesPath ?? options.casesPath ?? defaultBehaviorCasesPath,
+  );
+  const invokeCasesPath = resolve(options.invokeCasesPath ?? defaultInvokeCasesPath);
   const checks: CheckResult[] = [];
-  const caseSet = await readJson<EvalCaseSet>(casesPath);
+  const caseSet = await readJson<EvalCaseSet>(behaviorCasesPath);
+  const invokeCaseSet = await readJson<InvokeEvalCaseSet>(invokeCasesPath);
 
+  const invokeCases = evaluateInvokeCaseSet(invokeCaseSet, checks);
   evaluateCaseSet(caseSet, repoRoot, checks);
   await evaluateStaticSkillContract(repoRoot, checks);
 
@@ -431,21 +585,26 @@ export const runSkillEvals = async (options: RunOptions = {}): Promise<SkillEval
   const errors = checks.filter((check) => check.severity === "error" && !check.pass).length;
   const warnings = checks.filter((check) => check.severity === "warning" && !check.pass).length;
   const cases = caseSet.cases;
-  const languages = uniqueValues(cases.map((evalCase) => evalCase.language)).sort();
+  const languages = uniqueValues([
+    ...cases.map((evalCase) => evalCase.language),
+    ...invokeCases.map((evalCase) => evalCase.language),
+  ]).sort();
 
   return {
     generatedAt: new Date().toISOString(),
     ok: errors === 0,
     summary: {
-      categories: uniqueValues(cases.map((evalCase) => evalCase.category)).length,
+      behaviorCases: cases.length,
+      behaviorCategories: uniqueValues(cases.map((evalCase) => evalCase.category)).length,
       checks: checks.length,
       criticalCases: countCases(cases, (evalCase) => evalCase.expected.critical),
       destructiveCases: countCases(cases, (evalCase) => evalCase.expected.destructive),
+      invokeCases: invokeCases.length,
       errors,
       languages,
       negativeCases: countCases(cases, (evalCase) => !evalCase.expected.trigger),
       positiveCases: countCases(cases, (evalCase) => evalCase.expected.trigger),
-      totalCases: cases.length,
+      totalCases: cases.length + invokeCases.length,
       warnings,
     },
     checks,
@@ -467,6 +626,12 @@ const parseArgs = (argv: string[]): CliOptions => {
     } else if (arg === "--cases" && next) {
       options.casesPath = next;
       index += 1;
+    } else if (arg === "--behavior-cases" && next) {
+      options.behaviorCasesPath = next;
+      index += 1;
+    } else if (arg === "--invoke-cases" && next) {
+      options.invokeCasesPath = next;
+      index += 1;
     } else if (arg === "--output" && next) {
       options.outputPath = next;
       index += 1;
@@ -478,7 +643,7 @@ const parseArgs = (argv: string[]): CliOptions => {
       index += 1;
     } else if (arg === "--help" || arg === "-h") {
       console.log(
-        `Usage: vp run evals -- [--json] [--output <file>] [--trace <jsonl>] [--cases <json>]`,
+        `Usage: vp run evals -- [--json] [--output <file>] [--trace <jsonl>] [--behavior-cases <json>] [--invoke-cases <json>]`,
       );
       process.exit(0);
     } else {
@@ -492,8 +657,9 @@ const parseArgs = (argv: string[]): CliOptions => {
 const renderText = (result: SkillEvalResult): string => {
   const lines = [
     `Nonce skill evals: ${result.ok ? "PASS" : "FAIL"}`,
-    `Cases: ${result.summary.totalCases} total, ${result.summary.positiveCases} trigger, ${result.summary.negativeCases} negative, ${result.summary.destructiveCases} destructive`,
-    `Coverage: ${result.summary.categories} categories, languages: ${result.summary.languages.join(", ")}`,
+    `Invoke cases: ${result.summary.invokeCases} raw prompts`,
+    `Behavior contracts: ${result.summary.behaviorCases} cases, ${result.summary.positiveCases} trigger, ${result.summary.negativeCases} negative, ${result.summary.destructiveCases} destructive`,
+    `Coverage: ${result.summary.behaviorCategories} behavior categories, languages: ${result.summary.languages.join(", ")}`,
     `Checks: ${result.summary.checks} total, ${result.summary.errors} errors, ${result.summary.warnings} warnings`,
   ];
 

@@ -1,6 +1,8 @@
 {
+  "schemaVersion": 1,
+  "kind": "nonce-skill-invoke-cases",
   "skill": "nonce",
-  "description": "Development fixture for testing whether the Nonce skill description triggers on user-intent prompts without over-triggering on near misses.",
+  "description": "Raw user-intent prompts for measuring nonce skill activation without over-triggering on near misses.",
   "runsPerQuery": 3,
   "passingThreshold": 0.9,
   "train": [

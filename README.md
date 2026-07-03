@@ -66,8 +66,9 @@ Run the deterministic evals:
 vp run evals
 ```
 
-This validates the prompt cases in `evals/nonce-skill.cases.json` and confirms
-the packaged skill keeps its key workflow and safety contracts.
+This validates raw invocation cases in `evals/cases/invoke.json`, behavior
+contracts in `evals/cases/behavior.json`, and the packaged skill's key workflow
+and safety contracts.
 
 To capture a report:
 
@@ -75,9 +76,9 @@ To capture a report:
 vp run evals -- --json --output evals/artifacts/last-run.json
 ```
 
-Use `evals/nonce-skill-rubric.schema.json` with `codex exec --output-schema`
-when qualitative trace review is needed. See `evals/README.md` for the full flow
-and the optional `plugin-eval` commands.
+Use `evals/nonce-skill-rubric.schema.json` only for out-of-band qualitative
+trace review. See `evals/README.md` for the full flow and the optional
+`plugin-eval` commands.
 
 Run the full local Codex eval suite:
 
@@ -86,8 +87,9 @@ vp run evals:codex
 ```
 
 This provisions the current `skills/` directory into an isolated temporary
-`CODEX_HOME`, sends each case's raw user query to `codex exec --json`, and writes
-a normalized trigger report plus plugin-eval-compatible usage log under
+`CODEX_HOME`, sends each raw invocation query from `evals/cases/invoke.json` to
+`codex exec --json`, and writes a normalized trigger report plus
+plugin-eval-compatible usage log under
 `evals/artifacts/codex-runs/`.
 
 Run the full local Claude Code eval suite:
@@ -100,17 +102,9 @@ This provisions the current `skills/` directory as a project-level skill inside
 an isolated temporary workspace, runs every case through
 `claude -p --output-format stream-json` with user-level customization excluded,
 and writes the same normalized trigger report plus usage log under
-`evals/artifacts/claude-runs/`. Both agent suites share the case set in
-`evals/nonce-skill.cases.json`, run each case 3 times, and report
-train/validation splits separately.
-
-To score planning after raw-prompt activation is healthy, use the explicit
-instructed harnesses:
-
-```bash
-vp run evals:codex:instructed
-vp run evals:claude:instructed
-```
+`evals/artifacts/claude-runs/`. Both agent suites share
+`evals/cases/invoke.json`, run each case 3 times, and report train/validation
+splits separately.
 
 ## Generating Artifacts
 

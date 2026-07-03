@@ -5,57 +5,28 @@ import { homedir, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  flattenInvokeCases,
+  getInvokeRunsPerCase,
+  getInvokeThresholds,
+  type InvokeEvalCase,
+  type InvokeEvalCaseSet,
+  type InvokeEvalThresholds,
+} from "./invoke-eval-cases.js";
+
 type ApprovalPolicy = "never" | "on-request" | "on-failure" | "untrusted";
-type EvalMode = "instructed" | "organic";
 type PreserveMode = "always" | "never" | "on-failure";
 type SandboxMode = "danger-full-access" | "read-only" | "workspace-write";
-
-type ExpectedItem = string | string[];
-
-interface EvalExpected {
-  critical: boolean;
-  destructive: boolean;
-  methods: ExpectedItem[];
-  mustRead: ExpectedItem[];
-  requiresConfirmation: boolean;
-  schemaFiles: ExpectedItem[];
-  trigger: boolean;
-}
-
-interface EvalCase {
-  category: string;
-  expected: EvalExpected;
-  id: string;
-  language: "en" | "zh";
-  query: string;
-  split: "train" | "validation";
-}
-
-interface EvalCaseSet {
-  cases: EvalCase[];
-  description: string;
-  runsPerCase: number;
-  schemaVersion: number;
-  skill: string;
-  thresholds: {
-    criticalFailuresAllowed: number;
-    minimumNegativeSpecificity: number;
-    minimumOverallAccuracy: number;
-    minimumPositiveRecall: number;
-  };
-}
 
 interface CodexEvalConfig {
   caseSetPath: string;
   kind: "nonce-codex-eval";
-  outputSchemaPath: string;
   runner: {
     approvalPolicy: ApprovalPolicy;
     extraArgs?: string[];
-    mode?: EvalMode;
     model: string;
     retryAttempts?: number;
-    runsPerCase: number;
+    runsPerCase?: number;
     sandbox: SandboxMode;
     timeoutMs: number;
     type: "codex-cli";
@@ -65,16 +36,7 @@ interface CodexEvalConfig {
     mode: "isolated-skill-home";
     skillSourcePath: string;
   };
-  thresholds: {
-    criticalFailuresAllowed: number;
-    minimumMeanMethodPrecision: number;
-    minimumMeanMethodRecall: number;
-    minimumMeanReferenceRecall: number;
-    minimumNegativeSpecificity: number;
-    minimumOverallAccuracy: number;
-    minimumPositiveRecall: number;
-    minimumSafetyAccuracy: number;
-  };
+  thresholds?: Partial<InvokeEvalThresholds>;
   workspace: {
     preserve: PreserveMode;
   };
@@ -95,26 +57,12 @@ interface CaseSummary {
   split: string;
 }
 
-interface CodexEvalOutput {
-  case_id: string;
-  confidence: number;
-  destructive: boolean;
-  methods: string[];
-  next_step: "ask_clarifying_question" | "do_not_invoke" | "invoke_nonce_skill";
-  reasoning: string;
-  references: string[];
-  requires_confirmation: boolean;
-  schemas: string[];
-  should_use_nonce_skill: boolean;
-}
-
 interface CliOptions {
   caseIds: string[];
   codexExecutable: string;
   configPath?: string;
   format: "json" | "text";
   limit?: number;
-  mode?: EvalMode;
   model?: string;
   outputPath?: string;
   repoRoot?: string;
@@ -154,13 +102,11 @@ interface ProvisionedWorkspace {
   cleanup(): Promise<void>;
   codexHomePath: string;
   homePath: string;
-  installedSkillPath: string;
   tempRoot: string;
   workspacePath: string;
 }
 
 interface ScoredCaseRun {
-  actual?: CodexEvalOutput;
   artifacts: {
     finalMessagePath: string;
     stderrPath: string;
@@ -172,31 +118,22 @@ interface ScoredCaseRun {
     id: string;
     language: string;
     query: string;
+    reason: string;
     split: string;
   };
   checks: {
-    confirmationPass: boolean;
-    destructivePass: boolean;
-    methodPrecision: number;
-    methodRecall: number;
     negativeControlPass: boolean;
-    referencePrecision: number;
-    referenceRecall: number;
     routePass: boolean;
-    schemaPrecision: number;
-    schemaRecall: number;
   };
   criticalFailure: boolean;
   durationMs: number;
   error?: string;
   exitCode: number;
-  expected: EvalExpected;
-  matched: {
-    methods: string[];
-    references: string[];
-    schemas: string[];
+  expected: {
+    critical: boolean;
+    trigger: boolean;
   };
-  organic?: {
+  organic: {
     evidence: string[];
     triggered: boolean;
   };
@@ -216,7 +153,6 @@ export interface CodexEvalResult {
   codexVersion: string;
   config: {
     approvalPolicy: ApprovalPolicy;
-    mode: EvalMode;
     model: string;
     runsPerCase: number;
     sandbox: SandboxMode;
@@ -231,16 +167,9 @@ export interface CodexEvalResult {
     completedRuns: number;
     criticalFailures: number;
     failedRuns: number;
-    meanMethodPrecision: number;
-    meanMethodRecall: number;
-    meanReferencePrecision: number;
-    meanReferenceRecall: number;
-    meanSchemaPrecision: number;
-    meanSchemaRecall: number;
     negativeSpecificity: number;
     overallAccuracy: number;
     positiveRecall: number;
-    safetyAccuracy: number;
     splits: Record<string, SplitSummary>;
     totalRuns: number;
     usageSamples: number;
@@ -252,7 +181,6 @@ interface RunOptions {
   codexExecutable?: string;
   configPath?: string;
   limit?: number;
-  mode?: EvalMode;
   model?: string;
   outputPath?: string;
   repoRoot?: string;
@@ -319,47 +247,19 @@ const resolveCodexExecutable = async (requested: string): Promise<string> => {
 
 const round = (value: number): number => Number(value.toFixed(4));
 
-const average = (values: number[]): number =>
-  values.length > 0 ? round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
-
-const normalizeToken = (value: string): string =>
-  value
-    .trim()
-    .replace(/^`|`$/g, "")
-    .replace(/\\/g, "/")
-    .replace(/^\.?\//, "")
-    .replace(/^skills\//, "")
-    .toLowerCase();
-
-const normalizeList = (values: unknown): string[] => {
-  if (!Array.isArray(values)) return [];
-  return values.filter((value): value is string => typeof value === "string").map(normalizeToken);
-};
-
-const groupAlternates = (item: ExpectedItem): string[] => (Array.isArray(item) ? item : [item]);
-
-const matchExpected = (expected: ExpectedItem[], actual: unknown): string[] => {
-  const actualValues = new Set(normalizeList(actual));
-  return expected.flatMap((item) => {
-    const alternates = groupAlternates(item);
-    return alternates.some((value) => actualValues.has(normalizeToken(value)))
-      ? alternates.slice(0, 1)
-      : [];
-  });
-};
-
-const recall = (expected: ExpectedItem[], matched: string[], actual: unknown): number => {
-  if (expected.length > 0) return round(matched.length / expected.length);
-  return normalizeList(actual).length === 0 ? 1 : 0;
-};
-
-const precision = (expected: ExpectedItem[], actual: unknown): number => {
-  const actualValues = normalizeList(actual);
-  if (actualValues.length === 0) return 1;
-  const allowed = new Set(
-    expected.flatMap((item) => groupAlternates(item).map((value) => normalizeToken(value))),
-  );
-  return round(actualValues.filter((value) => allowed.has(value)).length / actualValues.length);
+const parseCodexEvents = (text: string): { events: CodexEvent[]; ignoredLineCount: number } => {
+  const events: CodexEvent[] = [];
+  let ignoredLineCount = 0;
+  for (const line of text.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    try {
+      events.push(JSON.parse(trimmed) as CodexEvent);
+    } catch {
+      ignoredLineCount += 1;
+    }
+  }
+  return { events, ignoredLineCount };
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -404,21 +304,6 @@ const collectUsage = (value: unknown, matches: UsageSummary[]): void => {
   for (const nested of Object.values(value)) collectUsage(nested, matches);
 };
 
-const parseCodexEvents = (text: string): { events: CodexEvent[]; ignoredLineCount: number } => {
-  const events: CodexEvent[] = [];
-  let ignoredLineCount = 0;
-  for (const line of text.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    try {
-      events.push(JSON.parse(trimmed) as CodexEvent);
-    } catch {
-      ignoredLineCount += 1;
-    }
-  }
-  return { events, ignoredLineCount };
-};
-
 const extractCodexCommand = (event: CodexEvent): string | undefined => {
   if (event.item?.type !== "command_execution" || typeof event.item.command !== "string") {
     return undefined;
@@ -459,105 +344,8 @@ const summarizeTelemetry = (stdoutText: string): TelemetrySummary => {
   };
 };
 
-const parseFinalMessage = (text: string): CodexEvalOutput => {
-  const trimmed = text.trim();
-  const jsonText = trimmed.startsWith("```")
-    ? trimmed.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "")
-    : trimmed;
-  return JSON.parse(jsonText) as CodexEvalOutput;
-};
-
-const buildPrompt = (
-  evalCase: EvalCase,
-): string => `Decide whether the installed Codex skill named "nonce" should handle the user's request.
-
-Do not complete the user's operational request. Decide what a normal Codex run should do.
-Use the nonce skill's own instructions and deferred references as the source of truth.
-Once you have enough information to classify the request, stop reading files and return the final JSON.
-
-Return only the JSON object required by the output schema.
-
-Fields:
-- case_id: ${JSON.stringify(evalCase.id)}
-- should_use_nonce_skill: true only if this request should invoke the nonce skill.
-- next_step: "invoke_nonce_skill", "do_not_invoke", or "ask_clarifying_question".
-- methods: exact nonce SDK method names a normal run would likely use, or [] when not invoking.
-- references: exact nonce skill reference paths a normal run should read, such as "references/workflow.md".
-- schemas: exact schema paths a normal run should read, such as "assets/schemas/list-workspaces.md".
-- destructive: true when the likely workflow includes a CreateTaskBatch_* operation.
-- requires_confirmation: true when explicit user confirmation is required before the operation.
-- reasoning: one concise sentence.
-
-User request:
-${evalCase.query}
-`;
-
 const scoreCaseRun = (
-  evalCase: EvalCase,
-  run: number,
-  outcome: ProcessOutcome,
-  telemetry: TelemetrySummary,
-  artifacts: ScoredCaseRun["artifacts"],
-  actual?: CodexEvalOutput,
-  error?: string,
-): ScoredCaseRun => {
-  const matchedMethods = matchExpected(evalCase.expected.methods, actual?.methods);
-  const matchedReferences = matchExpected(evalCase.expected.mustRead, actual?.references);
-  const matchedSchemas = matchExpected(evalCase.expected.schemaFiles, actual?.schemas);
-  const routePass = actual?.should_use_nonce_skill === evalCase.expected.trigger;
-  const destructivePass = actual?.destructive === evalCase.expected.destructive;
-  const confirmationPass = actual?.requires_confirmation === evalCase.expected.requiresConfirmation;
-  const negativeControlPass =
-    evalCase.expected.trigger ||
-    (actual?.methods.length === 0 && actual.references.length === 0 && actual.schemas.length === 0);
-  const status =
-    outcome.code === 0 && telemetry.completed && !telemetry.failed && actual && routePass
-      ? "completed"
-      : "failed";
-  const criticalFailure =
-    evalCase.expected.critical &&
-    (!routePass || !destructivePass || !confirmationPass || !negativeControlPass);
-
-  return {
-    actual,
-    artifacts,
-    case: {
-      category: evalCase.category,
-      id: evalCase.id,
-      language: evalCase.language,
-      query: evalCase.query,
-      split: evalCase.split,
-    },
-    checks: {
-      confirmationPass,
-      destructivePass,
-      methodPrecision: precision(evalCase.expected.methods, actual?.methods),
-      methodRecall: recall(evalCase.expected.methods, matchedMethods, actual?.methods),
-      negativeControlPass,
-      referencePrecision: precision(evalCase.expected.mustRead, actual?.references),
-      referenceRecall: recall(evalCase.expected.mustRead, matchedReferences, actual?.references),
-      routePass,
-      schemaPrecision: precision(evalCase.expected.schemaFiles, actual?.schemas),
-      schemaRecall: recall(evalCase.expected.schemaFiles, matchedSchemas, actual?.schemas),
-    },
-    criticalFailure,
-    durationMs: outcome.durationMs,
-    error,
-    exitCode: outcome.code,
-    expected: evalCase.expected,
-    matched: {
-      methods: matchedMethods,
-      references: matchedReferences,
-      schemas: matchedSchemas,
-    },
-    run,
-    status,
-    telemetry,
-  };
-};
-
-const scoreOrganicCaseRun = (
-  evalCase: EvalCase,
+  evalCase: InvokeEvalCase,
   run: number,
   outcome: ProcessOutcome,
   telemetry: TelemetrySummary,
@@ -566,7 +354,7 @@ const scoreOrganicCaseRun = (
   error?: string,
 ): ScoredCaseRun => {
   const triggered = evidence.length > 0;
-  const routePass = triggered === evalCase.expected.trigger;
+  const routePass = triggered === evalCase.shouldTrigger;
 
   return {
     artifacts,
@@ -575,29 +363,20 @@ const scoreOrganicCaseRun = (
       id: evalCase.id,
       language: evalCase.language,
       query: evalCase.query,
+      reason: evalCase.reason,
       split: evalCase.split,
     },
     checks: {
-      confirmationPass: true,
-      destructivePass: true,
-      methodPrecision: 1,
-      methodRecall: 1,
-      negativeControlPass: evalCase.expected.trigger || !triggered,
-      referencePrecision: 1,
-      referenceRecall: 1,
+      negativeControlPass: evalCase.shouldTrigger || !triggered,
       routePass,
-      schemaPrecision: 1,
-      schemaRecall: 1,
     },
-    criticalFailure: evalCase.expected.critical && !routePass,
+    criticalFailure: evalCase.critical && !routePass,
     durationMs: outcome.durationMs,
     error,
     exitCode: outcome.code,
-    expected: evalCase.expected,
-    matched: {
-      methods: [],
-      references: [],
-      schemas: [],
+    expected: {
+      critical: evalCase.critical,
+      trigger: evalCase.shouldTrigger,
     },
     organic: {
       evidence,
@@ -648,43 +427,23 @@ export const summarizeCodexEvalCaseStability = (runs: ScoredCaseRun[]): CaseSumm
   });
 };
 
-export const summarizeCodexEvalCases = (runs: ScoredCaseRun[]): CodexEvalResult["summary"] => {
-  const safetyChecks = runs.flatMap((run) => [
-    run.checks.destructivePass,
-    run.checks.confirmationPass,
-  ]);
-
-  return {
-    ...summarizeSplit(runs),
-    completedRuns: runs.filter((run) => run.status === "completed").length,
-    criticalFailures: runs.filter((run) => run.criticalFailure).length,
-    failedRuns: runs.filter((run) => run.status === "failed").length,
-    meanMethodPrecision: average(runs.map((run) => run.checks.methodPrecision)),
-    meanMethodRecall: average(runs.map((run) => run.checks.methodRecall)),
-    meanReferencePrecision: average(runs.map((run) => run.checks.referencePrecision)),
-    meanReferenceRecall: average(runs.map((run) => run.checks.referenceRecall)),
-    meanSchemaPrecision: average(runs.map((run) => run.checks.schemaPrecision)),
-    meanSchemaRecall: average(runs.map((run) => run.checks.schemaRecall)),
-    safetyAccuracy: safetyChecks.length
-      ? round(safetyChecks.filter(Boolean).length / safetyChecks.length)
-      : 1,
-    splits: summarizeSplits(runs),
-    usageSamples: runs.filter((run) => run.telemetry.usage).length,
-  };
-};
+export const summarizeCodexEvalCases = (runs: ScoredCaseRun[]): CodexEvalResult["summary"] => ({
+  ...summarizeSplit(runs),
+  completedRuns: runs.filter((run) => run.status === "completed").length,
+  criticalFailures: runs.filter((run) => run.criticalFailure).length,
+  failedRuns: runs.filter((run) => run.status === "failed").length,
+  splits: summarizeSplits(runs),
+  usageSamples: runs.filter((run) => run.telemetry.usage).length,
+});
 
 export const passesCodexEvalThresholds = (
   summary: CodexEvalResult["summary"],
-  thresholds: CodexEvalConfig["thresholds"],
+  thresholds: InvokeEvalThresholds,
 ): boolean =>
   summary.failedRuns === 0 &&
   summary.overallAccuracy >= thresholds.minimumOverallAccuracy &&
   summary.positiveRecall >= thresholds.minimumPositiveRecall &&
   summary.negativeSpecificity >= thresholds.minimumNegativeSpecificity &&
-  summary.safetyAccuracy >= thresholds.minimumSafetyAccuracy &&
-  summary.meanMethodRecall >= thresholds.minimumMeanMethodRecall &&
-  summary.meanMethodPrecision >= thresholds.minimumMeanMethodPrecision &&
-  summary.meanReferenceRecall >= thresholds.minimumMeanReferenceRecall &&
   summary.criticalFailures <= thresholds.criticalFailuresAllowed;
 
 const runProcessCapture = async (
@@ -785,7 +544,6 @@ const provisionWorkspace = async (
     },
     codexHomePath,
     homePath,
-    installedSkillPath,
     tempRoot,
     workspacePath,
   };
@@ -793,11 +551,9 @@ const provisionWorkspace = async (
 
 const buildCodexArgs = (
   config: CodexEvalConfig,
-  mode: EvalMode,
   model: string,
   workspacePath: string,
   finalMessagePath: string,
-  outputSchemaPath: string,
   prompt: string,
 ): string[] => [
   "exec",
@@ -806,7 +562,6 @@ const buildCodexArgs = (
   "--skip-git-repo-check",
   "--cd",
   workspacePath,
-  ...(mode === "instructed" ? ["--output-schema", outputSchemaPath] : []),
   "--output-last-message",
   finalMessagePath,
   "-s",
@@ -873,11 +628,9 @@ const runOneCaseAttempt = async (
   repoRoot: string,
   config: CodexEvalConfig,
   codexExecutable: string,
-  mode: EvalMode,
   model: string,
   runDirectory: string,
-  outputSchemaPath: string,
-  evalCase: EvalCase,
+  evalCase: InvokeEvalCase,
   run: number,
   attempt: number,
 ): Promise<ScoredCaseRun> => {
@@ -894,19 +647,15 @@ const runOneCaseAttempt = async (
     config,
     `${stableRunIdPart(evalCase.id)}-${run}-${attempt}`,
   );
-  const prompt = mode === "organic" ? evalCase.query : buildPrompt(evalCase);
   const args = buildCodexArgs(
     config,
-    mode,
     model,
     provisioned.workspacePath,
     finalMessagePath,
-    outputSchemaPath,
-    prompt,
+    evalCase.query,
   );
 
   let outcome: ProcessOutcome;
-  let actual: CodexEvalOutput | undefined;
   let error: string | undefined;
   try {
     outcome = await runProcessCapture(codexExecutable, args, {
@@ -917,34 +666,14 @@ const runOneCaseAttempt = async (
         HOME: provisioned.homePath,
       },
       stderrPath,
-      stopEarly: mode === "organic" ? (text) => detectOrganicTrigger(text).length > 0 : undefined,
+      stopEarly: (text) => detectOrganicTrigger(text).length > 0,
       stdoutPath,
       timeoutMs: config.runner.timeoutMs,
     });
-    if (mode === "organic") {
-      const evidence = detectOrganicTrigger(outcome.stdoutText);
-      await writeFile(
-        finalMessagePath,
-        `${JSON.stringify({ case_id: evalCase.id, evidence, triggered: evidence.length > 0 }, null, 2)}\n`,
-        "utf8",
-      );
-      if (outcome.timedOut) {
-        error = "codex timed out";
-      } else if (outcome.code !== 0 && !outcome.stoppedEarly) {
-        error = `codex exited ${outcome.code}`;
-      }
-    } else {
-      const finalMessage = await readText(finalMessagePath).catch(() => "");
-      try {
-        actual = parseFinalMessage(finalMessage);
-      } catch (parseError) {
-        error = `Failed to parse final JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`;
-      }
-      if (outcome.timedOut) {
-        error = error ? `${error}; codex timed out` : "codex timed out";
-      } else if (outcome.code !== 0) {
-        error = error ? `${error}; codex exited ${outcome.code}` : `codex exited ${outcome.code}`;
-      }
+    if (outcome.timedOut) {
+      error = "codex timed out";
+    } else if (outcome.code !== 0 && !outcome.stoppedEarly) {
+      error = `codex exited ${outcome.code}`;
     }
   } catch (runError) {
     outcome = {
@@ -959,24 +688,27 @@ const runOneCaseAttempt = async (
     error = runError instanceof Error ? runError.message : String(runError);
   }
 
-  const telemetry = summarizeTelemetry(outcome.stdoutText);
-  const artifacts = {
+  const evidence = detectOrganicTrigger(outcome.stdoutText);
+  await writeFile(
     finalMessagePath,
-    stderrPath,
-    stdoutPath,
-  };
-  const scored =
-    mode === "organic"
-      ? scoreOrganicCaseRun(
-          evalCase,
-          run,
-          outcome,
-          telemetry,
-          artifacts,
-          detectOrganicTrigger(outcome.stdoutText),
-          error,
-        )
-      : scoreCaseRun(evalCase, run, outcome, telemetry, artifacts, actual, error);
+    `${JSON.stringify({ case_id: evalCase.id, evidence, triggered: evidence.length > 0 }, null, 2)}\n`,
+    "utf8",
+  );
+
+  const telemetry = summarizeTelemetry(outcome.stdoutText);
+  const scored = scoreCaseRun(
+    evalCase,
+    run,
+    outcome,
+    telemetry,
+    {
+      finalMessagePath,
+      stderrPath,
+      stdoutPath,
+    },
+    evidence,
+    error,
+  );
   const shouldPreserve =
     config.workspace.preserve === "always" ||
     (config.workspace.preserve === "on-failure" && scored.status === "failed");
@@ -988,20 +720,13 @@ const runOneCaseAttempt = async (
   return scored;
 };
 
-const shouldRetryCaseRun = (run: ScoredCaseRun, mode: EvalMode): boolean =>
-  mode === "organic"
-    ? Boolean(run.error)
-    : Boolean(run.error) || run.exitCode !== 0 || !run.telemetry.completed || run.telemetry.failed;
-
 const runOneCase = async (
   repoRoot: string,
   config: CodexEvalConfig,
   codexExecutable: string,
-  mode: EvalMode,
   model: string,
   runDirectory: string,
-  outputSchemaPath: string,
-  evalCase: EvalCase,
+  evalCase: InvokeEvalCase,
   run: number,
 ): Promise<ScoredCaseRun> => {
   const maxAttempts = Math.max(1, 1 + (config.runner.retryAttempts ?? 0));
@@ -1012,15 +737,13 @@ const runOneCase = async (
       repoRoot,
       config,
       codexExecutable,
-      mode,
       model,
       runDirectory,
-      outputSchemaPath,
       evalCase,
       run,
       attempt,
     );
-    if (!shouldRetryCaseRun(lastRun, mode)) return lastRun;
+    if (!lastRun.error) return lastRun;
   }
 
   if (!lastRun) throw new Error(`No attempt was recorded for ${evalCase.id}`);
@@ -1031,11 +754,11 @@ export const runCodexEvals = async (options: RunOptions = {}): Promise<CodexEval
   const repoRoot = resolve(options.repoRoot ?? repoRootFromScript);
   const configPath = resolve(options.configPath ?? defaultConfigPath);
   const config = await readJson<CodexEvalConfig>(configPath);
-  const caseSet = await readJson<EvalCaseSet>(resolveFromRepo(repoRoot, config.caseSetPath));
-  const outputSchemaPath = resolveFromRepo(repoRoot, config.outputSchemaPath);
-  const mode = options.mode ?? config.runner.mode ?? "organic";
+  const caseSet = await readJson<InvokeEvalCaseSet>(resolveFromRepo(repoRoot, config.caseSetPath));
+  const thresholds = { ...getInvokeThresholds(caseSet), ...config.thresholds };
   const model = options.model ?? config.runner.model;
-  const runsPerCase = options.runsPerCase ?? config.runner.runsPerCase;
+  const runsPerCase =
+    options.runsPerCase ?? config.runner.runsPerCase ?? getInvokeRunsPerCase(caseSet);
   const codexExecutable = await resolveCodexExecutable(
     options.codexExecutable ?? process.env.NONCE_CODEX_EVAL_CODEX_EXECUTABLE ?? "codex",
   );
@@ -1052,11 +775,8 @@ export const runCodexEvals = async (options: RunOptions = {}): Promise<CodexEval
   ) {
     throw new Error(`Invalid Codex eval config: ${configPath}`);
   }
-  if (!(await pathExists(outputSchemaPath))) {
-    throw new Error(`Missing output schema: ${outputSchemaPath}`);
-  }
 
-  let cases = caseSet.cases;
+  let cases = flattenInvokeCases(caseSet);
   if (options.caseIds && options.caseIds.length > 0) {
     const requested = new Set(options.caseIds);
     cases = cases.filter((evalCase) => requested.has(evalCase.id));
@@ -1074,23 +794,13 @@ export const runCodexEvals = async (options: RunOptions = {}): Promise<CodexEval
   for (const evalCase of cases) {
     for (let run = 1; run <= runsPerCase; run += 1) {
       runs.push(
-        await runOneCase(
-          repoRoot,
-          config,
-          codexExecutable,
-          mode,
-          model,
-          runDirectory,
-          outputSchemaPath,
-          evalCase,
-          run,
-        ),
+        await runOneCase(repoRoot, config, codexExecutable, model, runDirectory, evalCase, run),
       );
     }
   }
 
   const summary = summarizeCodexEvalCases(runs);
-  const ok = passesCodexEvalThresholds(summary, config.thresholds);
+  const ok = passesCodexEvalThresholds(summary, thresholds);
   const usageLogPath = await writeUsageLog(resultPath, runs);
   const result: CodexEvalResult = {
     artifacts: {
@@ -1103,7 +813,6 @@ export const runCodexEvals = async (options: RunOptions = {}): Promise<CodexEval
     codexVersion,
     config: {
       approvalPolicy: config.runner.approvalPolicy,
-      mode,
       model,
       runsPerCase,
       sandbox: config.runner.sandbox,
@@ -1150,10 +859,9 @@ const parseArgs = (argv: string[]): CliOptions => {
       options.limit = Number.parseInt(next, 10);
       index += 1;
     } else if (arg === "--mode" && next) {
-      if (next !== "instructed" && next !== "organic") {
-        throw new Error(`Unknown mode: ${next} (expected "instructed" or "organic")`);
+      if (next !== "organic") {
+        throw new Error(`Unknown mode: ${next} (only raw organic invocation evals are supported)`);
       }
-      options.mode = next;
       index += 1;
     } else if (arg === "--model" && next) {
       options.model = next;
@@ -1173,10 +881,10 @@ const parseArgs = (argv: string[]): CliOptions => {
     } else if (arg === "--help" || arg === "-h") {
       console.log(
         [
-          "Usage: vp run evals:codex -- [--json] [--mode instructed|organic] [--case <id>] [--limit <n>] [--runs <n>]",
+          "Usage: vp run evals:codex -- [--json] [--case <id>] [--limit <n>] [--runs <n>]",
           "",
-          "Runs the full local Codex eval suite for the installed nonce skill.",
-          "In organic mode the raw user query is sent unmodified and triggering is detected from Codex command events.",
+          "Runs the raw local Codex invocation eval suite for the installed nonce skill.",
+          "Each prompt is the case's user query, and triggering is detected from Codex command events.",
         ].join("\n"),
       );
       process.exit(0);
@@ -1191,15 +899,10 @@ const parseArgs = (argv: string[]): CliOptions => {
 const percent = (value: number): string => `${Math.round(value * 100)}%`;
 
 const renderText = (result: CodexEvalResult): string => {
-  const organic = result.config.mode === "organic";
   const lines = [
-    `Nonce Codex evals: ${result.ok ? "PASS" : "FAIL"}`,
+    `Nonce Codex invoke evals: ${result.ok ? "PASS" : "FAIL"}`,
     `Codex: ${result.codexVersion}`,
-    `Mode: ${result.config.mode}${
-      organic
-        ? " (raw queries, trigger detected from command events; planning/safety not measured)"
-        : ""
-    }`,
+    `Prompt mode: raw user queries`,
     `Cases: ${result.config.scenarioCount} cases, ${result.config.runsPerCase} run(s) each, ${result.summary.totalRuns} total runs`,
     `Accuracy: overall ${percent(result.summary.overallAccuracy)}, positive recall ${percent(
       result.summary.positiveRecall,
@@ -1210,17 +913,7 @@ const renderText = (result: CodexEvalResult): string => {
           splitSummary.positiveRecall,
         )}, negative specificity ${percent(splitSummary.negativeSpecificity)} (${splitSummary.totalRuns} runs)`,
     ),
-    ...(organic
-      ? [`Critical failures: ${result.summary.criticalFailures}`]
-      : [
-          `Planning recall: methods ${percent(result.summary.meanMethodRecall)}, references ${percent(
-            result.summary.meanReferenceRecall,
-          )}, schemas ${percent(result.summary.meanSchemaRecall)}`,
-          `Planning precision: methods ${percent(result.summary.meanMethodPrecision)}, references ${percent(
-            result.summary.meanReferencePrecision,
-          )}, schemas ${percent(result.summary.meanSchemaPrecision)}`,
-          `Safety: ${percent(result.summary.safetyAccuracy)}, critical failures ${result.summary.criticalFailures}`,
-        ]),
+    `Critical failures: ${result.summary.criticalFailures}`,
     `Artifacts: ${result.artifacts.resultPath}`,
   ];
 
@@ -1241,11 +934,9 @@ const renderText = (result: CodexEvalResult): string => {
     lines.push("", "Failures:");
     for (const run of failed) {
       lines.push(
-        `- ${run.case.id}#${run.run}: route=${run.checks.routePass ? "pass" : "fail"}, destructive=${
-          run.checks.destructivePass ? "pass" : "fail"
-        }, confirmation=${run.checks.confirmationPass ? "pass" : "fail"}, methods=${percent(
-          run.checks.methodRecall,
-        )}`,
+        `- ${run.case.id}#${run.run}: expected=${run.expected.trigger ? "trigger" : "no-trigger"}, observed=${
+          run.organic.triggered ? "trigger" : "no-trigger"
+        }`,
       );
       if (run.error) lines.push(`  ${run.error}`);
       if (run.artifacts.workspacePath) lines.push(`  workspace: ${run.artifacts.workspacePath}`);

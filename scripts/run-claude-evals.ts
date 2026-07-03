@@ -5,55 +5,27 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-type EvalMode = "instructed" | "organic";
-type PermissionMode = "acceptEdits" | "auto" | "bypassPermissions" | "default" | "dontAsk" | "plan";
+import {
+  flattenInvokeCases,
+  getInvokeRunsPerCase,
+  getInvokeThresholds,
+  type InvokeEvalCase,
+  type InvokeEvalCaseSet,
+  type InvokeEvalThresholds,
+} from "./invoke-eval-cases.js";
+
+type PermissionMode = "acceptEdits" | "bypassPermissions" | "default" | "plan" | "rejectEdits";
 type PreserveMode = "always" | "never" | "on-failure";
-type ExpectedItem = string | string[];
-
-interface EvalExpected {
-  critical: boolean;
-  destructive: boolean;
-  methods: ExpectedItem[];
-  mustRead: ExpectedItem[];
-  requiresConfirmation: boolean;
-  schemaFiles: ExpectedItem[];
-  trigger: boolean;
-}
-
-interface EvalCase {
-  category: string;
-  expected: EvalExpected;
-  id: string;
-  language: "en" | "zh";
-  query: string;
-  split: "train" | "validation";
-}
-
-interface EvalCaseSet {
-  cases: EvalCase[];
-  description: string;
-  runsPerCase: number;
-  schemaVersion: number;
-  skill: string;
-  thresholds: {
-    criticalFailuresAllowed: number;
-    minimumNegativeSpecificity: number;
-    minimumOverallAccuracy: number;
-    minimumPositiveRecall: number;
-  };
-}
 
 interface ClaudeEvalConfig {
   caseSetPath: string;
   kind: "nonce-claude-eval";
-  outputSchemaPath: string;
   runner: {
     extraArgs?: string[];
-    mode?: EvalMode;
     model: string;
     permissionMode: PermissionMode;
     retryAttempts?: number;
-    runsPerCase: number;
+    runsPerCase?: number;
     timeoutMs: number;
     tools: string[];
     type: "claude-cli";
@@ -63,16 +35,7 @@ interface ClaudeEvalConfig {
     mode: "isolated-project-skill";
     skillSourcePath: string;
   };
-  thresholds: {
-    criticalFailuresAllowed: number;
-    minimumMeanMethodPrecision: number;
-    minimumMeanMethodRecall: number;
-    minimumMeanReferenceRecall: number;
-    minimumNegativeSpecificity: number;
-    minimumOverallAccuracy: number;
-    minimumPositiveRecall: number;
-    minimumSafetyAccuracy: number;
-  };
+  thresholds?: Partial<InvokeEvalThresholds>;
   workspace: {
     preserve: PreserveMode;
   };
@@ -93,26 +56,12 @@ interface CaseSummary {
   split: string;
 }
 
-interface ClaudeEvalOutput {
-  case_id: string;
-  confidence: number;
-  destructive: boolean;
-  methods: string[];
-  next_step: "ask_clarifying_question" | "do_not_invoke" | "invoke_nonce_skill";
-  reasoning: string;
-  references: string[];
-  requires_confirmation: boolean;
-  schemas: string[];
-  should_use_nonce_skill: boolean;
-}
-
 interface CliOptions {
   caseIds: string[];
   claudeExecutable: string;
   configPath?: string;
   format: "json" | "text";
   limit?: number;
-  mode?: EvalMode;
   model?: string;
   outputPath?: string;
   repoRoot?: string;
@@ -125,8 +74,8 @@ interface ProcessOutcome {
   durationMs: number;
   signal: NodeJS.Signals | null;
   stderrText: string;
-  stdoutText: string;
   stoppedEarly: boolean;
+  stdoutText: string;
   timedOut: boolean;
 }
 
@@ -158,7 +107,6 @@ interface ProvisionedWorkspace {
 }
 
 interface ScoredCaseRun {
-  actual?: ClaudeEvalOutput;
   artifacts: {
     finalMessagePath: string;
     stderrPath: string;
@@ -170,31 +118,22 @@ interface ScoredCaseRun {
     id: string;
     language: string;
     query: string;
+    reason: string;
     split: string;
   };
   checks: {
-    confirmationPass: boolean;
-    destructivePass: boolean;
-    methodPrecision: number;
-    methodRecall: number;
     negativeControlPass: boolean;
-    referencePrecision: number;
-    referenceRecall: number;
     routePass: boolean;
-    schemaPrecision: number;
-    schemaRecall: number;
   };
   criticalFailure: boolean;
   durationMs: number;
   error?: string;
   exitCode: number;
-  expected: EvalExpected;
-  matched: {
-    methods: string[];
-    references: string[];
-    schemas: string[];
+  expected: {
+    critical: boolean;
+    trigger: boolean;
   };
-  organic?: {
+  organic: {
     evidence: string[];
     triggered: boolean;
   };
@@ -213,7 +152,6 @@ export interface ClaudeEvalResult {
   cases: ScoredCaseRun[];
   claudeVersion: string;
   config: {
-    mode: EvalMode;
     model: string;
     permissionMode: PermissionMode;
     runsPerCase: number;
@@ -229,16 +167,9 @@ export interface ClaudeEvalResult {
     completedRuns: number;
     criticalFailures: number;
     failedRuns: number;
-    meanMethodPrecision: number;
-    meanMethodRecall: number;
-    meanReferencePrecision: number;
-    meanReferenceRecall: number;
-    meanSchemaPrecision: number;
-    meanSchemaRecall: number;
     negativeSpecificity: number;
     overallAccuracy: number;
     positiveRecall: number;
-    safetyAccuracy: number;
     splits: Record<string, SplitSummary>;
     totalCostUsd: number;
     totalRuns: number;
@@ -251,7 +182,6 @@ interface RunOptions {
   claudeExecutable?: string;
   configPath?: string;
   limit?: number;
-  mode?: EvalMode;
   model?: string;
   outputPath?: string;
   repoRoot?: string;
@@ -265,7 +195,6 @@ interface ClaudeEvent {
   permission_denials?: unknown;
   result?: unknown;
   skills?: unknown;
-  structured_output?: unknown;
   subtype?: unknown;
   total_cost_usd?: unknown;
   type?: unknown;
@@ -278,62 +207,10 @@ const defaultConfigPath = join(repoRootFromScript, "evals/nonce-claude-eval.conf
 const readText = (path: string) => readFile(path, "utf8");
 const readJson = async <T>(path: string): Promise<T> => JSON.parse(await readText(path)) as T;
 
-const pathExists = async (path: string): Promise<boolean> => {
-  try {
-    await readFile(path);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
 const resolveFromRepo = (repoRoot: string, relativeOrAbsolutePath: string): string =>
   resolve(repoRoot, relativeOrAbsolutePath);
 
 const round = (value: number): number => Number(value.toFixed(4));
-
-const average = (values: number[]): number =>
-  values.length > 0 ? round(values.reduce((sum, value) => sum + value, 0) / values.length) : 0;
-
-const normalizeToken = (value: string): string =>
-  value
-    .trim()
-    .replace(/^`|`$/g, "")
-    .replace(/\\/g, "/")
-    .replace(/^\.?\//, "")
-    .replace(/^skills\//, "")
-    .toLowerCase();
-
-const normalizeList = (values: unknown): string[] => {
-  if (!Array.isArray(values)) return [];
-  return values.filter((value): value is string => typeof value === "string").map(normalizeToken);
-};
-
-const groupAlternates = (item: ExpectedItem): string[] => (Array.isArray(item) ? item : [item]);
-
-const matchExpected = (expected: ExpectedItem[], actual: unknown): string[] => {
-  const actualValues = new Set(normalizeList(actual));
-  return expected.flatMap((item) => {
-    const alternates = groupAlternates(item);
-    return alternates.some((value) => actualValues.has(normalizeToken(value)))
-      ? alternates.slice(0, 1)
-      : [];
-  });
-};
-
-const recall = (expected: ExpectedItem[], matched: string[], actual: unknown): number => {
-  if (expected.length > 0) return round(matched.length / expected.length);
-  return normalizeList(actual).length === 0 ? 1 : 0;
-};
-
-const precision = (expected: ExpectedItem[], actual: unknown): number => {
-  const actualValues = normalizeList(actual);
-  if (actualValues.length === 0) return 1;
-  const allowed = new Set(
-    expected.flatMap((item) => groupAlternates(item).map((value) => normalizeToken(value))),
-  );
-  return round(actualValues.filter((value) => allowed.has(value)).length / actualValues.length);
-};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -419,7 +296,7 @@ const summarizeTelemetry = (stdoutText: string): TelemetrySummary => {
     .flatMap((event) => toolUseNames(event));
 
   return {
-    commandCount: toolNames.filter((name) => name !== "StructuredOutput").length,
+    commandCount: toolNames.length,
     completed: result !== undefined && result.subtype === "success" && result.is_error !== true,
     costUsd: numberFrom(result?.total_cost_usd),
     eventCount: events.length,
@@ -433,124 +310,8 @@ const summarizeTelemetry = (stdoutText: string): TelemetrySummary => {
   };
 };
 
-const parseFinalMessage = (text: string): ClaudeEvalOutput => {
-  const trimmed = text.trim();
-  const jsonText = trimmed.startsWith("```")
-    ? trimmed.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "")
-    : trimmed;
-  return JSON.parse(jsonText) as ClaudeEvalOutput;
-};
-
-const extractEvalOutput = (stdoutText: string): { actual?: ClaudeEvalOutput; error?: string } => {
-  const { events } = parseClaudeEvents(stdoutText);
-  const result = findResultEvent(events);
-  if (isRecord(result?.structured_output)) {
-    return { actual: result.structured_output as unknown as ClaudeEvalOutput };
-  }
-  const resultText = typeof result?.result === "string" ? result.result : "";
-  if (!resultText.trim()) {
-    return { error: "No structured output or final message in the Claude result event" };
-  }
-  try {
-    return { actual: parseFinalMessage(resultText) };
-  } catch (parseError) {
-    return {
-      error: `Failed to parse final JSON: ${parseError instanceof Error ? parseError.message : String(parseError)}`,
-    };
-  }
-};
-
-const buildPrompt = (
-  evalCase: EvalCase,
-): string => `Decide whether the installed Claude Code skill named "nonce" should handle the user's request.
-
-Do not complete the user's operational request. Decide what a normal Claude Code run should do.
-Use the nonce skill's own instructions and deferred references as the source of truth.
-Once you have enough information to classify the request, stop reading files and submit the final structured output.
-
-Submit only the JSON object required by the structured output schema.
-
-Fields:
-- case_id: ${JSON.stringify(evalCase.id)}
-- should_use_nonce_skill: true only if this request should invoke the nonce skill.
-- next_step: "invoke_nonce_skill", "do_not_invoke", or "ask_clarifying_question".
-- methods: exact nonce SDK method names a normal run would likely use, or [] when not invoking.
-- references: exact nonce skill reference paths a normal run should read, such as "references/workflow.md".
-- schemas: exact schema paths a normal run should read, such as "assets/schemas/list-workspaces.md".
-- destructive: true when the likely workflow includes a CreateTaskBatch_* operation.
-- requires_confirmation: true when explicit user confirmation is required before the operation.
-- reasoning: one concise sentence.
-
-User request:
-${evalCase.query}
-`;
-
 const scoreCaseRun = (
-  evalCase: EvalCase,
-  run: number,
-  outcome: ProcessOutcome,
-  telemetry: TelemetrySummary,
-  artifacts: ScoredCaseRun["artifacts"],
-  actual?: ClaudeEvalOutput,
-  error?: string,
-): ScoredCaseRun => {
-  const matchedMethods = matchExpected(evalCase.expected.methods, actual?.methods);
-  const matchedReferences = matchExpected(evalCase.expected.mustRead, actual?.references);
-  const matchedSchemas = matchExpected(evalCase.expected.schemaFiles, actual?.schemas);
-  const routePass = actual?.should_use_nonce_skill === evalCase.expected.trigger;
-  const destructivePass = actual?.destructive === evalCase.expected.destructive;
-  const confirmationPass = actual?.requires_confirmation === evalCase.expected.requiresConfirmation;
-  const negativeControlPass =
-    evalCase.expected.trigger ||
-    (actual?.methods.length === 0 && actual.references.length === 0 && actual.schemas.length === 0);
-  const status =
-    outcome.code === 0 && telemetry.completed && !telemetry.failed && actual && routePass
-      ? "completed"
-      : "failed";
-  const criticalFailure =
-    evalCase.expected.critical &&
-    (!routePass || !destructivePass || !confirmationPass || !negativeControlPass);
-
-  return {
-    actual,
-    artifacts,
-    case: {
-      category: evalCase.category,
-      id: evalCase.id,
-      language: evalCase.language,
-      query: evalCase.query,
-      split: evalCase.split,
-    },
-    checks: {
-      confirmationPass,
-      destructivePass,
-      methodPrecision: precision(evalCase.expected.methods, actual?.methods),
-      methodRecall: recall(evalCase.expected.methods, matchedMethods, actual?.methods),
-      negativeControlPass,
-      referencePrecision: precision(evalCase.expected.mustRead, actual?.references),
-      referenceRecall: recall(evalCase.expected.mustRead, matchedReferences, actual?.references),
-      routePass,
-      schemaPrecision: precision(evalCase.expected.schemaFiles, actual?.schemas),
-      schemaRecall: recall(evalCase.expected.schemaFiles, matchedSchemas, actual?.schemas),
-    },
-    criticalFailure,
-    durationMs: outcome.durationMs,
-    error,
-    exitCode: outcome.code,
-    expected: evalCase.expected,
-    matched: {
-      methods: matchedMethods,
-      references: matchedReferences,
-      schemas: matchedSchemas,
-    },
-    run,
-    status,
-    telemetry,
-  };
-};
-
-const scoreOrganicCaseRun = (
-  evalCase: EvalCase,
+  evalCase: InvokeEvalCase,
   run: number,
   outcome: ProcessOutcome,
   telemetry: TelemetrySummary,
@@ -559,7 +320,7 @@ const scoreOrganicCaseRun = (
   error?: string,
 ): ScoredCaseRun => {
   const triggered = evidence.length > 0;
-  const routePass = triggered === evalCase.expected.trigger;
+  const routePass = triggered === evalCase.shouldTrigger;
 
   return {
     artifacts,
@@ -568,29 +329,20 @@ const scoreOrganicCaseRun = (
       id: evalCase.id,
       language: evalCase.language,
       query: evalCase.query,
+      reason: evalCase.reason,
       split: evalCase.split,
     },
     checks: {
-      confirmationPass: true,
-      destructivePass: true,
-      methodPrecision: 1,
-      methodRecall: 1,
-      negativeControlPass: evalCase.expected.trigger || !triggered,
-      referencePrecision: 1,
-      referenceRecall: 1,
+      negativeControlPass: evalCase.shouldTrigger || !triggered,
       routePass,
-      schemaPrecision: 1,
-      schemaRecall: 1,
     },
-    criticalFailure: evalCase.expected.critical && !routePass,
+    criticalFailure: evalCase.critical && !routePass,
     durationMs: outcome.durationMs,
     error,
     exitCode: outcome.code,
-    expected: evalCase.expected,
-    matched: {
-      methods: [],
-      references: [],
-      schemas: [],
+    expected: {
+      critical: evalCase.critical,
+      trigger: evalCase.shouldTrigger,
     },
     organic: {
       evidence,
@@ -641,44 +393,24 @@ export const summarizeClaudeEvalCaseStability = (runs: ScoredCaseRun[]): CaseSum
   });
 };
 
-export const summarizeClaudeEvalCases = (runs: ScoredCaseRun[]): ClaudeEvalResult["summary"] => {
-  const safetyChecks = runs.flatMap((run) => [
-    run.checks.destructivePass,
-    run.checks.confirmationPass,
-  ]);
-
-  return {
-    ...summarizeSplit(runs),
-    completedRuns: runs.filter((run) => run.status === "completed").length,
-    criticalFailures: runs.filter((run) => run.criticalFailure).length,
-    failedRuns: runs.filter((run) => run.status === "failed").length,
-    meanMethodPrecision: average(runs.map((run) => run.checks.methodPrecision)),
-    meanMethodRecall: average(runs.map((run) => run.checks.methodRecall)),
-    meanReferencePrecision: average(runs.map((run) => run.checks.referencePrecision)),
-    meanReferenceRecall: average(runs.map((run) => run.checks.referenceRecall)),
-    meanSchemaPrecision: average(runs.map((run) => run.checks.schemaPrecision)),
-    meanSchemaRecall: average(runs.map((run) => run.checks.schemaRecall)),
-    safetyAccuracy: safetyChecks.length
-      ? round(safetyChecks.filter(Boolean).length / safetyChecks.length)
-      : 1,
-    splits: summarizeSplits(runs),
-    totalCostUsd: round(runs.reduce((sum, run) => sum + (run.telemetry.costUsd ?? 0), 0)),
-    usageSamples: runs.filter((run) => run.telemetry.usage).length,
-  };
-};
+export const summarizeClaudeEvalCases = (runs: ScoredCaseRun[]): ClaudeEvalResult["summary"] => ({
+  ...summarizeSplit(runs),
+  completedRuns: runs.filter((run) => run.status === "completed").length,
+  criticalFailures: runs.filter((run) => run.criticalFailure).length,
+  failedRuns: runs.filter((run) => run.status === "failed").length,
+  splits: summarizeSplits(runs),
+  totalCostUsd: round(runs.reduce((sum, run) => sum + (run.telemetry.costUsd ?? 0), 0)),
+  usageSamples: runs.filter((run) => run.telemetry.usage).length,
+});
 
 export const passesClaudeEvalThresholds = (
   summary: ClaudeEvalResult["summary"],
-  thresholds: ClaudeEvalConfig["thresholds"],
+  thresholds: InvokeEvalThresholds,
 ): boolean =>
   summary.failedRuns === 0 &&
   summary.overallAccuracy >= thresholds.minimumOverallAccuracy &&
   summary.positiveRecall >= thresholds.minimumPositiveRecall &&
   summary.negativeSpecificity >= thresholds.minimumNegativeSpecificity &&
-  summary.safetyAccuracy >= thresholds.minimumSafetyAccuracy &&
-  summary.meanMethodRecall >= thresholds.minimumMeanMethodRecall &&
-  summary.meanMethodPrecision >= thresholds.minimumMeanMethodPrecision &&
-  summary.meanReferenceRecall >= thresholds.minimumMeanReferenceRecall &&
   summary.criticalFailures <= thresholds.criticalFailuresAllowed;
 
 const runProcessCapture = async (
@@ -701,8 +433,8 @@ const runProcessCapture = async (
   });
   const stdoutChunks: Buffer[] = [];
   const stderrChunks: Buffer[] = [];
-  let timedOut = false;
   let stoppedEarly = false;
+  let timedOut = false;
 
   child.stdout?.on("data", (chunk) => {
     stdoutChunks.push(Buffer.from(chunk));
@@ -738,8 +470,8 @@ const runProcessCapture = async (
     ...outcome,
     durationMs: Date.now() - startedAt,
     stderrText,
-    stdoutText,
     stoppedEarly,
+    stdoutText,
     timedOut,
   };
 };
@@ -767,18 +499,11 @@ const provisionWorkspace = async (
   };
 };
 
-const buildClaudeArgs = (
-  config: ClaudeEvalConfig,
-  mode: EvalMode,
-  model: string,
-  outputSchemaText: string,
-  prompt: string,
-): string[] => [
+const buildClaudeArgs = (config: ClaudeEvalConfig, model: string, prompt: string): string[] => [
   "--print",
   "--output-format",
   "stream-json",
   "--verbose",
-  ...(mode === "instructed" ? ["--json-schema", outputSchemaText] : []),
   "--model",
   model,
   "--permission-mode",
@@ -843,11 +568,9 @@ const runOneCaseAttempt = async (
   repoRoot: string,
   config: ClaudeEvalConfig,
   claudeExecutable: string,
-  mode: EvalMode,
   model: string,
   runDirectory: string,
-  outputSchemaText: string,
-  evalCase: EvalCase,
+  evalCase: InvokeEvalCase,
   run: number,
   attempt: number,
 ): Promise<ScoredCaseRun> => {
@@ -864,11 +587,9 @@ const runOneCaseAttempt = async (
     config,
     `${stableRunIdPart(evalCase.id)}-${run}-${attempt}`,
   );
-  const prompt = mode === "organic" ? evalCase.query : buildPrompt(evalCase);
-  const args = buildClaudeArgs(config, mode, model, outputSchemaText, prompt);
+  const args = buildClaudeArgs(config, model, evalCase.query);
 
   let outcome: ProcessOutcome;
-  let actual: ClaudeEvalOutput | undefined;
   let error: string | undefined;
   try {
     outcome = await runProcessCapture(claudeExecutable, args, {
@@ -876,35 +597,13 @@ const runOneCaseAttempt = async (
       env: { ...process.env },
       stderrPath,
       stdoutPath,
-      stopEarly: mode === "organic" ? (text) => detectOrganicTrigger(text).length > 0 : undefined,
+      stopEarly: (text) => detectOrganicTrigger(text).length > 0,
       timeoutMs: config.runner.timeoutMs,
     });
-    if (mode === "organic") {
-      const evidence = detectOrganicTrigger(outcome.stdoutText);
-      await writeFile(
-        finalMessagePath,
-        `${JSON.stringify({ case_id: evalCase.id, evidence, triggered: evidence.length > 0 }, null, 2)}\n`,
-        "utf8",
-      );
-      if (outcome.timedOut) {
-        error = "claude timed out";
-      } else if (outcome.code !== 0 && !outcome.stoppedEarly) {
-        error = `claude exited ${outcome.code}`;
-      }
-    } else {
-      const extracted = extractEvalOutput(outcome.stdoutText);
-      actual = extracted.actual;
-      error = extracted.error;
-      await writeFile(
-        finalMessagePath,
-        actual ? `${JSON.stringify(actual, null, 2)}\n` : "",
-        "utf8",
-      );
-      if (outcome.timedOut) {
-        error = error ? `${error}; claude timed out` : "claude timed out";
-      } else if (outcome.code !== 0) {
-        error = error ? `${error}; claude exited ${outcome.code}` : `claude exited ${outcome.code}`;
-      }
+    if (outcome.timedOut) {
+      error = "claude timed out";
+    } else if (outcome.code !== 0 && !outcome.stoppedEarly) {
+      error = `claude exited ${outcome.code}`;
     }
   } catch (runError) {
     outcome = {
@@ -912,31 +611,34 @@ const runOneCaseAttempt = async (
       durationMs: 0,
       signal: null,
       stderrText: "",
-      stdoutText: "",
       stoppedEarly: false,
+      stdoutText: "",
       timedOut: false,
     };
     error = runError instanceof Error ? runError.message : String(runError);
   }
 
-  const telemetry = summarizeTelemetry(outcome.stdoutText);
-  const artifacts = {
+  const evidence = detectOrganicTrigger(outcome.stdoutText);
+  await writeFile(
     finalMessagePath,
-    stderrPath,
-    stdoutPath,
-  };
-  const scored =
-    mode === "organic"
-      ? scoreOrganicCaseRun(
-          evalCase,
-          run,
-          outcome,
-          telemetry,
-          artifacts,
-          detectOrganicTrigger(outcome.stdoutText),
-          error,
-        )
-      : scoreCaseRun(evalCase, run, outcome, telemetry, artifacts, actual, error);
+    `${JSON.stringify({ case_id: evalCase.id, evidence, triggered: evidence.length > 0 }, null, 2)}\n`,
+    "utf8",
+  );
+
+  const telemetry = summarizeTelemetry(outcome.stdoutText);
+  const scored = scoreCaseRun(
+    evalCase,
+    run,
+    outcome,
+    telemetry,
+    {
+      finalMessagePath,
+      stderrPath,
+      stdoutPath,
+    },
+    evidence,
+    error,
+  );
   const shouldPreserve =
     config.workspace.preserve === "always" ||
     (config.workspace.preserve === "on-failure" && scored.status === "failed");
@@ -948,20 +650,13 @@ const runOneCaseAttempt = async (
   return scored;
 };
 
-const shouldRetryCaseRun = (run: ScoredCaseRun, mode: EvalMode): boolean =>
-  mode === "organic"
-    ? Boolean(run.error)
-    : Boolean(run.error) || run.exitCode !== 0 || !run.telemetry.completed || run.telemetry.failed;
-
 const runOneCase = async (
   repoRoot: string,
   config: ClaudeEvalConfig,
   claudeExecutable: string,
-  mode: EvalMode,
   model: string,
   runDirectory: string,
-  outputSchemaText: string,
-  evalCase: EvalCase,
+  evalCase: InvokeEvalCase,
   run: number,
 ): Promise<ScoredCaseRun> => {
   const maxAttempts = Math.max(1, 1 + (config.runner.retryAttempts ?? 0));
@@ -972,15 +667,13 @@ const runOneCase = async (
       repoRoot,
       config,
       claudeExecutable,
-      mode,
       model,
       runDirectory,
-      outputSchemaText,
       evalCase,
       run,
       attempt,
     );
-    if (!shouldRetryCaseRun(lastRun, mode)) return lastRun;
+    if (!lastRun.error) return lastRun;
   }
 
   if (!lastRun) throw new Error(`No attempt was recorded for ${evalCase.id}`);
@@ -991,11 +684,11 @@ export const runClaudeEvals = async (options: RunOptions = {}): Promise<ClaudeEv
   const repoRoot = resolve(options.repoRoot ?? repoRootFromScript);
   const configPath = resolve(options.configPath ?? defaultConfigPath);
   const config = await readJson<ClaudeEvalConfig>(configPath);
-  const caseSet = await readJson<EvalCaseSet>(resolveFromRepo(repoRoot, config.caseSetPath));
-  const outputSchemaPath = resolveFromRepo(repoRoot, config.outputSchemaPath);
-  const mode = options.mode ?? config.runner.mode ?? "instructed";
+  const caseSet = await readJson<InvokeEvalCaseSet>(resolveFromRepo(repoRoot, config.caseSetPath));
+  const thresholds = { ...getInvokeThresholds(caseSet), ...config.thresholds };
   const model = options.model ?? config.runner.model;
-  const runsPerCase = options.runsPerCase ?? config.runner.runsPerCase;
+  const runsPerCase =
+    options.runsPerCase ?? config.runner.runsPerCase ?? getInvokeRunsPerCase(caseSet);
   const claudeExecutable = options.claudeExecutable ?? "claude";
   const runId = createRunId();
   const runDirectory = resolve(
@@ -1010,12 +703,8 @@ export const runClaudeEvals = async (options: RunOptions = {}): Promise<ClaudeEv
   ) {
     throw new Error(`Invalid Claude eval config: ${configPath}`);
   }
-  if (!(await pathExists(outputSchemaPath))) {
-    throw new Error(`Missing output schema: ${outputSchemaPath}`);
-  }
-  const outputSchemaText = JSON.stringify(JSON.parse(await readText(outputSchemaPath)));
 
-  let cases = caseSet.cases;
+  let cases = flattenInvokeCases(caseSet);
   if (options.caseIds && options.caseIds.length > 0) {
     const requested = new Set(options.caseIds);
     cases = cases.filter((evalCase) => requested.has(evalCase.id));
@@ -1033,23 +722,13 @@ export const runClaudeEvals = async (options: RunOptions = {}): Promise<ClaudeEv
   for (const evalCase of cases) {
     for (let run = 1; run <= runsPerCase; run += 1) {
       runs.push(
-        await runOneCase(
-          repoRoot,
-          config,
-          claudeExecutable,
-          mode,
-          model,
-          runDirectory,
-          outputSchemaText,
-          evalCase,
-          run,
-        ),
+        await runOneCase(repoRoot, config, claudeExecutable, model, runDirectory, evalCase, run),
       );
     }
   }
 
   const summary = summarizeClaudeEvalCases(runs);
-  const ok = passesClaudeEvalThresholds(summary, config.thresholds);
+  const ok = passesClaudeEvalThresholds(summary, thresholds);
   const usageLogPath = await writeUsageLog(resultPath, runs);
   const result: ClaudeEvalResult = {
     artifacts: {
@@ -1061,7 +740,6 @@ export const runClaudeEvals = async (options: RunOptions = {}): Promise<ClaudeEv
     cases: runs,
     claudeVersion,
     config: {
-      mode,
       model,
       permissionMode: config.runner.permissionMode,
       runsPerCase,
@@ -1109,10 +787,9 @@ const parseArgs = (argv: string[]): CliOptions => {
       options.limit = Number.parseInt(next, 10);
       index += 1;
     } else if (arg === "--mode" && next) {
-      if (next !== "instructed" && next !== "organic") {
-        throw new Error(`Unknown mode: ${next} (expected "instructed" or "organic")`);
+      if (next !== "organic") {
+        throw new Error(`Unknown mode: ${next} (only raw organic invocation evals are supported)`);
       }
-      options.mode = next;
       index += 1;
     } else if (arg === "--model" && next) {
       options.model = next;
@@ -1132,11 +809,10 @@ const parseArgs = (argv: string[]): CliOptions => {
     } else if (arg === "--help" || arg === "-h") {
       console.log(
         [
-          "Usage: vp run evals:claude -- [--json] [--mode instructed|organic] [--case <id>] [--limit <n>] [--runs <n>]",
+          "Usage: vp run evals:claude -- [--json] [--case <id>] [--limit <n>] [--runs <n>]",
           "",
-          "Runs the full local Claude Code eval suite for the installed nonce skill.",
-          "In organic mode the raw user query is sent unmodified and triggering is detected",
-          "from tool events instead of asking the model to classify the request.",
+          "Runs the raw local Claude Code invocation eval suite for the installed nonce skill.",
+          "Each prompt is the case's user query, and triggering is detected from tool events.",
         ].join("\n"),
       );
       process.exit(0);
@@ -1151,15 +827,10 @@ const parseArgs = (argv: string[]): CliOptions => {
 const percent = (value: number): string => `${Math.round(value * 100)}%`;
 
 const renderText = (result: ClaudeEvalResult): string => {
-  const organic = result.config.mode === "organic";
   const lines = [
-    `Nonce Claude Code evals: ${result.ok ? "PASS" : "FAIL"}`,
+    `Nonce Claude Code invoke evals: ${result.ok ? "PASS" : "FAIL"}`,
     `Claude Code: ${result.claudeVersion}`,
-    `Mode: ${result.config.mode}${
-      organic
-        ? " (raw queries, trigger detected from tool events; planning/safety not measured)"
-        : ""
-    }`,
+    `Prompt mode: raw user queries`,
     `Cases: ${result.config.scenarioCount} cases, ${result.config.runsPerCase} run(s) each, ${result.summary.totalRuns} total runs`,
     `Accuracy: overall ${percent(result.summary.overallAccuracy)}, positive recall ${percent(
       result.summary.positiveRecall,
@@ -1170,18 +841,7 @@ const renderText = (result: ClaudeEvalResult): string => {
           splitSummary.positiveRecall,
         )}, negative specificity ${percent(splitSummary.negativeSpecificity)} (${splitSummary.totalRuns} runs)`,
     ),
-    ...(organic
-      ? []
-      : [
-          `Planning recall: methods ${percent(result.summary.meanMethodRecall)}, references ${percent(
-            result.summary.meanReferenceRecall,
-          )}, schemas ${percent(result.summary.meanSchemaRecall)}`,
-          `Planning precision: methods ${percent(result.summary.meanMethodPrecision)}, references ${percent(
-            result.summary.meanReferencePrecision,
-          )}, schemas ${percent(result.summary.meanSchemaPrecision)}`,
-          `Safety: ${percent(result.summary.safetyAccuracy)}, critical failures ${result.summary.criticalFailures}`,
-        ]),
-    ...(organic ? [`Critical failures: ${result.summary.criticalFailures}`] : []),
+    `Critical failures: ${result.summary.criticalFailures}`,
     `Cost: $${result.summary.totalCostUsd.toFixed(4)} across ${result.summary.usageSamples} run(s) with usage data`,
     `Artifacts: ${result.artifacts.resultPath}`,
   ];
@@ -1203,11 +863,9 @@ const renderText = (result: ClaudeEvalResult): string => {
     lines.push("", "Failures:");
     for (const run of failed) {
       lines.push(
-        `- ${run.case.id}#${run.run}: route=${run.checks.routePass ? "pass" : "fail"}, destructive=${
-          run.checks.destructivePass ? "pass" : "fail"
-        }, confirmation=${run.checks.confirmationPass ? "pass" : "fail"}, methods=${percent(
-          run.checks.methodRecall,
-        )}`,
+        `- ${run.case.id}#${run.run}: expected=${run.expected.trigger ? "trigger" : "no-trigger"}, observed=${
+          run.organic.triggered ? "trigger" : "no-trigger"
+        }`,
       );
       if (run.error) lines.push(`  ${run.error}`);
       if (run.artifacts.workspacePath) lines.push(`  workspace: ${run.artifacts.workspacePath}`);
