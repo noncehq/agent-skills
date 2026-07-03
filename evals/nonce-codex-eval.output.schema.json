@@ -1,0 +1,60 @@
+{
+  "type": "object",
+  "properties": {
+    "case_id": {
+      "type": "string"
+    },
+    "should_use_nonce_skill": {
+      "type": "boolean"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "next_step": {
+      "type": "string",
+      "enum": ["invoke_nonce_skill", "do_not_invoke", "ask_clarifying_question"]
+    },
+    "methods": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "references": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "schemas": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "destructive": {
+      "type": "boolean"
+    },
+    "requires_confirmation": {
+      "type": "boolean"
+    },
+    "reasoning": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "case_id",
+    "should_use_nonce_skill",
+    "confidence",
+    "next_step",
+    "methods",
+    "references",
+    "schemas",
+    "destructive",
+    "requires_confirmation",
+    "reasoning"
+  ],
+  "additionalProperties": false
+}

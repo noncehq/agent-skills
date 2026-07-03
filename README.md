@@ -44,6 +44,8 @@ Run checks:
 ```bash
 vp check
 vp test
+vp run evals
+vp run evals:codex
 vp fmt --check
 ```
 
@@ -52,6 +54,40 @@ Format files:
 ```bash
 vp fmt
 ```
+
+## Evaluating the Skill
+
+The repository includes a local eval loop for the packaged skill under `skills/`.
+
+Run the deterministic evals:
+
+```bash
+vp run evals
+```
+
+This validates the prompt cases in `evals/nonce-skill.cases.json` and confirms
+the packaged skill keeps its key workflow and safety contracts.
+
+To capture a report:
+
+```bash
+vp run evals -- --json --output evals/artifacts/last-run.json
+```
+
+Use `evals/nonce-skill-rubric.schema.json` with `codex exec --output-schema`
+when qualitative trace review is needed. See `evals/README.md` for the full flow
+and the optional `plugin-eval` commands.
+
+Run the full local Codex eval suite:
+
+```bash
+vp run evals:codex
+```
+
+This provisions the current `skills/` directory into an isolated temporary
+`CODEX_HOME`, runs every case through `codex exec --json --output-schema`, and
+writes a normalized report plus plugin-eval-compatible usage log under
+`evals/artifacts/codex-runs/`.
 
 ## Generating Artifacts
 

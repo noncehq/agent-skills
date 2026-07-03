@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "check": "vp check",
+    "evals": "node --import tsx/esm scripts/run-skill-evals.ts",
+    "evals:all": "vp run evals && vp run evals:codex",
+    "evals:codex": "node --import tsx/esm scripts/run-codex-evals.ts",
     "lint": "vp lint",
     "format": "vp fmt",
     "format:check": "vp fmt --check",
