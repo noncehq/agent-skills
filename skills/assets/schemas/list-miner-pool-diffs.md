@@ -26,11 +26,12 @@ export interface ListMinerPoolDiffsInput {
   to_time: string
   /**
    * Time resolution of the returned snapshots.
+   * - `10min`: max range 1 day (144 data points). Requires miner_id (single-miner queries only).
    * - `hour` (default): max range 7 days (168 data points).
    * - `day`: max range 90 days (90 data points).
    * - `week`: max range 365 days (52 data points).
    */
-  granularity?: "hour" | "day" | "week"
+  granularity?: "10min" | "hour" | "day" | "week"
 }
 ```
 

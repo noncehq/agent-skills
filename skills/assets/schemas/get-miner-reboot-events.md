@@ -1,21 +1,22 @@
-# listMinerRebootEvents
+# getMinerRebootEvents
 
-ListMinerRebootEvents — read-only
+GetMinerRebootEvents — read-only
 
-Required: `workspace_id`, `farm_id`
+Required: `workspace_id`, `farm_id`, `miner_id`
 
 ## Signature
 
 ```ts
-listMinerRebootEvents(input: ListMinerRebootEventsInput, options?: ReadonlyCallOptions): Promise<ListMinerRebootEventsOutput>
+getMinerRebootEvents(input: GetMinerRebootEventsInput, options?: ReadonlyCallOptions): Promise<GetMinerRebootEventsOutput>
 ```
 
 ## Input
 
 ```ts
-export interface ListMinerRebootEventsInput {
+export interface GetMinerRebootEventsInput {
   workspace_id: string
   farm_id: string
+  miner_id: string
   /**
    * Page number (default: 1)
    */
@@ -24,10 +25,6 @@ export interface ListMinerRebootEventsInput {
    * Number of items per page (default: 10, max: 10000)
    */
   pageSize?: number
-  /**
-   * Filter by miner ID
-   */
-  miner_id?: string
   /**
    * Start time filter. Defaults to 7 days ago if not provided.
    */
@@ -42,7 +39,7 @@ export interface ListMinerRebootEventsInput {
 ## Output
 
 ```ts
-export interface ListMinerRebootEventsOutput {
+export interface GetMinerRebootEventsOutput {
   /**
    * Indicates if the request was successful
    */

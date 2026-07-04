@@ -6,9 +6,9 @@ description: >-
 
 # Nonce
 
-Nonce manages Bitcoin mining workspaces, farms, miners, agents, task batches, and miner tasks.
+Nonce manages your Bitcoin mining workspaces, farms, miners, agents, task batches, and miner tasks.
 
-Use this skill to work with those resources through the local SDK/runner. Determine the user's intent, write task-specific JavaScript code against the SDK, run it locally, and use compact JSON output for the next decision.
+Use this skill to work with those resources through the local SDK/runner. Determine the user's intent, write task-specific code against the SDK, run it locally.
 
 ## Before Use
 

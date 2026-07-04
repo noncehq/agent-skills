@@ -60,6 +60,13 @@ export interface ListMinersInput {
    */
   status?: string
   /**
+   * Exclude miners by status (NOT IN semantics) — the complement of `status`.
+   * Accepts the same values as `status`; combine with `status` to include some and exclude others.
+   * Primary use: `status_exclude=stale` selects the online scope (status <> stale), matching the
+   * overview "online/healthy/abnormal/sleep" cards. Supports `,`-separated or repeated params.
+   */
+  status_exclude?: string
+  /**
    * Filter miners by ops status (operator-managed state).
    * Values: `maintenance`, `retired`, `off_rack`, `transit`, `archived`.
    * Supports multiple values separated by `,` or multiple query parameters.
@@ -70,8 +77,15 @@ export interface ListMinersInput {
    */
   unstable?: string
   /**
+   * Abnormal axis (the whole `anomaly_flags` bitmask, not a specific type).
+   * `true` = any anomaly bit set (anomaly_flags <> 0) — the overview "abnormal" scope.
+   * `false` = no anomaly bits (anomaly_flags = 0) — the fault-free scope behind "healthy"/"sleep".
+   * Omit to include both. Prefer this over OR-ing all `anomaly_filters` for the abnormal aggregate.
+   */
+  has_anomaly?: string
+  /**
    * Filter miners by anomaly type (OR semantics — returns miners matching ANY of the specified types).
-   * Available values: fan, power, temperature, hashboard, network, firmware, unknown, control_board, pool.
+   * Available values: fan, power, temperature, hashboard, network, firmware, unknown, control_board, pool, low_hashrate.
    * Corresponds to bits in the anomaly_flags bitmask field on each miner.
    * Accepts repeated array (anomaly_filters[]=fan&anomaly_filters[]=power), comma-separated string (anomaly_filters=fan,power), or single value (anomaly_filters=fan).
    */
@@ -85,6 +99,7 @@ export interface ListMinersInput {
     | "unknown"
     | "control_board"
     | "pool"
+    | "low_hashrate"
   )[]
   /**
    * Lower bound of hashrate realization rate (actual / expected). 1.0 = 100%. Miners with NULL or 0 expected_hashrate are excluded.
@@ -99,6 +114,12 @@ export interface ListMinersInput {
    * Accepts repeated array (mining_modes_in[]=high&mining_modes_in[]=power_tuning), comma-separated string (mining_modes_in=high,power_tuning), or single value (mining_modes_in=high).
    */
   mining_modes_in?: string[]
+  /**
+   * Exclude miners by mining_mode value (NOT IN semantics) — the complement of `mining_modes_in`.
+   * Primary use: `mining_modes_not_in=sleep` excludes sleepers, matching the overview "healthy" card
+   * (fault-free, non-sleep). Accepts repeated array, comma-separated string, or single value.
+   */
+  mining_modes_not_in?: string[]
   /**
    * Filter miners by IPv4 ranges. A miner matches if its IP falls into any of the provided ranges.
    * Each item accepts one of three forms:
