@@ -271,12 +271,14 @@ const toolUseNames = (event: ClaudeEvent): string[] =>
 export const detectOrganicTrigger = (stdoutText: string): string[] => {
   const { events } = parseClaudeEvents(stdoutText);
   const evidence: string[] = [];
+  let sawNonceSkillUse = false;
   for (const event of events) {
     for (const block of toolUseBlocks(event)) {
       const inputText = JSON.stringify(block.input ?? {});
-      if (block.name === "Skill" && inputText.includes('"nonce"')) {
+      if (block.name === "Skill" && isRecord(block.input) && block.input.skill === "nonce") {
+        sawNonceSkillUse = true;
         evidence.push(`Skill: ${inputText.slice(0, 160)}`);
-      } else if (inputText.includes(".claude/skills/nonce")) {
+      } else if (sawNonceSkillUse && inputText.includes(".claude/skills/nonce")) {
         evidence.push(`${block.name}: ${inputText.slice(0, 160)}`);
       }
     }

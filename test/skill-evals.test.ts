@@ -189,12 +189,30 @@ describe("Nonce skill eval flow", () => {
         type: "assistant",
       }),
     ].join("\n");
+    const readOnlyStream = [
+      JSON.stringify({
+        message: {
+          content: [
+            {
+              input: { file_path: "/tmp/workspace/.claude/skills/nonce/SKILL.md" },
+              name: "Read",
+              type: "tool_use",
+            },
+          ],
+        },
+        type: "assistant",
+      }),
+    ].join("\n");
     const untriggeredStream = [
       JSON.stringify({
         message: {
           content: [
             { input: { skill: "code-review" }, name: "Skill", type: "tool_use" },
-            { input: { file_path: "/tmp/workspace/notes.md" }, name: "Read", type: "tool_use" },
+            {
+              input: { file_path: "/tmp/workspace/.claude/skills/nonce/SKILL.md" },
+              name: "Read",
+              type: "tool_use",
+            },
           ],
         },
         type: "assistant",
@@ -203,6 +221,7 @@ describe("Nonce skill eval flow", () => {
     ].join("\n");
 
     expect(detectClaudeOrganicTrigger(triggeredStream)).toHaveLength(2);
+    expect(detectClaudeOrganicTrigger(readOnlyStream)).toHaveLength(0);
     expect(detectClaudeOrganicTrigger(untriggeredStream)).toHaveLength(0);
   });
 
