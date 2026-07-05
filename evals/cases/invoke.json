@@ -104,7 +104,7 @@
       "reason": "Generic runtime setup unrelated to Nonce."
     },
     {
-      "query": "我手头这张矿场网络拓扑图，帮我从网络设计角度看看可能有什么瓶颈，不需要查 Nonce。",
+      "query": "我手头这张矿场网络拓扑图，帮我从网络设计角度看看可能有什么瓶颈",
       "shouldTrigger": false,
       "reason": "External infrastructure analysis without Nonce resource access."
     }
