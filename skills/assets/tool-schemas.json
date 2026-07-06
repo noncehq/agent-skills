@@ -208,6 +208,10 @@
             "type": "string",
             "description": "Filter miners by status.\nAccepts both run status (`online`, `stale`) and ops status (`archived`, `maintenance`, `retired`, `off_rack`, `transit`).\nRun status and ops status are independent axes — filtering by `online` does NOT exclude miners with an ops_status set.\nFor new clients prefer `ops_status` for ops-state filtering and `status` for connectivity-state filtering.\nSupports multiple values separated by `,` (e.g., \"online,stale\") or multiple query parameters (e.g., \"status=online&status=stale\").\nAvailable statuses:\n- online: Miner is actively mining and connected\n- offline: Miner is not connected or powered off\n- stale: Miner data is stale (no recent updates)\n- archived: (Asset) Miner has been archived\n- off_rack: (Asset) Miner is removed from rack\n- transit: (Asset) Miner is in transit\n- maintenance: (Asset) Miner is under maintenance\n- retired: (Asset) Miner has been retired\n- error: Deprecated. Use anomaly_filters.\n- low_hashrate: Deprecated. Use hashrate_realization range.\n- overheated: Deprecated. Use anomaly_filters=temperature.\n- overpower: Deprecated. Use anomaly_filters=power.\n- underpower: Deprecated. Use anomaly_filters=power.\n- overclocking: Deprecated. Use mining_modes_in with overclocking presets."
           },
+          "status_exclude": {
+            "type": "string",
+            "description": "Exclude miners by status (NOT IN semantics) — the complement of `status`.\nAccepts the same values as `status`; combine with `status` to include some and exclude others.\nPrimary use: `status_exclude=stale` selects the online scope (status <> stale), matching the\noverview \"online/healthy/abnormal/sleep\" cards. Supports `,`-separated or repeated params."
+          },
           "ops_status": {
             "type": "string",
             "description": "Filter miners by ops status (operator-managed state).\nValues: `maintenance`, `retired`, `off_rack`, `transit`, `archived`.\nSupports multiple values separated by `,` or multiple query parameters."
@@ -215,6 +219,10 @@
           "unstable": {
             "type": "string",
             "description": "Unstable filter. `true` returns only miners with non-null `unstable_reason` (mac/sn unreliable). Omit, null, or false to include unstable miners."
+          },
+          "has_anomaly": {
+            "type": "string",
+            "description": "Abnormal axis (the whole `anomaly_flags` bitmask, not a specific type).\n`true` = any anomaly bit set (anomaly_flags <> 0) — the overview \"abnormal\" scope.\n`false` = no anomaly bits (anomaly_flags = 0) — the fault-free scope behind \"healthy\"/\"sleep\".\nOmit to include both. Prefer this over OR-ing all `anomaly_filters` for the abnormal aggregate."
           },
           "anomaly_filters": {
             "type": "array",
@@ -229,10 +237,11 @@
                 "firmware",
                 "unknown",
                 "control_board",
-                "pool"
+                "pool",
+                "low_hashrate"
               ]
             },
-            "description": "Filter miners by anomaly type (OR semantics — returns miners matching ANY of the specified types).\nAvailable values: fan, power, temperature, hashboard, network, firmware, unknown, control_board, pool.\nCorresponds to bits in the anomaly_flags bitmask field on each miner.\nAccepts repeated array (anomaly_filters[]=fan&anomaly_filters[]=power), comma-separated string (anomaly_filters=fan,power), or single value (anomaly_filters=fan)."
+            "description": "Filter miners by anomaly type (OR semantics — returns miners matching ANY of the specified types).\nAvailable values: fan, power, temperature, hashboard, network, firmware, unknown, control_board, pool, low_hashrate.\nCorresponds to bits in the anomaly_flags bitmask field on each miner.\nAccepts repeated array (anomaly_filters[]=fan&anomaly_filters[]=power), comma-separated string (anomaly_filters=fan,power), or single value (anomaly_filters=fan)."
           },
           "hashrate_realization_min": {
             "type": "string",
@@ -248,6 +257,13 @@
               "type": "string"
             },
             "description": "Filter miners by mining_mode value (OR semantics — returns miners matching ANY of the specified modes).\nAccepts repeated array (mining_modes_in[]=high&mining_modes_in[]=power_tuning), comma-separated string (mining_modes_in=high,power_tuning), or single value (mining_modes_in=high)."
+          },
+          "mining_modes_not_in": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Exclude miners by mining_mode value (NOT IN semantics) — the complement of `mining_modes_in`.\nPrimary use: `mining_modes_not_in=sleep` excludes sleepers, matching the overview \"healthy\" card\n(fault-free, non-sleep). Accepts repeated array, comma-separated string, or single value."
           },
           "ip_ranges": {
             "type": "string",
@@ -500,6 +516,21 @@
           },
           "farm_id": {
             "type": "string"
+          },
+          "id": {
+            "type": "object",
+            "properties": {
+              "eq": {
+                "type": "string"
+              },
+              "in": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Miner ID filter. Supports exact match (`eq`) or set membership (`in`)."
           },
           "agent_id": {
             "type": "object",
@@ -855,6 +886,360 @@
         "additionalProperties": false
       },
       "outputSchemaSource": "mcp+openapi"
+    },
+    "GetMinerStats": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "workspace_id": {
+            "type": "string"
+          },
+          "farm_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "farm_id"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "inputSchemaSource": "mcp",
+      "output": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indicates if the request was successful"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "theo": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "total": {
+                "type": "number"
+              },
+              "by_type": {
+                "type": "object",
+                "properties": {
+                  "healthy": {
+                    "type": "number"
+                  },
+                  "abnormal": {
+                    "type": "number"
+                  },
+                  "sleep": {
+                    "type": "number"
+                  },
+                  "stale": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "healthy",
+                  "abnormal",
+                  "sleep",
+                  "stale"
+                ],
+                "additionalProperties": false
+              },
+              "by_abnormal_type": {
+                "type": "object",
+                "properties": {
+                  "hashboard": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "number"
+                      },
+                      "also_has": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "also_has"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "temperature": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "number"
+                      },
+                      "also_has": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "also_has"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "fan": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "number"
+                      },
+                      "also_has": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "also_has"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "network": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "number"
+                      },
+                      "also_has": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "also_has"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "pool": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "number"
+                      },
+                      "also_has": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "also_has"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "power": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "number"
+                      },
+                      "also_has": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "also_has"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "control_board": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "number"
+                      },
+                      "also_has": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "also_has"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "firmware": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "number"
+                      },
+                      "also_has": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "also_has"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "low_hashrate": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "number"
+                      },
+                      "also_has": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "also_has"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "unknown": {
+                    "type": "object",
+                    "properties": {
+                      "count": {
+                        "type": "number"
+                      },
+                      "also_has": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "count",
+                      "also_has"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "hashboard",
+                  "temperature",
+                  "fan",
+                  "network",
+                  "pool",
+                  "power",
+                  "control_board",
+                  "firmware",
+                  "low_hashrate",
+                  "unknown"
+                ],
+                "additionalProperties": false
+              },
+              "mining_mode": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "mode": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "mode",
+                    "count"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "miner_model": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "count": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "model",
+                    "count"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "theo",
+              "total",
+              "by_type",
+              "by_abnormal_type",
+              "mining_mode",
+              "miner_model"
+            ],
+            "additionalProperties": false
+          },
+          "error": {
+            "type": "null",
+            "description": "Error object (null on success)"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchemaSource": "mcp"
     },
     "ListFarmMetricsHistory": {
       "input": {
@@ -1229,6 +1614,499 @@
       },
       "outputSchemaSource": "mcp+openapi"
     },
+    "ListFarmEnergyHistory": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "workspace_id": {
+            "type": "string"
+          },
+          "farm_id": {
+            "type": "string"
+          },
+          "end_time": {
+            "type": "string",
+            "description": "End time (ISO 8601). Defaults to now."
+          },
+          "start_time": {
+            "type": "string",
+            "description": "Start time (ISO 8601). Defaults to 7 days ago."
+          }
+        },
+        "required": [
+          "workspace_id",
+          "farm_id"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "inputSchemaSource": "mcp",
+      "output": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indicates if the request was successful"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "energy_summary": {
+                "type": "object",
+                "properties": {
+                  "theo_power": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "theoEfficiency": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "theo_total_energy": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "theo_total_electricity_cost": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "theo_avg_margin": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "agent_avg_hashrate": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "agent_avg_power": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "agent_total_energy": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "agent_avg_efficiency": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "agent_total_est_electricity_cost": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "agent_avg_margin": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pool_avg_hashrate": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pool_avg_power": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pool_total_energy": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pool_total_est_electricity_cost": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pool_avg_margin": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "total_earning_btc": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "total_earning_usd": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "theo_power",
+                  "theoEfficiency",
+                  "theo_total_energy",
+                  "theo_total_electricity_cost",
+                  "theo_avg_margin",
+                  "agent_avg_hashrate",
+                  "agent_avg_power",
+                  "agent_total_energy",
+                  "agent_avg_efficiency",
+                  "agent_total_est_electricity_cost",
+                  "agent_avg_margin",
+                  "pool_avg_hashrate",
+                  "pool_avg_power",
+                  "pool_total_energy",
+                  "pool_total_est_electricity_cost",
+                  "pool_avg_margin",
+                  "total_earning_btc",
+                  "total_earning_usd"
+                ],
+                "additionalProperties": false
+              },
+              "energy_metrics": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "period": {
+                      "type": "string"
+                    },
+                    "theo_energy": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "theo_electricity_cost": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "theo_margin": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "agent_hashrate": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "agent_power": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "agent_energy": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "agent_efficiency": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "agent_est_electricity_cost": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "agent_margin": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "pool_hashrate": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "pool_power": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "pool_energy": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "pool_est_electricity_cost": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "pool_margin": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "earning_btc": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "earning_usd": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "period",
+                    "theo_energy",
+                    "theo_electricity_cost",
+                    "theo_margin",
+                    "agent_hashrate",
+                    "agent_power",
+                    "agent_energy",
+                    "agent_efficiency",
+                    "agent_est_electricity_cost",
+                    "agent_margin",
+                    "pool_hashrate",
+                    "pool_power",
+                    "pool_energy",
+                    "pool_est_electricity_cost",
+                    "pool_margin",
+                    "earning_btc",
+                    "earning_usd"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "power_metrics": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "period": {
+                      "type": "string"
+                    },
+                    "pool_power": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "agent_power": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "period",
+                    "pool_power",
+                    "agent_power"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "energy_summary",
+              "energy_metrics",
+              "power_metrics"
+            ],
+            "additionalProperties": false
+          },
+          "error": {
+            "type": "null",
+            "description": "Error object (null on success)"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchemaSource": "mcp"
+    },
     "ListMinerHistory": {
       "input": {
         "type": "object",
@@ -1255,11 +2133,12 @@
           "granularity": {
             "type": "string",
             "enum": [
+              "10min",
               "hour",
               "day",
               "week"
             ],
-            "description": "Time resolution of the returned snapshots.\n- `hour` (default): max range 7 days (168 data points).\n- `day`: max range 90 days (90 data points).\n- `week`: max range 365 days (52 data points)."
+            "description": "Time resolution of the returned snapshots.\n- `10min`: max range 1 day (144 data points). Requires miner_id (single-miner queries only).\n- `hour` (default): max range 7 days (168 data points).\n- `day`: max range 90 days (90 data points).\n- `week`: max range 365 days (52 data points)."
           }
         },
         "required": [
@@ -1297,11 +2176,12 @@
               "granularity": {
                 "type": "string",
                 "enum": [
+                  "10min",
                   "hour",
                   "day",
                   "week"
                 ],
-                "description": "Time resolution of the returned snapshots. Values: hour | day | week."
+                "description": "Time resolution of the returned snapshots. Values: 10min | hour | day | week."
               },
               "snapshots": {
                 "type": "array",
@@ -1355,6 +2235,19 @@
                         }
                       ],
                       "description": "Uptime in seconds"
+                    },
+                    "anomaly_flags": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": -9007199254740991,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ],
+                      "description": "Bitmask of active anomalies. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool."
                     }
                   },
                   "required": [
@@ -1362,7 +2255,8 @@
                     "hashrate",
                     "wattage",
                     "temp",
-                    "uptime"
+                    "uptime",
+                    "anomaly_flags"
                   ],
                   "additionalProperties": false
                 },
@@ -1686,23 +2580,15 @@
             "type": "string",
             "description": "Filter by miner ID"
           },
-          "source": {
-            "type": "string",
-            "enum": [
-              "automation",
-              "api",
-              "user",
-              "external"
-            ],
-            "description": "Filter by reboot source: automation, api, user, or external"
-          },
           "from_time": {
             "type": "string",
-            "description": "Start time filter. Defaults to 7 days ago if not provided."
+            "description": "Start time filter. Defaults to 7 days ago if not provided.",
+            "format": "datetime"
           },
           "to_time": {
             "type": "string",
-            "description": "End time filter. Defaults to now if not provided."
+            "description": "End time filter. Defaults to now if not provided.",
+            "format": "datetime"
           }
         },
         "required": [
@@ -1711,7 +2597,7 @@
         ],
         "$schema": "http://json-schema.org/draft-07/schema#"
       },
-      "inputSchemaSource": "mcp",
+      "inputSchemaSource": "mcp+openapi",
       "output": {
         "type": "object",
         "properties": {
@@ -1726,7 +2612,8 @@
               "properties": {
                 "id": {
                   "type": "string",
-                  "description": "Reboot event ID"
+                  "description": "Reboot event ID",
+                  "format": "uuid"
                 },
                 "workspace_id": {
                   "type": "string",
@@ -1734,11 +2621,42 @@
                 },
                 "farm_id": {
                   "type": "string",
-                  "description": "Farm ID"
+                  "description": "Farm ID",
+                  "format": "uuid"
                 },
                 "miner_id": {
                   "type": "string",
                   "description": "Miner ID"
+                },
+                "ip": {
+                  "type": "string",
+                  "description": "Miner IP address at time of query"
+                },
+                "model": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Miner hardware model (e.g. S19 Pro)"
+                },
+                "make": {
+                  "type": "string",
+                  "description": "Miner manufacturer (e.g. Bitmain)"
+                },
+                "serial_number": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Miner serial number"
                 },
                 "period": {
                   "type": "string",
@@ -1788,11 +2706,7 @@
                   ],
                   "description": "Hashrate after reboot (H/s)"
                 },
-                "source": {
-                  "type": "string",
-                  "description": "Reboot source: automation, api, user, or external"
-                },
-                "source_task_id": {
+                "pre_period": {
                   "anyOf": [
                     {
                       "type": "string"
@@ -1801,7 +2715,114 @@
                       "type": "null"
                     }
                   ],
-                  "description": "Associated agent_task ID if platform-initiated"
+                  "description": "Pre-reboot snapshot collection time (ISO 8601)"
+                },
+                "post_period": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Post-reboot snapshot collection time (ISO 8601)"
+                },
+                "pre_wattage": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Power consumption before reboot (watts)"
+                },
+                "post_wattage": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Power consumption after reboot (watts)"
+                },
+                "pre_temp": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Average board temperature before reboot (celsius)"
+                },
+                "post_temp": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Average board temperature after reboot (celsius)"
+                },
+                "pre_anomaly_flags": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Anomaly bitmask before reboot. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool.",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "post_anomaly_flags": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Anomaly bitmask after reboot. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool.",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "pre_mining_mode": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Mining mode before reboot (e.g. normal, sleep, low)"
+                },
+                "post_mining_mode": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Mining mode after reboot (e.g. normal, sleep, low)"
                 },
                 "created_at": {
                   "anyOf": [
@@ -1813,6 +2834,28 @@
                     }
                   ],
                   "description": "Record creation time (ISO 8601)"
+                },
+                "before_avg_hashrate": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Average hashrate 30–5 minutes before reboot (H/s)"
+                },
+                "after_avg_hashrate": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Average hashrate 15–60 minutes after reboot (H/s)"
                 }
               },
               "required": [
@@ -1820,14 +2863,405 @@
                 "workspace_id",
                 "farm_id",
                 "miner_id",
+                "ip",
+                "model",
+                "make",
+                "serial_number",
                 "period",
                 "pre_uptime",
                 "post_uptime",
                 "pre_hashrate",
                 "post_hashrate",
-                "source",
-                "source_task_id",
-                "created_at"
+                "pre_period",
+                "post_period",
+                "pre_wattage",
+                "post_wattage",
+                "pre_temp",
+                "post_temp",
+                "pre_anomaly_flags",
+                "post_anomaly_flags",
+                "pre_mining_mode",
+                "post_mining_mode",
+                "created_at",
+                "before_avg_hashrate",
+                "after_avg_hashrate"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Array of items"
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "description": "Total number of items"
+              },
+              "limit": {
+                "type": "number",
+                "description": "Maximum number of items per page"
+              },
+              "offset": {
+                "type": "number",
+                "description": "Number of items to skip"
+              },
+              "hasNext": {
+                "type": "boolean",
+                "description": "Whether there are more items after this page"
+              },
+              "hasPrevious": {
+                "type": "boolean",
+                "description": "Whether there are items before this page"
+              }
+            },
+            "required": [
+              "total",
+              "limit",
+              "offset",
+              "hasNext",
+              "hasPrevious"
+            ],
+            "additionalProperties": false,
+            "description": "Pagination metadata"
+          },
+          "error": {
+            "type": "null",
+            "description": "Error object (null on success)"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "pagination",
+          "error"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchemaSource": "mcp+openapi"
+    },
+    "GetMinerRebootEvents": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "workspace_id": {
+            "type": "string"
+          },
+          "farm_id": {
+            "type": "string"
+          },
+          "miner_id": {
+            "type": "string"
+          },
+          "page": {
+            "type": "number",
+            "minimum": 1,
+            "description": "Page number (default: 1)"
+          },
+          "pageSize": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 10000,
+            "description": "Number of items per page (default: 10, max: 10000)"
+          },
+          "from_time": {
+            "type": "string",
+            "description": "Start time filter. Defaults to 7 days ago if not provided."
+          },
+          "to_time": {
+            "type": "string",
+            "description": "End time filter. Defaults to now if not provided."
+          }
+        },
+        "required": [
+          "workspace_id",
+          "farm_id",
+          "miner_id"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "inputSchemaSource": "mcp",
+      "output": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indicates if the request was successful"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "Reboot event ID"
+                },
+                "workspace_id": {
+                  "type": "string",
+                  "description": "Workspace ID"
+                },
+                "farm_id": {
+                  "type": "string",
+                  "description": "Farm ID"
+                },
+                "miner_id": {
+                  "type": "string",
+                  "description": "Miner ID"
+                },
+                "ip": {
+                  "type": "string",
+                  "description": "Miner IP address at time of query"
+                },
+                "model": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Miner hardware model (e.g. S19 Pro)"
+                },
+                "make": {
+                  "type": "string",
+                  "description": "Miner manufacturer (e.g. Bitmain)"
+                },
+                "serial_number": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Miner serial number"
+                },
+                "period": {
+                  "type": "string",
+                  "description": "Detection period (ISO 8601)"
+                },
+                "pre_uptime": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Uptime before reboot (seconds)"
+                },
+                "post_uptime": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Uptime after reboot (seconds)"
+                },
+                "pre_hashrate": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Hashrate before reboot (H/s)"
+                },
+                "post_hashrate": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Hashrate after reboot (H/s)"
+                },
+                "pre_period": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Pre-reboot snapshot collection time (ISO 8601)"
+                },
+                "post_period": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Post-reboot snapshot collection time (ISO 8601)"
+                },
+                "pre_wattage": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Power consumption before reboot (watts)"
+                },
+                "post_wattage": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Power consumption after reboot (watts)"
+                },
+                "pre_temp": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Average board temperature before reboot (celsius)"
+                },
+                "post_temp": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Average board temperature after reboot (celsius)"
+                },
+                "pre_anomaly_flags": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Anomaly bitmask before reboot. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool."
+                },
+                "post_anomaly_flags": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Anomaly bitmask after reboot. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool."
+                },
+                "pre_mining_mode": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Mining mode before reboot (e.g. normal, sleep, low)"
+                },
+                "post_mining_mode": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Mining mode after reboot (e.g. normal, sleep, low)"
+                },
+                "created_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Record creation time (ISO 8601)"
+                },
+                "before_avg_hashrate": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Average hashrate 30–5 minutes before reboot (H/s)"
+                },
+                "after_avg_hashrate": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Average hashrate 15–60 minutes after reboot (H/s)"
+                }
+              },
+              "required": [
+                "id",
+                "workspace_id",
+                "farm_id",
+                "miner_id",
+                "ip",
+                "model",
+                "make",
+                "serial_number",
+                "period",
+                "pre_uptime",
+                "post_uptime",
+                "pre_hashrate",
+                "post_hashrate",
+                "pre_period",
+                "post_period",
+                "pre_wattage",
+                "post_wattage",
+                "pre_temp",
+                "post_temp",
+                "pre_anomaly_flags",
+                "post_anomaly_flags",
+                "pre_mining_mode",
+                "post_mining_mode",
+                "created_at",
+                "before_avg_hashrate",
+                "after_avg_hashrate"
               ],
               "additionalProperties": false
             },
@@ -1906,11 +3340,12 @@
           "granularity": {
             "type": "string",
             "enum": [
+              "10min",
               "hour",
               "day",
               "week"
             ],
-            "description": "Time resolution of the returned snapshots.\n- `hour` (default): max range 7 days (168 data points).\n- `day`: max range 90 days (90 data points).\n- `week`: max range 365 days (52 data points)."
+            "description": "Time resolution of the returned snapshots.\n- `10min`: max range 1 day (144 data points). Requires miner_id (single-miner queries only).\n- `hour` (default): max range 7 days (168 data points).\n- `day`: max range 90 days (90 data points).\n- `week`: max range 365 days (52 data points)."
           }
         },
         "required": [
@@ -5382,7 +6817,7 @@
                     "miner.asset.delete",
                     "miner.rack_location.update"
                   ],
-                  "description": "Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.self.update`. Event types: `miner.asset.update`, `miner.asset.delete`, `miner.rack_location.update`."
+                  "description": "Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.asset.update`, `miner.asset.delete`, `miner.rack_location.update`."
                 }
               }
             },
@@ -6111,6 +7546,105 @@
         "description": "Observed output from read-only MCP tool ListWorkspaces."
       },
       "outputSchemaSource": "observed-mcp"
+    },
+    "ListBtcNetworkHistory": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "from_time": {
+            "type": "string",
+            "description": "Start of time range (ISO 8601). Defaults to 7 days ago."
+          },
+          "to_time": {
+            "type": "string",
+            "description": "End of time range (ISO 8601). Defaults to now."
+          }
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "inputSchemaSource": "mcp",
+      "output": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Indicates if the request was successful"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "from": {
+                "type": "string",
+                "description": "Start of the queried time range (ISO 8601)"
+              },
+              "to": {
+                "type": "string",
+                "description": "End of the queried time range (ISO 8601)"
+              },
+              "snapshots": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "period": {
+                      "type": "string",
+                      "description": "Period timestamp for this data point"
+                    },
+                    "bitcoin_price": {
+                      "type": "number",
+                      "description": "Bitcoin price in USD"
+                    },
+                    "hashprice_usd": {
+                      "type": "number",
+                      "description": "Hashprice in USD per PH/s per day"
+                    },
+                    "hashprice_btc": {
+                      "type": "number",
+                      "description": "Hashprice in BTC per PH/s per day"
+                    },
+                    "network_hashrate": {
+                      "type": "number",
+                      "description": "Network hashrate in EH/s"
+                    },
+                    "network_difficulty": {
+                      "type": "number",
+                      "description": "Network difficulty"
+                    }
+                  },
+                  "required": [
+                    "period",
+                    "bitcoin_price",
+                    "hashprice_usd",
+                    "hashprice_btc",
+                    "network_hashrate",
+                    "network_difficulty"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Time-series data points"
+              }
+            },
+            "required": [
+              "from",
+              "to",
+              "snapshots"
+            ],
+            "additionalProperties": false
+          },
+          "error": {
+            "type": "null",
+            "description": "Error object (null on success)"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchemaSource": "mcp"
     }
   }
 }

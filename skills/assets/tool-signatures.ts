@@ -145,6 +145,13 @@ export interface ListMinersInput {
    */
   status?: string
   /**
+   * Exclude miners by status (NOT IN semantics) — the complement of `status`.
+   * Accepts the same values as `status`; combine with `status` to include some and exclude others.
+   * Primary use: `status_exclude=stale` selects the online scope (status <> stale), matching the
+   * overview "online/healthy/abnormal/sleep" cards. Supports `,`-separated or repeated params.
+   */
+  status_exclude?: string
+  /**
    * Filter miners by ops status (operator-managed state).
    * Values: `maintenance`, `retired`, `off_rack`, `transit`, `archived`.
    * Supports multiple values separated by `,` or multiple query parameters.
@@ -155,8 +162,15 @@ export interface ListMinersInput {
    */
   unstable?: string
   /**
+   * Abnormal axis (the whole `anomaly_flags` bitmask, not a specific type).
+   * `true` = any anomaly bit set (anomaly_flags <> 0) — the overview "abnormal" scope.
+   * `false` = no anomaly bits (anomaly_flags = 0) — the fault-free scope behind "healthy"/"sleep".
+   * Omit to include both. Prefer this over OR-ing all `anomaly_filters` for the abnormal aggregate.
+   */
+  has_anomaly?: string
+  /**
    * Filter miners by anomaly type (OR semantics — returns miners matching ANY of the specified types).
-   * Available values: fan, power, temperature, hashboard, network, firmware, unknown, control_board, pool.
+   * Available values: fan, power, temperature, hashboard, network, firmware, unknown, control_board, pool, low_hashrate.
    * Corresponds to bits in the anomaly_flags bitmask field on each miner.
    * Accepts repeated array (anomaly_filters[]=fan&anomaly_filters[]=power), comma-separated string (anomaly_filters=fan,power), or single value (anomaly_filters=fan).
    */
@@ -170,6 +184,7 @@ export interface ListMinersInput {
     | "unknown"
     | "control_board"
     | "pool"
+    | "low_hashrate"
   )[]
   /**
    * Lower bound of hashrate realization rate (actual / expected). 1.0 = 100%. Miners with NULL or 0 expected_hashrate are excluded.
@@ -184,6 +199,12 @@ export interface ListMinersInput {
    * Accepts repeated array (mining_modes_in[]=high&mining_modes_in[]=power_tuning), comma-separated string (mining_modes_in=high,power_tuning), or single value (mining_modes_in=high).
    */
   mining_modes_in?: string[]
+  /**
+   * Exclude miners by mining_mode value (NOT IN semantics) — the complement of `mining_modes_in`.
+   * Primary use: `mining_modes_not_in=sleep` excludes sleepers, matching the overview "healthy" card
+   * (fault-free, non-sleep). Accepts repeated array, comma-separated string, or single value.
+   */
+  mining_modes_not_in?: string[]
   /**
    * Filter miners by IPv4 ranges. A miner matches if its IP falls into any of the provided ranges.
    * Each item accepts one of three forms:
@@ -315,6 +336,13 @@ export interface SearchMinersInput {
   workspace_id: string
   farm_id: string
   /**
+   * Miner ID filter. Supports exact match (`eq`) or set membership (`in`).
+   */
+  id?: {
+    eq?: string
+    in?: string[]
+  }
+  /**
    * String filter operators. Provide at least one operator.
    */
   agent_id?: {
@@ -407,6 +435,100 @@ export interface SearchMinersOutput {
      * Whether there are items before this page
      */
     hasPrevious: boolean
+  }
+  /**
+   * Error object (null on success)
+   */
+  error: null
+}
+export interface GetMinerStatsInput {
+  workspace_id: string
+  farm_id: string
+}
+export interface GetMinerStatsOutput {
+  /**
+   * Indicates if the request was successful
+   */
+  success: boolean
+  data: {
+    theo: number | null
+    total: number
+    by_type: {
+      healthy: number
+      abnormal: number
+      sleep: number
+      stale: number
+    }
+    by_abnormal_type: {
+      hashboard: {
+        count: number
+        also_has: {
+          [k: string]: unknown
+        }
+      }
+      temperature: {
+        count: number
+        also_has: {
+          [k: string]: unknown
+        }
+      }
+      fan: {
+        count: number
+        also_has: {
+          [k: string]: unknown
+        }
+      }
+      network: {
+        count: number
+        also_has: {
+          [k: string]: unknown
+        }
+      }
+      pool: {
+        count: number
+        also_has: {
+          [k: string]: unknown
+        }
+      }
+      power: {
+        count: number
+        also_has: {
+          [k: string]: unknown
+        }
+      }
+      control_board: {
+        count: number
+        also_has: {
+          [k: string]: unknown
+        }
+      }
+      firmware: {
+        count: number
+        also_has: {
+          [k: string]: unknown
+        }
+      }
+      low_hashrate: {
+        count: number
+        also_has: {
+          [k: string]: unknown
+        }
+      }
+      unknown: {
+        count: number
+        also_has: {
+          [k: string]: unknown
+        }
+      }
+    }
+    mining_mode: {
+      mode: string
+      count: number
+    }[]
+    miner_model: {
+      model: string | null
+      count: number
+    }[]
   }
   /**
    * Error object (null on success)
@@ -569,6 +691,74 @@ export interface FarmSubDayMetricHistory {
     offline_miners: number | null
   }
 }
+export interface ListFarmEnergyHistoryInput {
+  workspace_id: string
+  farm_id: string
+  /**
+   * End time (ISO 8601). Defaults to now.
+   */
+  end_time?: string
+  /**
+   * Start time (ISO 8601). Defaults to 7 days ago.
+   */
+  start_time?: string
+}
+export interface ListFarmEnergyHistoryOutput {
+  /**
+   * Indicates if the request was successful
+   */
+  success: boolean
+  data: {
+    energy_summary: {
+      theo_power: number | null
+      theoEfficiency: number | null
+      theo_total_energy: number | null
+      theo_total_electricity_cost: number | null
+      theo_avg_margin: number | null
+      agent_avg_hashrate: number | null
+      agent_avg_power: number | null
+      agent_total_energy: number | null
+      agent_avg_efficiency: number | null
+      agent_total_est_electricity_cost: number | null
+      agent_avg_margin: number | null
+      pool_avg_hashrate: number | null
+      pool_avg_power: number | null
+      pool_total_energy: number | null
+      pool_total_est_electricity_cost: number | null
+      pool_avg_margin: number | null
+      total_earning_btc: number | null
+      total_earning_usd: number | null
+    }
+    energy_metrics: {
+      period: string
+      theo_energy: number | null
+      theo_electricity_cost: number | null
+      theo_margin: number | null
+      agent_hashrate: number | null
+      agent_power: number | null
+      agent_energy: number | null
+      agent_efficiency: number | null
+      agent_est_electricity_cost: number | null
+      agent_margin: number | null
+      pool_hashrate: number | null
+      pool_power: number | null
+      pool_energy: number | null
+      pool_est_electricity_cost: number | null
+      pool_margin: number | null
+      earning_btc: number | null
+      earning_usd: number | null
+    }[]
+    power_metrics: {
+      period: string
+      pool_power: number | null
+      agent_power: number | null
+    }[]
+  }
+  /**
+   * Error object (null on success)
+   */
+  error: null
+}
 export interface ListMinerHistoryInput {
   workspace_id: string
   farm_id: string
@@ -583,11 +773,12 @@ export interface ListMinerHistoryInput {
   to_time: string
   /**
    * Time resolution of the returned snapshots.
+   * - `10min`: max range 1 day (144 data points). Requires miner_id (single-miner queries only).
    * - `hour` (default): max range 7 days (168 data points).
    * - `day`: max range 90 days (90 data points).
    * - `week`: max range 365 days (52 data points).
    */
-  granularity?: "hour" | "day" | "week"
+  granularity?: "10min" | "hour" | "day" | "week"
 }
 export interface ListMinerHistoryOutput {
   /**
@@ -611,9 +802,9 @@ export interface ListMinerHistoryOutput {
      */
     to: string
     /**
-     * Time resolution of the returned snapshots. Values: hour | day | week.
+     * Time resolution of the returned snapshots. Values: 10min | hour | day | week.
      */
-    granularity: "hour" | "day" | "week"
+    granularity: "10min" | "hour" | "day" | "week"
     /**
      * Time-series data points within the requested range.
      */
@@ -638,6 +829,10 @@ export interface ListMinerHistoryOutput {
        * Uptime in seconds
        */
       uptime: number | null
+      /**
+       * Bitmask of active anomalies. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool.
+       */
+      anomaly_flags: number | null
     }[]
   }
   /**
@@ -809,10 +1004,6 @@ export interface ListMinerRebootEventsInput {
    */
   miner_id?: string
   /**
-   * Filter by reboot source: automation, api, user, or external
-   */
-  source?: "automation" | "api" | "user" | "external"
-  /**
    * Start time filter. Defaults to 7 days ago if not provided.
    */
   from_time?: string
@@ -847,6 +1038,22 @@ export interface ListMinerRebootEventsOutput {
      */
     miner_id: string
     /**
+     * Miner IP address at time of query
+     */
+    ip: string
+    /**
+     * Miner hardware model (e.g. S19 Pro)
+     */
+    model: string | null
+    /**
+     * Miner manufacturer (e.g. Bitmain)
+     */
+    make: string
+    /**
+     * Miner serial number
+     */
+    serial_number: string | null
+    /**
      * Detection period (ISO 8601)
      */
     period: string
@@ -867,17 +1074,222 @@ export interface ListMinerRebootEventsOutput {
      */
     post_hashrate: number | null
     /**
-     * Reboot source: automation, api, user, or external
+     * Pre-reboot snapshot collection time (ISO 8601)
      */
-    source: string
+    pre_period: string | null
     /**
-     * Associated agent_task ID if platform-initiated
+     * Post-reboot snapshot collection time (ISO 8601)
      */
-    source_task_id: string | null
+    post_period: string | null
+    /**
+     * Power consumption before reboot (watts)
+     */
+    pre_wattage: number | null
+    /**
+     * Power consumption after reboot (watts)
+     */
+    post_wattage: number | null
+    /**
+     * Average board temperature before reboot (celsius)
+     */
+    pre_temp: number | null
+    /**
+     * Average board temperature after reboot (celsius)
+     */
+    post_temp: number | null
+    /**
+     * Anomaly bitmask before reboot. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool.
+     */
+    pre_anomaly_flags: number | null
+    /**
+     * Anomaly bitmask after reboot. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool.
+     */
+    post_anomaly_flags: number | null
+    /**
+     * Mining mode before reboot (e.g. normal, sleep, low)
+     */
+    pre_mining_mode: string | null
+    /**
+     * Mining mode after reboot (e.g. normal, sleep, low)
+     */
+    post_mining_mode: string | null
     /**
      * Record creation time (ISO 8601)
      */
     created_at: string | null
+    /**
+     * Average hashrate 30–5 minutes before reboot (H/s)
+     */
+    before_avg_hashrate: number | null
+    /**
+     * Average hashrate 15–60 minutes after reboot (H/s)
+     */
+    after_avg_hashrate: number | null
+  }[]
+  /**
+   * Pagination metadata
+   */
+  pagination: {
+    /**
+     * Total number of items
+     */
+    total: number
+    /**
+     * Maximum number of items per page
+     */
+    limit: number
+    /**
+     * Number of items to skip
+     */
+    offset: number
+    /**
+     * Whether there are more items after this page
+     */
+    hasNext: boolean
+    /**
+     * Whether there are items before this page
+     */
+    hasPrevious: boolean
+  }
+  /**
+   * Error object (null on success)
+   */
+  error: null
+}
+export interface GetMinerRebootEventsInput {
+  workspace_id: string
+  farm_id: string
+  miner_id: string
+  /**
+   * Page number (default: 1)
+   */
+  page?: number
+  /**
+   * Number of items per page (default: 10, max: 10000)
+   */
+  pageSize?: number
+  /**
+   * Start time filter. Defaults to 7 days ago if not provided.
+   */
+  from_time?: string
+  /**
+   * End time filter. Defaults to now if not provided.
+   */
+  to_time?: string
+}
+export interface GetMinerRebootEventsOutput {
+  /**
+   * Indicates if the request was successful
+   */
+  success: boolean
+  /**
+   * Array of items
+   */
+  data: {
+    /**
+     * Reboot event ID
+     */
+    id: string
+    /**
+     * Workspace ID
+     */
+    workspace_id: string
+    /**
+     * Farm ID
+     */
+    farm_id: string
+    /**
+     * Miner ID
+     */
+    miner_id: string
+    /**
+     * Miner IP address at time of query
+     */
+    ip: string
+    /**
+     * Miner hardware model (e.g. S19 Pro)
+     */
+    model: string | null
+    /**
+     * Miner manufacturer (e.g. Bitmain)
+     */
+    make: string
+    /**
+     * Miner serial number
+     */
+    serial_number: string | null
+    /**
+     * Detection period (ISO 8601)
+     */
+    period: string
+    /**
+     * Uptime before reboot (seconds)
+     */
+    pre_uptime: number | null
+    /**
+     * Uptime after reboot (seconds)
+     */
+    post_uptime: number | null
+    /**
+     * Hashrate before reboot (H/s)
+     */
+    pre_hashrate: number | null
+    /**
+     * Hashrate after reboot (H/s)
+     */
+    post_hashrate: number | null
+    /**
+     * Pre-reboot snapshot collection time (ISO 8601)
+     */
+    pre_period: string | null
+    /**
+     * Post-reboot snapshot collection time (ISO 8601)
+     */
+    post_period: string | null
+    /**
+     * Power consumption before reboot (watts)
+     */
+    pre_wattage: number | null
+    /**
+     * Power consumption after reboot (watts)
+     */
+    post_wattage: number | null
+    /**
+     * Average board temperature before reboot (celsius)
+     */
+    pre_temp: number | null
+    /**
+     * Average board temperature after reboot (celsius)
+     */
+    post_temp: number | null
+    /**
+     * Anomaly bitmask before reboot. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool.
+     */
+    pre_anomaly_flags: number | null
+    /**
+     * Anomaly bitmask after reboot. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool.
+     */
+    post_anomaly_flags: number | null
+    /**
+     * Mining mode before reboot (e.g. normal, sleep, low)
+     */
+    pre_mining_mode: string | null
+    /**
+     * Mining mode after reboot (e.g. normal, sleep, low)
+     */
+    post_mining_mode: string | null
+    /**
+     * Record creation time (ISO 8601)
+     */
+    created_at: string | null
+    /**
+     * Average hashrate 30–5 minutes before reboot (H/s)
+     */
+    before_avg_hashrate: number | null
+    /**
+     * Average hashrate 15–60 minutes after reboot (H/s)
+     */
+    after_avg_hashrate: number | null
   }[]
   /**
    * Pagination metadata
@@ -922,11 +1334,12 @@ export interface ListMinerPoolDiffsInput {
   to_time: string
   /**
    * Time resolution of the returned snapshots.
+   * - `10min`: max range 1 day (144 data points). Requires miner_id (single-miner queries only).
    * - `hour` (default): max range 7 days (168 data points).
    * - `day`: max range 90 days (90 data points).
    * - `week`: max range 365 days (52 data points).
    */
-  granularity?: "hour" | "day" | "week"
+  granularity?: "10min" | "hour" | "day" | "week"
 }
 /**
  * Complete miner history record before the change
@@ -2166,6 +2579,65 @@ export interface ListWorkspacesOutput {
     error: null
   }
 }
+export interface ListBtcNetworkHistoryInput {
+  /**
+   * Start of time range (ISO 8601). Defaults to 7 days ago.
+   */
+  from_time?: string
+  /**
+   * End of time range (ISO 8601). Defaults to now.
+   */
+  to_time?: string
+}
+export interface ListBtcNetworkHistoryOutput {
+  /**
+   * Indicates if the request was successful
+   */
+  success: boolean
+  data: {
+    /**
+     * Start of the queried time range (ISO 8601)
+     */
+    from: string
+    /**
+     * End of the queried time range (ISO 8601)
+     */
+    to: string
+    /**
+     * Time-series data points
+     */
+    snapshots: {
+      /**
+       * Period timestamp for this data point
+       */
+      period: string
+      /**
+       * Bitcoin price in USD
+       */
+      bitcoin_price: number
+      /**
+       * Hashprice in USD per PH/s per day
+       */
+      hashprice_usd: number
+      /**
+       * Hashprice in BTC per PH/s per day
+       */
+      hashprice_btc: number
+      /**
+       * Network hashrate in EH/s
+       */
+      network_hashrate: number
+      /**
+       * Network difficulty
+       */
+      network_difficulty: number
+    }[]
+  }
+  /**
+   * Error object (null on success)
+   */
+  error: null
+}
 export const nonceToolDefinitions = [
   {
     "destructive": false,
@@ -2187,8 +2659,20 @@ export const nonceToolDefinitions = [
   },
   {
     "destructive": false,
+    "methodName": "getMinerStats",
+    "name": "GetMinerStats",
+    "readOnly": true
+  },
+  {
+    "destructive": false,
     "methodName": "listFarmMetricsHistory",
     "name": "ListFarmMetricsHistory",
+    "readOnly": true
+  },
+  {
+    "destructive": false,
+    "methodName": "listFarmEnergyHistory",
+    "name": "ListFarmEnergyHistory",
     "readOnly": true
   },
   {
@@ -2207,6 +2691,12 @@ export const nonceToolDefinitions = [
     "destructive": false,
     "methodName": "listMinerRebootEvents",
     "name": "ListMinerRebootEvents",
+    "readOnly": true
+  },
+  {
+    "destructive": false,
+    "methodName": "getMinerRebootEvents",
+    "name": "GetMinerRebootEvents",
     "readOnly": true
   },
   {
@@ -2328,6 +2818,12 @@ export const nonceToolDefinitions = [
     "methodName": "listWorkspaces",
     "name": "ListWorkspaces",
     "readOnly": true
+  },
+  {
+    "destructive": false,
+    "methodName": "listBtcNetworkHistory",
+    "name": "ListBtcNetworkHistory",
+    "readOnly": true
   }
 ] as const
 
@@ -2336,10 +2832,13 @@ export interface NonceClient {
   listFarms(input: ListFarmsInput, options?: ReadonlyCallOptions): Promise<ListFarmsOutput>
   listMiners(input: ListMinersInput, options?: ReadonlyCallOptions): Promise<ListMinersOutput>
   searchMiners(input: SearchMinersInput, options?: ReadonlyCallOptions): Promise<SearchMinersOutput>
+  getMinerStats(input: GetMinerStatsInput, options?: ReadonlyCallOptions): Promise<GetMinerStatsOutput>
   listFarmMetricsHistory(input: ListFarmMetricsHistoryInput, options?: ReadonlyCallOptions): Promise<ListFarmMetricsHistoryOutput>
+  listFarmEnergyHistory(input: ListFarmEnergyHistoryInput, options?: ReadonlyCallOptions): Promise<ListFarmEnergyHistoryOutput>
   listMinerHistory(input: ListMinerHistoryInput, options?: ReadonlyCallOptions): Promise<ListMinerHistoryOutput>
   getMinerTasks(input: GetMinerTasksInput, options?: ReadonlyCallOptions): Promise<GetMinerTasksOutput>
   listMinerRebootEvents(input: ListMinerRebootEventsInput, options?: ReadonlyCallOptions): Promise<ListMinerRebootEventsOutput>
+  getMinerRebootEvents(input: GetMinerRebootEventsInput, options?: ReadonlyCallOptions): Promise<GetMinerRebootEventsOutput>
   listMinerPoolDiffs(input: ListMinerPoolDiffsInput, options?: ReadonlyCallOptions): Promise<ListMinerPoolDiffsOutput>
   listAgents(input: ListAgentsInput, options?: ReadonlyCallOptions): Promise<ListAgentsOutput>
   searchAgents(input: SearchAgentsInput, options?: ReadonlyCallOptions): Promise<SearchAgentsOutput>
@@ -2360,4 +2859,5 @@ export interface NonceClient {
   getTaskBatch(input: GetTaskBatchInput, options?: ReadonlyCallOptions): Promise<GetTaskBatchOutput>
   getTaskBatchTasks(input: GetTaskBatchTasksInput, options?: ReadonlyCallOptions): Promise<GetTaskBatchTasksOutput>
   listWorkspaces(input?: ListWorkspacesInput, options?: ReadonlyCallOptions): Promise<ListWorkspacesOutput>
+  listBtcNetworkHistory(input?: ListBtcNetworkHistoryInput, options?: ReadonlyCallOptions): Promise<ListBtcNetworkHistoryOutput>
 }

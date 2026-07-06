@@ -4,20 +4,6 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vite-plus/test";
 
-interface TriggerEvalQuery {
-  query: string;
-  reason: string;
-  shouldTrigger: boolean;
-}
-
-interface TriggerEvalFixture {
-  passingThreshold: number;
-  runsPerQuery: number;
-  skill: string;
-  train: TriggerEvalQuery[];
-  validation: TriggerEvalQuery[];
-}
-
 const readText = (path: string) => readFile(new URL(path, import.meta.url), "utf8");
 const repoRoot = dirname(fileURLToPath(new URL("../package.json", import.meta.url)));
 
@@ -37,9 +23,6 @@ const extractFrontmatterValue = (markdown: string, key: string): string => {
     .join(" ");
 };
 
-const countByExpectedTrigger = (queries: TriggerEvalQuery[], shouldTrigger: boolean): number =>
-  queries.filter((query) => query.shouldTrigger === shouldTrigger).length;
-
 describe("Nonce skill metadata", () => {
   it("keeps the trigger description concise and user-intent oriented", async () => {
     const skill = await readText("../skills/SKILL.md");
@@ -49,28 +32,6 @@ describe("Nonce skill metadata", () => {
     expect(description).toMatch(/^Use this skill when/);
     expect(description).toContain("Nonce mining resources");
     expect(description).toContain("Do not use it for generic Bitcoin mining questions");
-  });
-
-  it("documents a balanced trigger eval fixture", async () => {
-    const fixture = JSON.parse(
-      await readText("./evals/nonce-skill-trigger.json"),
-    ) as TriggerEvalFixture;
-
-    expect(fixture.skill).toBe("nonce");
-    expect(fixture.runsPerQuery).toBeGreaterThanOrEqual(3);
-    expect(fixture.passingThreshold).toBeGreaterThan(0);
-    expect(fixture.passingThreshold).toBeLessThanOrEqual(1);
-    expect(fixture.train).toHaveLength(10);
-    expect(fixture.validation).toHaveLength(10);
-
-    for (const split of [fixture.train, fixture.validation]) {
-      expect(countByExpectedTrigger(split, true)).toBe(5);
-      expect(countByExpectedTrigger(split, false)).toBe(5);
-      for (const query of split) {
-        expect(query.query.length).toBeGreaterThan(0);
-        expect(query.reason.length).toBeGreaterThan(0);
-      }
-    }
   });
 
   it("points OpenAI skill icons at bundled assets", async () => {

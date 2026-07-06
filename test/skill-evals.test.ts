@@ -1,0 +1,252 @@
+import { readFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+import { describe, expect, it } from "vite-plus/test";
+
+import {
+  detectOrganicTrigger as detectClaudeOrganicTrigger,
+  passesClaudeEvalThresholds,
+  summarizeClaudeEvalCases,
+  type ClaudeEvalResult,
+} from "../scripts/run-claude-evals.js";
+import {
+  detectOrganicTrigger as detectCodexOrganicTrigger,
+  passesCodexEvalThresholds,
+  summarizeCodexEvalCases,
+  type CodexEvalResult,
+} from "../scripts/run-codex-evals.js";
+import { runSkillEvals } from "../scripts/run-skill-evals.js";
+
+describe("Nonce skill eval flow", () => {
+  it("passes the local deterministic eval checks", async () => {
+    const result = await runSkillEvals();
+
+    expect(result.ok).toBe(true);
+    expect(result.summary.invokeCases).toBe(20);
+    expect(result.summary.behaviorCases).toBe(20);
+    expect(result.summary.positiveCases).toBe(result.summary.negativeCases);
+    expect(result.summary.destructiveCases).toBeGreaterThan(0);
+    expect(result.summary.errors).toBe(0);
+  });
+
+  it("scores the Codex eval summary with per-class thresholds", () => {
+    const runs = [
+      {
+        case: { id: "trigger.a", split: "train" },
+        checks: {
+          negativeControlPass: true,
+          routePass: true,
+        },
+        criticalFailure: false,
+        expected: { trigger: true },
+        status: "completed",
+        telemetry: { usage: { raw: { total_tokens: 10 } } },
+      },
+      {
+        case: { id: "negative.a", split: "validation" },
+        checks: {
+          negativeControlPass: true,
+          routePass: true,
+        },
+        criticalFailure: false,
+        expected: { trigger: false },
+        status: "completed",
+        telemetry: {},
+      },
+    ] as CodexEvalResult["cases"];
+
+    const summary = summarizeCodexEvalCases(runs);
+
+    expect(summary.overallAccuracy).toBe(1);
+    expect(summary.positiveRecall).toBe(1);
+    expect(summary.negativeSpecificity).toBe(1);
+    expect(summary.usageSamples).toBe(1);
+    expect(summary.splits.train?.totalRuns).toBe(1);
+    expect(summary.splits.validation?.totalRuns).toBe(1);
+    expect(
+      passesCodexEvalThresholds(summary, {
+        criticalFailuresAllowed: 0,
+        minimumNegativeSpecificity: 0.9,
+        minimumOverallAccuracy: 0.9,
+        minimumPositiveRecall: 0.9,
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps the local Codex eval config wired to the full case set", async () => {
+    const config = JSON.parse(
+      await readFile(resolve("evals/nonce-codex-eval.config.json"), "utf8"),
+    ) as {
+      caseSetPath: string;
+      runner: { runsPerCase: number; type: string };
+      targetProvisioning: { mode: string };
+      thresholds: { minimumOverallAccuracy: number };
+    };
+    const caseSet = JSON.parse(await readFile(resolve(config.caseSetPath), "utf8")) as {
+      kind: string;
+      train: unknown[];
+      validation: unknown[];
+    };
+
+    expect(config.runner.type).toBe("codex-cli");
+    expect(config.runner.runsPerCase).toBeGreaterThanOrEqual(3);
+    expect(config.targetProvisioning.mode).toBe("isolated-skill-home");
+    expect(config.thresholds.minimumOverallAccuracy).toBeGreaterThan(0.5);
+    expect(caseSet.kind).toBe("nonce-skill-invoke-cases");
+    expect(caseSet.train).toHaveLength(10);
+    expect(caseSet.validation).toHaveLength(10);
+  });
+
+  it("detects organic skill triggering from Codex command events", () => {
+    const triggeredStream = [
+      JSON.stringify({
+        item: {
+          command: "sed -n '1,120p' /tmp/home/.codex/skills/nonce/SKILL.md",
+          type: "command_execution",
+        },
+        type: "item.completed",
+      }),
+      JSON.stringify({ type: "turn.completed" }),
+    ].join("\n");
+    const untriggeredStream = [
+      JSON.stringify({
+        item: {
+          command: "sed -n '1,120p' /tmp/workspace/README.md",
+          type: "command_execution",
+        },
+        type: "item.completed",
+      }),
+      JSON.stringify({ type: "turn.completed" }),
+    ].join("\n");
+
+    expect(detectCodexOrganicTrigger(triggeredStream)).toHaveLength(1);
+    expect(detectCodexOrganicTrigger(untriggeredStream)).toHaveLength(0);
+  });
+
+  it("scores the Claude Code eval summary with per-class thresholds", () => {
+    const runs = [
+      {
+        case: { id: "trigger.a", split: "train" },
+        checks: {
+          negativeControlPass: true,
+          routePass: true,
+        },
+        criticalFailure: false,
+        expected: { trigger: true },
+        status: "completed",
+        telemetry: { costUsd: 0.05, usage: { raw: { input_tokens: 5, output_tokens: 5 } } },
+      },
+      {
+        case: { id: "negative.a", split: "validation" },
+        checks: {
+          negativeControlPass: true,
+          routePass: true,
+        },
+        criticalFailure: false,
+        expected: { trigger: false },
+        status: "completed",
+        telemetry: {},
+      },
+    ] as ClaudeEvalResult["cases"];
+
+    const summary = summarizeClaudeEvalCases(runs);
+
+    expect(summary.overallAccuracy).toBe(1);
+    expect(summary.positiveRecall).toBe(1);
+    expect(summary.negativeSpecificity).toBe(1);
+    expect(summary.usageSamples).toBe(1);
+    expect(summary.totalCostUsd).toBe(0.05);
+    expect(summary.splits.train?.overallAccuracy).toBe(1);
+    expect(summary.splits.validation?.overallAccuracy).toBe(1);
+    expect(
+      passesClaudeEvalThresholds(summary, {
+        criticalFailuresAllowed: 0,
+        minimumNegativeSpecificity: 0.9,
+        minimumOverallAccuracy: 0.9,
+        minimumPositiveRecall: 0.9,
+      }),
+    ).toBe(true);
+  });
+
+  it("detects organic skill triggering from Claude tool events", () => {
+    const triggeredStream = [
+      JSON.stringify({
+        message: {
+          content: [{ input: { skill: "nonce" }, name: "Skill", type: "tool_use" }],
+        },
+        type: "assistant",
+      }),
+      JSON.stringify({
+        message: {
+          content: [
+            {
+              input: { file_path: "/tmp/workspace/.claude/skills/nonce/SKILL.md" },
+              name: "Read",
+              type: "tool_use",
+            },
+          ],
+        },
+        type: "assistant",
+      }),
+    ].join("\n");
+    const readOnlyStream = [
+      JSON.stringify({
+        message: {
+          content: [
+            {
+              input: { file_path: "/tmp/workspace/.claude/skills/nonce/SKILL.md" },
+              name: "Read",
+              type: "tool_use",
+            },
+          ],
+        },
+        type: "assistant",
+      }),
+    ].join("\n");
+    const untriggeredStream = [
+      JSON.stringify({
+        message: {
+          content: [
+            { input: { skill: "code-review" }, name: "Skill", type: "tool_use" },
+            {
+              input: { file_path: "/tmp/workspace/.claude/skills/nonce/SKILL.md" },
+              name: "Read",
+              type: "tool_use",
+            },
+          ],
+        },
+        type: "assistant",
+      }),
+      JSON.stringify({ result: "done", subtype: "success", type: "result" }),
+    ].join("\n");
+
+    expect(detectClaudeOrganicTrigger(triggeredStream)).toHaveLength(2);
+    expect(detectClaudeOrganicTrigger(readOnlyStream)).toHaveLength(0);
+    expect(detectClaudeOrganicTrigger(untriggeredStream)).toHaveLength(0);
+  });
+
+  it("keeps the local Claude Code eval config wired to the full case set", async () => {
+    const config = JSON.parse(
+      await readFile(resolve("evals/nonce-claude-eval.config.json"), "utf8"),
+    ) as {
+      caseSetPath: string;
+      runner: { runsPerCase: number; tools: string[]; type: string };
+      targetProvisioning: { mode: string };
+      thresholds: { minimumOverallAccuracy: number };
+    };
+    const caseSet = JSON.parse(await readFile(resolve(config.caseSetPath), "utf8")) as {
+      kind: string;
+      train: unknown[];
+      validation: unknown[];
+    };
+
+    expect(config.runner.type).toBe("claude-cli");
+    expect(config.runner.runsPerCase).toBeGreaterThanOrEqual(3);
+    expect(config.runner.tools).toContain("Read");
+    expect(config.targetProvisioning.mode).toBe("isolated-project-skill");
+    expect(config.thresholds.minimumOverallAccuracy).toBeGreaterThan(0.5);
+    expect(caseSet.kind).toBe("nonce-skill-invoke-cases");
+    expect(caseSet.train).toHaveLength(10);
+    expect(caseSet.validation).toHaveLength(10);
+  });
+});

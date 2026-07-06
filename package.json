@@ -5,6 +5,13 @@
   "type": "module",
   "scripts": {
     "check": "vp check",
+    "evals": "node --import tsx/esm scripts/run-skill-evals.ts",
+    "evals:all": "vp run evals && vp run evals:codex && vp run evals:claude",
+    "evals:claude": "node --import tsx/esm scripts/run-claude-evals.ts",
+    "evals:claude:organic": "node --import tsx/esm scripts/run-claude-evals.ts",
+    "evals:codex": "node --import tsx/esm scripts/run-codex-evals.ts",
+    "evals:codex:organic": "node --import tsx/esm scripts/run-codex-evals.ts",
+    "evals:invoke": "vp run evals:codex && vp run evals:claude",
     "lint": "vp lint",
     "format": "vp fmt",
     "format:check": "vp fmt --check",
@@ -19,7 +26,8 @@
     "open": "^11.0.0",
     "tsx": "^4.22.4",
     "typescript": "^6.0.3",
-    "vite-plus": "^0.2.1",
+    "vite": "catalog:",
+    "vite-plus": "catalog:",
     "zod": "^4.4.3"
   },
   "packageManager": "pnpm@10.33.0"

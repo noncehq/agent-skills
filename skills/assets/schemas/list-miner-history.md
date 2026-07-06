@@ -27,11 +27,12 @@ export interface ListMinerHistoryInput {
   to_time: string
   /**
    * Time resolution of the returned snapshots.
+   * - `10min`: max range 1 day (144 data points). Requires miner_id (single-miner queries only).
    * - `hour` (default): max range 7 days (168 data points).
    * - `day`: max range 90 days (90 data points).
    * - `week`: max range 365 days (52 data points).
    */
-  granularity?: "hour" | "day" | "week"
+  granularity?: "10min" | "hour" | "day" | "week"
 }
 ```
 
@@ -60,9 +61,9 @@ export interface ListMinerHistoryOutput {
      */
     to: string
     /**
-     * Time resolution of the returned snapshots. Values: hour | day | week.
+     * Time resolution of the returned snapshots. Values: 10min | hour | day | week.
      */
-    granularity: "hour" | "day" | "week"
+    granularity: "10min" | "hour" | "day" | "week"
     /**
      * Time-series data points within the requested range.
      */
@@ -87,6 +88,10 @@ export interface ListMinerHistoryOutput {
        * Uptime in seconds
        */
       uptime: number | null
+      /**
+       * Bitmask of active anomalies. Bits: 0=fan, 1=power, 2=temperature, 3=hashboard, 4=network, 5=firmware, 6=unknown, 8=control_board, 9=pool.
+       */
+      anomaly_flags: number | null
     }[]
   }
   /**

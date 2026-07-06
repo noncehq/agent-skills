@@ -1,0 +1,406 @@
+{
+  "schemaVersion": 1,
+  "skill": "nonce",
+  "description": "Natural-language prompt and behavior cases for the packaged Nonce Codex skill.",
+  "runsPerCase": 3,
+  "thresholds": {
+    "minimumOverallAccuracy": 0.9,
+    "minimumPositiveRecall": 0.9,
+    "minimumNegativeSpecificity": 0.9,
+    "criticalFailuresAllowed": 0
+  },
+  "cases": [
+    {
+      "id": "trigger.zh.workspace.list",
+      "split": "train",
+      "category": "trigger.read.workspace",
+      "language": "zh",
+      "query": "我在 Nonce 账号里现在能看到哪些工作区？",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": ["listWorkspaces"],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": ["assets/schemas/list-workspaces.md"],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "trigger.zh.farm.offline-miners",
+      "split": "train",
+      "category": "trigger.read.miners",
+      "language": "zh",
+      "query": "帮我看看这个矿场里最近有哪些矿机掉线了。",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": ["listWorkspaces", "listFarms", ["listMiners", "searchMiners"]],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          ["assets/schemas/list-miners.md", "assets/schemas/search-miners.md"]
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "trigger.en.miner.stale-hashrate",
+      "split": "train",
+      "category": "trigger.read.history",
+      "language": "en",
+      "query": "Some machines in my Nonce farm look like they stopped reporting hashrate. Can you find the affected miners?",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": [
+          "listWorkspaces",
+          "listFarms",
+          ["listMiners", "searchMiners"],
+          "listMinerHistory"
+        ],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          ["assets/schemas/list-miners.md", "assets/schemas/search-miners.md"],
+          "assets/schemas/list-miner-history.md"
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "trigger.zh.task-batch.reboot-preview",
+      "split": "train",
+      "category": "trigger.destructive.preview",
+      "language": "zh",
+      "query": "这些矿机我可能需要重启，先帮我确认会影响哪些机器，确认后再执行。",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": [
+          "listWorkspaces",
+          "listFarms",
+          ["listMiners", "searchMiners"],
+          "createTaskBatchMinerSystemReboot"
+        ],
+        "mustRead": [
+          "references/workflow.md",
+          "references/tool-signatures.md",
+          "references/safety.md"
+        ],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          ["assets/schemas/list-miners.md", "assets/schemas/search-miners.md"],
+          "assets/schemas/create-task-batch-miner-system-reboot.md"
+        ],
+        "destructive": true,
+        "requiresConfirmation": true
+      }
+    },
+    {
+      "id": "trigger.zh.metrics.task-code",
+      "split": "train",
+      "category": "trigger.automation.javascript",
+      "language": "zh",
+      "query": "帮我看一下这个矿场最近一周的算力变化，整理成一份简洁结果。",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": ["listWorkspaces", "listFarms", "listFarmMetricsHistory"],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          "assets/schemas/list-farm-metrics-history.md"
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "negative.zh.bitcoin收益",
+      "split": "train",
+      "category": "negative.generic-mining",
+      "language": "zh",
+      "query": "解释比特币挖矿收益怎么算。",
+      "expected": {
+        "trigger": false,
+        "critical": true,
+        "methods": [],
+        "mustRead": [],
+        "schemaFiles": [],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "negative.zh.node-oauth-demo",
+      "split": "train",
+      "category": "negative.generic-oauth",
+      "language": "zh",
+      "query": "帮我写一个普通网站登录示例，登录后记住用户状态。",
+      "expected": {
+        "trigger": false,
+        "critical": true,
+        "methods": [],
+        "mustRead": [],
+        "schemaFiles": [],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "negative.zh.csv-inventory",
+      "split": "train",
+      "category": "negative.external-data",
+      "language": "zh",
+      "query": "我这里有一份本地 CSV，里面是手工整理的矿机库存，不需要查 Nonce，帮我分析后画个图。",
+      "expected": {
+        "trigger": false,
+        "critical": false,
+        "methods": [],
+        "mustRead": [],
+        "schemaFiles": [],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "negative.zh.other-mcp",
+      "split": "train",
+      "category": "negative.other-mcp",
+      "language": "zh",
+      "query": "帮我看看另一个工具服务现在提供了哪些功能。",
+      "expected": {
+        "trigger": false,
+        "critical": true,
+        "methods": [],
+        "mustRead": [],
+        "schemaFiles": [],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "negative.zh.mining-dashboard-ui",
+      "split": "train",
+      "category": "negative.product-ui",
+      "language": "zh",
+      "query": "帮我设计一个矿场看板首页，给运营同事看。",
+      "expected": {
+        "trigger": false,
+        "critical": false,
+        "methods": [],
+        "mustRead": [],
+        "schemaFiles": [],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "trigger.zh.miner.history",
+      "split": "validation",
+      "category": "trigger.read.history",
+      "language": "zh",
+      "query": "Nonce 里有一台矿机这两天不太稳定，帮我看看它最近 24 小时的算力记录。",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": [
+          "listWorkspaces",
+          "listFarms",
+          ["searchMiners", "listMiners"],
+          "listMinerHistory"
+        ],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          ["assets/schemas/search-miners.md", "assets/schemas/list-miners.md"],
+          "assets/schemas/list-miner-history.md"
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "trigger.zh.farm.agents-online",
+      "split": "validation",
+      "category": "trigger.read.agents",
+      "language": "zh",
+      "query": "看一下这个矿场现在有哪些现场采集设备在线。",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": ["listWorkspaces", "listFarms", ["listAgents", "searchAgents"]],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          ["assets/schemas/list-agents.md", "assets/schemas/search-agents.md"]
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "trigger.en.miner.search-serial",
+      "split": "validation",
+      "category": "trigger.read.search",
+      "language": "en",
+      "query": "I only have a miner serial number. Can you find which workspace and farm it belongs to?",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": ["listWorkspaces", "listFarms", ["searchMiners", "listMiners"]],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          ["assets/schemas/search-miners.md", "assets/schemas/list-miners.md"]
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "trigger.zh.task-batch.tasks",
+      "split": "validation",
+      "category": "trigger.read.tasks",
+      "language": "zh",
+      "query": "帮我看看这次批量操作里每台矿机现在处理到哪一步了。",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": [
+          "listWorkspaces",
+          ["getTaskBatch", "listTaskBatches", "searchTaskBatches"],
+          "getTaskBatchTasks"
+        ],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          [
+            "assets/schemas/get-task-batch.md",
+            "assets/schemas/list-task-batches.md",
+            "assets/schemas/search-task-batches.md"
+          ],
+          "assets/schemas/get-task-batch-tasks.md"
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "trigger.zh.pool-diffs-script",
+      "split": "validation",
+      "category": "trigger.automation.javascript",
+      "language": "zh",
+      "query": "帮我批量检查这些矿机的矿池配置有没有和预期不一致的地方。",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": [
+          "listWorkspaces",
+          "listFarms",
+          ["listMiners", "searchMiners"],
+          "listMinerPoolDiffs"
+        ],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          ["assets/schemas/list-miners.md", "assets/schemas/search-miners.md"],
+          "assets/schemas/list-miner-pool-diffs.md"
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "negative.zh.asic-power-mode",
+      "split": "validation",
+      "category": "negative.generic-mining",
+      "language": "zh",
+      "query": "矿机上的低功耗模式是什么意思？适合什么时候开？",
+      "expected": {
+        "trigger": false,
+        "critical": true,
+        "methods": [],
+        "mustRead": [],
+        "schemaFiles": [],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "negative.zh.oauth-button",
+      "split": "validation",
+      "category": "negative.generic-oauth",
+      "language": "zh",
+      "query": "帮我给网页加一个登录按钮，让用户能进自己的账号。",
+      "expected": {
+        "trigger": false,
+        "critical": true,
+        "methods": [],
+        "mustRead": [],
+        "schemaFiles": [],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "negative.zh.openapi-types",
+      "split": "validation",
+      "category": "negative.generic-api",
+      "language": "zh",
+      "query": "我有一份接口说明，帮我整理成工程师能接手的字段清单。",
+      "expected": {
+        "trigger": false,
+        "critical": true,
+        "methods": [],
+        "mustRead": [],
+        "schemaFiles": [],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "negative.zh.install-node",
+      "split": "validation",
+      "category": "negative.runtime-setup",
+      "language": "zh",
+      "query": "帮我写一份 Windows 电脑安装运行环境的步骤，给同事照着做。",
+      "expected": {
+        "trigger": false,
+        "critical": false,
+        "methods": [],
+        "mustRead": [],
+        "schemaFiles": [],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "negative.zh.network-topology",
+      "split": "validation",
+      "category": "negative.infrastructure-analysis",
+      "language": "zh",
+      "query": "我手头这张矿场网络拓扑图，帮我从网络设计角度看看可能有什么瓶颈，不需要查 Nonce。",
+      "expected": {
+        "trigger": false,
+        "critical": false,
+        "methods": [],
+        "mustRead": [],
+        "schemaFiles": [],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    }
+  ]
+}

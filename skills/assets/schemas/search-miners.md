@@ -17,6 +17,13 @@ export interface SearchMinersInput {
   workspace_id: string
   farm_id: string
   /**
+   * Miner ID filter. Supports exact match (`eq`) or set membership (`in`).
+   */
+  id?: {
+    eq?: string
+    in?: string[]
+  }
+  /**
    * String filter operators. Provide at least one operator.
    */
   agent_id?: {

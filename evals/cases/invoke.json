@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 1,
+  "kind": "nonce-skill-invoke-cases",
+  "skill": "nonce",
+  "description": "Raw user-intent prompts for measuring nonce skill activation without over-triggering on near misses.",
+  "runsPerQuery": 3,
+  "passingThreshold": 0.9,
+  "train": [
+    {
+      "query": "我在 Nonce 账号里现在能看到哪些工作区？",
+      "shouldTrigger": true,
+      "reason": "Direct Nonce workspace query."
+    },
+    {
+      "query": "帮我看看这个矿场里最近有哪些矿机掉线了。",
+      "shouldTrigger": true,
+      "reason": "Nonce farm and miner inspection."
+    },
+    {
+      "query": "Some machines in my Nonce farm look like they stopped reporting hashrate. Can you find the affected miners?",
+      "shouldTrigger": true,
+      "reason": "Nonce miner operational status query."
+    },
+    {
+      "query": "这些矿机我可能需要重启，先帮我确认会影响哪些机器，确认后再执行。",
+      "shouldTrigger": true,
+      "reason": "Nonce destructive miner operation that must preview impact first."
+    },
+    {
+      "query": "帮我看一下这个矿场最近一周的算力变化，整理成一份简洁结果。",
+      "shouldTrigger": true,
+      "reason": "Nonce farm metrics reporting request."
+    },
+    {
+      "query": "解释比特币挖矿收益怎么算。",
+      "shouldTrigger": false,
+      "reason": "Generic Bitcoin mining explanation, not Nonce operations."
+    },
+    {
+      "query": "帮我写一个普通网站登录示例，登录后记住用户状态。",
+      "shouldTrigger": false,
+      "reason": "Generic website login work without Nonce resources."
+    },
+    {
+      "query": "我这里有一份本地 CSV，里面是手工整理的矿机库存，不需要查 Nonce，帮我分析后画个图。",
+      "shouldTrigger": false,
+      "reason": "Local file analysis without Nonce resource access."
+    },
+    {
+      "query": "帮我看看另一个工具服务现在提供了哪些功能。",
+      "shouldTrigger": false,
+      "reason": "Unrelated tool/server work."
+    },
+    {
+      "query": "帮我设计一个矿场看板首页，给运营同事看。",
+      "shouldTrigger": false,
+      "reason": "Product/UI design, not Nonce resource querying or operation."
+    }
+  ],
+  "validation": [
+    {
+      "query": "Nonce 里有一台矿机这两天不太稳定，帮我看看它最近 24 小时的算力记录。",
+      "shouldTrigger": true,
+      "reason": "Nonce miner history query."
+    },
+    {
+      "query": "看一下这个矿场现在有哪些现场采集设备在线。",
+      "shouldTrigger": true,
+      "reason": "Nonce farm agent inspection."
+    },
+    {
+      "query": "I only have a miner serial number. Can you find which workspace and farm it belongs to?",
+      "shouldTrigger": true,
+      "reason": "Nonce miner search plus ID handling."
+    },
+    {
+      "query": "帮我看看这次批量操作里每台矿机现在处理到哪一步了。",
+      "shouldTrigger": true,
+      "reason": "Nonce batch-operation status inspection."
+    },
+    {
+      "query": "帮我批量检查这些矿机的矿池配置有没有和预期不一致的地方。",
+      "shouldTrigger": true,
+      "reason": "Nonce miner pool configuration audit."
+    },
+    {
+      "query": "矿机上的低功耗模式是什么意思？适合什么时候开？",
+      "shouldTrigger": false,
+      "reason": "General mining hardware question."
+    },
+    {
+      "query": "帮我给网页加一个登录按钮，让用户能进自己的账号。",
+      "shouldTrigger": false,
+      "reason": "Generic application auth UI."
+    },
+    {
+      "query": "我有一份接口说明，帮我整理成工程师能接手的字段清单。",
+      "shouldTrigger": false,
+      "reason": "Generic API type generation, not Nonce resource work."
+    },
+    {
+      "query": "帮我写一份 Windows 电脑安装运行环境的步骤，给同事照着做。",
+      "shouldTrigger": false,
+      "reason": "Generic runtime setup unrelated to Nonce."
+    },
+    {
+      "query": "我手头这张矿场网络拓扑图，帮我从网络设计角度看看可能有什么瓶颈",
+      "shouldTrigger": false,
+      "reason": "External infrastructure analysis without Nonce resource access."
+    }
+  ]
+}

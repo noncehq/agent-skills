@@ -1,0 +1,28 @@
+{
+  "kind": "nonce-codex-eval",
+  "schemaVersion": 1,
+  "caseSetPath": "evals/cases/invoke.json",
+  "runner": {
+    "type": "codex-cli",
+    "model": "gpt-5.4-mini",
+    "sandbox": "read-only",
+    "approvalPolicy": "never",
+    "timeoutMs": 240000,
+    "retryAttempts": 1,
+    "runsPerCase": 3,
+    "extraArgs": ["--ignore-user-config", "--ignore-rules"]
+  },
+  "workspace": {
+    "preserve": "on-failure"
+  },
+  "targetProvisioning": {
+    "mode": "isolated-skill-home",
+    "skillSourcePath": "skills"
+  },
+  "thresholds": {
+    "minimumOverallAccuracy": 0.9,
+    "minimumPositiveRecall": 0.9,
+    "minimumNegativeSpecificity": 0.9,
+    "criticalFailuresAllowed": 0
+  }
+}
