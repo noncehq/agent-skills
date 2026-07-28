@@ -79,7 +79,7 @@ describe("Nonce skill eval flow", () => {
     ) as {
       caseSetPath: string;
       runner: { runsPerCase: number; type: string };
-      targetProvisioning: { mode: string };
+      targetProvisioning: { mode: string; skillSourcePath: string };
       thresholds: { minimumOverallAccuracy: number };
     };
     const caseSet = JSON.parse(await readFile(resolve(config.caseSetPath), "utf8")) as {
@@ -91,6 +91,7 @@ describe("Nonce skill eval flow", () => {
     expect(config.runner.type).toBe("codex-cli");
     expect(config.runner.runsPerCase).toBeGreaterThanOrEqual(3);
     expect(config.targetProvisioning.mode).toBe("isolated-skill-home");
+    expect(config.targetProvisioning.skillSourcePath).toBe("skills/nonce");
     expect(config.thresholds.minimumOverallAccuracy).toBeGreaterThan(0.5);
     expect(caseSet.kind).toBe("nonce-skill-invoke-cases");
     expect(caseSet.train).toHaveLength(10);
@@ -231,7 +232,7 @@ describe("Nonce skill eval flow", () => {
     ) as {
       caseSetPath: string;
       runner: { runsPerCase: number; tools: string[]; type: string };
-      targetProvisioning: { mode: string };
+      targetProvisioning: { mode: string; skillSourcePath: string };
       thresholds: { minimumOverallAccuracy: number };
     };
     const caseSet = JSON.parse(await readFile(resolve(config.caseSetPath), "utf8")) as {
@@ -244,6 +245,7 @@ describe("Nonce skill eval flow", () => {
     expect(config.runner.runsPerCase).toBeGreaterThanOrEqual(3);
     expect(config.runner.tools).toContain("Read");
     expect(config.targetProvisioning.mode).toBe("isolated-project-skill");
+    expect(config.targetProvisioning.skillSourcePath).toBe("skills/nonce");
     expect(config.thresholds.minimumOverallAccuracy).toBeGreaterThan(0.5);
     expect(caseSet.kind).toBe("nonce-skill-invoke-cases");
     expect(caseSet.train).toHaveLength(10);

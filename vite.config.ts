@@ -8,17 +8,18 @@ const scriptEntries = {
   "skill-runtime": "src/runtime/index.ts",
 } as const;
 
-const generatedOutputs = [
-  "skills/assets/tool-signatures.ts",
-  "skills/assets/tool-manifest.json",
-  "skills/assets/tool-schemas.json",
-  "skills/assets/schemas/*.md",
-  "skills/references/tool-signatures.md",
-  "skills/scripts/**/*.mjs",
+const checkIgnorePatterns = [
+  "skills/nonce/assets/tool-signatures.ts",
+  "skills/nonce/assets/tool-manifest.json",
+  "skills/nonce/assets/tool-schemas.json",
+  "skills/nonce/assets/schemas/*.md",
+  "skills/nonce/references/tool-signatures.md",
+  "skills/nonce/scripts/**/*.mjs",
+  "skills/reboot-report/assets/template.html",
 ];
 
 const createScriptPack = ([name, entry]: [string, string]): PackUserConfig => ({
-  clean: [`skills/scripts/${name}.mjs`, `skills/scripts/${name}.js`],
+  clean: [`skills/nonce/scripts/${name}.mjs`, `skills/nonce/scripts/${name}.js`],
   dts: false,
   deps: {
     onlyBundle: false,
@@ -30,12 +31,12 @@ const createScriptPack = ([name, entry]: [string, string]): PackUserConfig => ({
   format: "esm",
   minify: true,
   name: `nonce-${name}`,
-  outDir: "skills/scripts",
+  outDir: "skills/nonce/scripts",
 });
 
 export default defineConfig({
   fmt: {
-    ignorePatterns: generatedOutputs,
+    ignorePatterns: checkIgnorePatterns,
     lineWidth: 120,
     quotes: "single",
     semicolons: false,
@@ -43,7 +44,7 @@ export default defineConfig({
   },
   pack: Object.entries(scriptEntries).map(createScriptPack),
   lint: {
-    ignorePatterns: generatedOutputs,
+    ignorePatterns: checkIgnorePatterns,
     options: {
       typeAware: true,
       typeCheck: true,

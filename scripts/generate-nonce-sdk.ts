@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readdir, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import {
@@ -113,7 +113,7 @@ const authorizationRefreshDependencies: AuthorizationRefreshDependencies = {
 };
 
 const authLoginHint =
-  "Run `vp node -- skills/scripts/auth.mjs login` from the repository root first.";
+  "Run `vp node -- skills/nonce/scripts/auth.mjs login` from the repository root first.";
 
 export const refreshNonceAccessToken = async (
   provider: NonceOAuthProvider,
@@ -234,13 +234,33 @@ const writeText = async (path: string, value: string): Promise<void> => {
   await writeFile(path, value);
 };
 
+export const removeStaleGeneratedSchemas = async (
+  schemasDir: string,
+  currentFileNames: Iterable<string>,
+): Promise<void> => {
+  const current = new Set(currentFileNames);
+  let entries;
+  try {
+    entries = await readdir(schemasDir, { withFileTypes: true });
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return;
+    throw error;
+  }
+
+  await Promise.all(
+    entries
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && !current.has(entry.name))
+      .map((entry) => unlink(join(schemasDir, entry.name))),
+  );
+};
+
 const generate = async (options: GenerateSdkOptions): Promise<void> => {
   const endpoint = options.endpoint ?? DEFAULT_MCP_ENDPOINT;
   const profile = normalizeProfile(options.profile ?? DEFAULT_PROFILE);
-  const outputDir = options.outputDir ?? "skills/assets";
+  const outputDir = options.outputDir ?? "skills/nonce/assets";
   const openapiUrl = options.openapiUrl ?? DEFAULT_OPENAPI_URL;
-  const referenceOutput = options.referenceOutput ?? "skills/references/tool-signatures.md";
-  const schemasDir = options.schemasDir ?? "skills/assets/schemas";
+  const referenceOutput = options.referenceOutput ?? "skills/nonce/references/tool-signatures.md";
+  const schemasDir = options.schemasDir ?? "skills/nonce/assets/schemas";
 
   const openApiDocument = await fetchOpenApiDocument(openapiUrl);
   const openApiIndex = buildOpenApiIndex(openApiDocument);
@@ -265,6 +285,8 @@ const generate = async (options: GenerateSdkOptions): Promise<void> => {
   const signatureFileWrites = [...artifacts.methodSchemaFiles.entries()].map(
     ([fileName, content]) => writeText(join(schemasDir, fileName), content),
   );
+
+  await removeStaleGeneratedSchemas(schemasDir, artifacts.methodSchemaFiles.keys());
 
   await Promise.all([
     writeText(join(outputDir, "tool-signatures.ts"), artifacts.signatures),
@@ -301,17 +323,17 @@ const main = async (): Promise<void> => {
     )
     .option("--endpoint <url>", "Nonce endpoint", DEFAULT_MCP_ENDPOINT)
     .option("--openapi-url <url>", "OpenAPI supplement URL", DEFAULT_OPENAPI_URL)
-    .option("--output-dir <path>", "generated runtime output directory", "skills/assets")
+    .option("--output-dir <path>", "generated runtime output directory", "skills/nonce/assets")
     .option("--profile <name>", "credential profile", DEFAULT_PROFILE)
     .option(
       "--reference-output <path>",
       "generated Markdown signature reference",
-      "skills/references/tool-signatures.md",
+      "skills/nonce/references/tool-signatures.md",
     )
     .option(
       "--schemas-dir <path>",
       "generated per-method Markdown schema directory",
-      "skills/assets/schemas",
+      "skills/nonce/assets/schemas",
     )
     .option(
       "--skip-observed-outputs",

@@ -1,6 +1,7 @@
 # Nonce Skill Evals
 
-This directory contains the eval loop for the packaged `nonce` skill under `skills/`.
+This directory contains the eval loop for the packaged `nonce` skill under
+`skills/nonce/`.
 
 The first-principles rule is that a model-facing eval prompt must be a real user
 request. Eval labels, expected outcomes, and scoring criteria live beside the
@@ -44,7 +45,7 @@ vp run evals -- --json --output evals/artifacts/last-run.json
 The live flow answers one question: would the skill activate for a realistic
 user request?
 
-1. Provision the current `skills/` artifact into an isolated agent environment.
+1. Provision the current `skills/nonce/` artifact into an isolated agent environment.
 2. Send the raw `query` from `cases/invoke.json` unchanged.
 3. Detect activation from tool or command events that read or invoke the installed
    `nonce` skill.

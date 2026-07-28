@@ -1,6 +1,9 @@
 # Nonce Skills
 
-Skills for Nonce. This repository builds the installable `nonce` skill, which lets agent query and operate Nonce mining resources through local JavaScript task code.
+Skills for Nonce. This repository builds an installable skill collection:
+
+- `nonce` queries and operates Nonce mining resources through local JavaScript task code.
+- `reboot-report` analyzes one farm's reboot activity and produces a shareable HTML report. It uses `nonce` for authenticated data access.
 
 ## Repository Structure
 
@@ -13,17 +16,27 @@ src/
 scripts/
 └── generate-nonce-sdk.ts
 
-skills/               # Installable skill artifact
-├── SKILL.md          # Skill entrypoint and operating rules
-├── agents/           # Agent-facing skill metadata
-├── assets/           # Generated method manifest, schemas, and TypeScript signatures
-├── references/       # Installed-skill workflow, auth, method, and safety docs
-└── scripts/          # Bundled runtime/auth/task-runner scripts
+skills/               # Installable skill collection
+├── nonce/            # Nonce data-access skill and bundled runtime
+│   ├── SKILL.md
+│   ├── agents/
+│   ├── assets/
+│   ├── references/
+│   └── scripts/
+└── reboot-report/    # Read-only reboot analysis and HTML report workflow
+    ├── SKILL.md
+    ├── agents/
+    ├── assets/
+    ├── references/
+    └── scripts/
 
 test/                 # Runtime, generator, metadata, and smoke tests
 ```
 
-`skills/` is the packaged skill root. Installed copies should run the bundled scripts with `node`.
+`skills/` is the collection root. Each direct child containing `SKILL.md` is an
+independently discoverable skill. Install `nonce` together with `reboot-report`;
+the report skill intentionally does not duplicate the Nonce runtime or
+authentication implementation.
 
 ## Development
 
@@ -58,7 +71,8 @@ vp fmt
 
 ## Evaluating the Skill
 
-The repository includes a local eval loop for the packaged skill under `skills/`.
+The repository includes a local eval loop for the packaged `nonce` skill under
+`skills/nonce/`.
 
 Run the deterministic evals:
 
@@ -86,7 +100,7 @@ Run the full local Codex eval suite:
 vp run evals:codex
 ```
 
-This provisions the current `skills/` directory into an isolated temporary
+This provisions the current `skills/nonce/` directory into an isolated temporary
 `CODEX_HOME`, sends each raw invocation query from `evals/cases/invoke.json` to
 `codex exec --json`, and writes a normalized trigger report plus
 plugin-eval-compatible usage log under
@@ -98,7 +112,7 @@ Run the full local Claude Code eval suite:
 vp run evals:claude
 ```
 
-This provisions the current `skills/` directory as a project-level skill inside
+This provisions the current `skills/nonce/` directory as a project-level skill inside
 an isolated temporary workspace, runs every case through
 `claude -p --output-format stream-json` with user-level customization excluded,
 and writes the same normalized trigger report plus usage log under
@@ -108,7 +122,8 @@ splits separately.
 
 ## Generating Artifacts
 
-The build bundles the installed scripts and regenerates method artifacts under `skills/assets/` and `skills/references/tool-signatures.md`.
+The build bundles the installed scripts and regenerates method artifacts under
+`skills/nonce/assets/` and `skills/nonce/references/tool-signatures.md`.
 
 ```bash
 vp run build
@@ -117,8 +132,8 @@ vp run build
 SDK generation connects to the Nonce MCP endpoint and may need a saved local auth profile. Authenticate from the repository root when needed:
 
 ```bash
-vp node -- skills/scripts/auth.mjs login
-vp node -- skills/scripts/auth.mjs verify
+vp node -- skills/nonce/scripts/auth.mjs login
+vp node -- skills/nonce/scripts/auth.mjs verify
 ```
 
 To generate only SDK artifacts:
@@ -127,10 +142,26 @@ To generate only SDK artifacts:
 vp run generate:nonce-sdk
 ```
 
+## Reboot Report Template
+
+`skills/reboot-report/assets/template.html` is the original report deck, preserved
+with its structure, styles, and comments. Generated reports must be copied outside
+the installed skill directory and should change only report data and wording.
+Validate a completed report with:
+
+```bash
+vp node -- skills/reboot-report/scripts/validate-report.mjs path/to/report.html
+```
+
+The validator rejects an unchanged copy of the bundled example, removed template
+comments, and incomplete deck structure. A hash test prevents the bundled template
+from being reformatted or rewritten accidentally.
+
 To create a zip of the installable skill:
 
 ```bash
 vp run archive:skills
 ```
 
-This writes `nonce-skills.zip`, which contains the `skills/` directory.
+This writes `nonce-skills.zip`, which contains both skill directories under
+`skills/`.

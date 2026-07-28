@@ -312,6 +312,10 @@ const renderMethodSignatureFile = async (tool: GeneratedTool): Promise<string> =
     lines.push(`Required: ${required.map((r) => `\`${r}\``).join(", ")}`, "");
   }
 
+  if (tool.description?.trim()) {
+    lines.push("## Purpose", "", tool.description.trim(), "");
+  }
+
   lines.push(
     "## Signature",
     "",

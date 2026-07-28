@@ -14,11 +14,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6.0.3
 
-      - name: Package current skill directory
+      - name: Package skill collection
         run: |
           set -euo pipefail
 
-          test -f skills/SKILL.md
+          test -f skills/nonce/SKILL.md
+          test -f skills/reboot-report/SKILL.md
           mkdir -p dist
 
           zip -r dist/nonce-skills.zip skills \

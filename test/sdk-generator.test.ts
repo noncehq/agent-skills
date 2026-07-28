@@ -2,9 +2,15 @@ import type {
   OAuthClientInformationMixed,
   OAuthTokens,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
+import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vite-plus/test";
 
-import { refreshNonceAccessToken } from "../scripts/generate-nonce-sdk.js";
+import {
+  refreshNonceAccessToken,
+  removeStaleGeneratedSchemas,
+} from "../scripts/generate-nonce-sdk.js";
 import type { NonceOAuthProvider } from "../src/runtime/oauth-provider.js";
 import { generateArtifacts } from "../src/sdk-generator/artifacts.js";
 import { buildOpenApiIndex, type OpenApiDocument } from "../src/sdk-generator/openapi.js";
@@ -88,6 +94,24 @@ const createRefreshProvider = (
 };
 
 describe("SDK generator helpers", () => {
+  it("removes Markdown schemas that are absent from the current MCP contract", async () => {
+    const schemasDir = await mkdtemp(join(tmpdir(), "nonce-generated-schemas-"));
+
+    try {
+      await Promise.all([
+        writeFile(join(schemasDir, "current.md"), "current"),
+        writeFile(join(schemasDir, "stale.md"), "stale"),
+        writeFile(join(schemasDir, "notes.txt"), "keep"),
+      ]);
+
+      await removeStaleGeneratedSchemas(schemasDir, ["current.md"]);
+
+      expect((await readdir(schemasDir)).sort()).toEqual(["current.md", "notes.txt"]);
+    } finally {
+      await rm(schemasDir, { force: true, recursive: true });
+    }
+  });
+
   it("refreshes saved OAuth tokens before live SDK inspection", async () => {
     const { provider, savedTokens } = createRefreshProvider({
       access_token: "old-access-token",
@@ -230,6 +254,7 @@ describe("SDK generator helpers", () => {
         mcpEndpoint: "https://mcp.nonce.app/mcp",
         tools: [
           {
+            description: "List farms visible in a workspace.",
             inputSchema: {
               properties: {
                 workspace_id: { type: "string" },
@@ -270,6 +295,8 @@ describe("SDK generator helpers", () => {
     const listFarmsFile = artifacts.methodSchemaFiles.get("list-farms.md");
     expect(listFarmsFile).toBeTruthy();
     expect(listFarmsFile).toContain("# listFarms");
+    expect(listFarmsFile).toContain("## Purpose");
+    expect(listFarmsFile).toContain("List farms visible in a workspace.");
     expect(listFarmsFile).toContain("export interface ListFarmsInput");
     expect(listFarmsFile).toContain("export interface ListFarmsOutput");
     expect(listFarmsFile).toContain("workspace_id");

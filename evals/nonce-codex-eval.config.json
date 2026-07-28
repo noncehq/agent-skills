@@ -17,7 +17,7 @@
   },
   "targetProvisioning": {
     "mode": "isolated-skill-home",
-    "skillSourcePath": "skills"
+    "skillSourcePath": "skills/nonce"
   },
   "thresholds": {
     "minimumOverallAccuracy": 0.9,

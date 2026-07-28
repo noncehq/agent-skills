@@ -333,7 +333,7 @@ const evaluateCaseSet = (caseSet: EvalCaseSet, repoRoot: string, checks: CheckRe
       .flatMap((item) => (Array.isArray(item) ? item : [item])),
   );
   const missingFiles = referencedFiles.filter(
-    (relativePath) => !existsSync(join(repoRoot, "skills", relativePath)),
+    (relativePath) => !existsSync(join(repoRoot, "skills", "nonce", relativePath)),
   );
   addCheck(
     checks,
@@ -449,7 +449,7 @@ const evaluateInvokeCaseSet = (
 };
 
 const evaluateStaticSkillContract = async (repoRoot: string, checks: CheckResult[]) => {
-  const skillRoot = join(repoRoot, "skills");
+  const skillRoot = join(repoRoot, "skills", "nonce");
   const skillText = await readText(join(skillRoot, "SKILL.md"));
   const workflowText = await readText(join(skillRoot, "references/workflow.md"));
   const safetyText = await readText(join(skillRoot, "references/safety.md"));
