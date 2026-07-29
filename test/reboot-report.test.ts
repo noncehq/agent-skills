@@ -15,7 +15,7 @@ const reportRoot = join(repoRoot, "skills", "reboot-report");
 const readReportFile = (relativePath: string) => readFile(join(reportRoot, relativePath), "utf8");
 
 describe("Reboot report skill", () => {
-  it("is a sibling skill with an explicit nonce dependency boundary", async () => {
+  it("supports either direct Nonce MCP or the sibling nonce skill", async () => {
     const [nonceSkill, reportSkill] = await Promise.all([
       readFile(join(nonceRoot, "SKILL.md"), "utf8"),
       readReportFile("SKILL.md"),
@@ -24,25 +24,31 @@ describe("Reboot report skill", () => {
     expect(nonceSkill).toContain("name: nonce");
     expect(nonceSkill).toContain("activate the sibling `reboot-report` skill");
     expect(reportSkill).toContain("name: reboot-report");
-    expect(reportSkill).toContain("Activate the `nonce` skill");
+    expect(reportSkill).toContain("Use exactly one available data path");
+    expect(reportSkill).toContain("Nonce MCP path");
+    expect(reportSkill).toContain("`nonce` skill path");
+    expect(reportSkill).toContain("Prefer an already connected Nonce MCP path");
+    expect(reportSkill).toContain("Do not merge partial results");
     expect(reportSkill).toMatch(/It does not contain a\s+Nonce client/);
-    expect(reportSkill).toMatch(/Never call a\s+`createTaskBatch\.\.\.`/);
+    expect(reportSkill).toContain("Never call a `CreateTaskBatch_*` MCP tool");
+    expect(reportSkill).not.toContain("Do not bypass it with direct REST or MCP calls");
     expect(reportSkill).toContain("This workflow is read-only");
   });
 
-  it("uses current nonce SDK method names and keeps attribution datasets separate", async () => {
+  it("maps current MCP and nonce SDK operations and keeps attribution datasets separate", async () => {
     const [reportSkill, analysis] = await Promise.all([
       readReportFile("SKILL.md"),
       readReportFile("references/analysis.md"),
     ]);
 
-    for (const method of [
-      "listMinerRebootEvents",
-      "searchTaskBatches",
-      "getTaskBatchTasks",
-      "listBtcNetworkHistory",
+    for (const [mcpTool, sdkMethod] of [
+      ["ListMinerRebootEvents", "listMinerRebootEvents"],
+      ["SearchTaskBatches", "searchTaskBatches"],
+      ["GetTaskBatchTasks", "getTaskBatchTasks"],
+      ["ListBtcNetworkHistory", "listBtcNetworkHistory"],
     ]) {
-      expect(reportSkill).toContain(`\`${method}\``);
+      expect(reportSkill).toContain(`\`${mcpTool}\``);
+      expect(reportSkill).toContain(`\`${sdkMethod}\``);
     }
 
     expect(analysis).toContain("Nonce 下发");
@@ -51,7 +57,22 @@ describe("Reboot report skill", () => {
     expect(analysis).toContain("单位是 H/s");
     expect(analysis).toContain("分类可重叠，不能相加");
     expect(analysis).toContain("默认最近 7 天");
-    expect(analysis).not.toContain("`ListMinerRebootEvents`");
+  });
+
+  it("ships an installation flow for both data-access paths", async () => {
+    const installation = await readFile(join(repoRoot, "INSTALL.md"), "utf8");
+
+    expect(installation).toMatch(/exactly one Nonce data-access\s+path/);
+    expect(installation).toContain("https://mcp.nonce.app/mcp");
+    expect(installation).toContain("--skill reboot-report");
+    expect(installation).toContain("--skill nonce reboot-report");
+    expect(installation).toContain("## 5. Update an existing installation");
+    expect(installation).toContain("skills list --global --json");
+    expect(installation).toContain("skills update reboot-report --project -y");
+    expect(installation).toContain("replace `--project` with `--global`");
+    expect(installation).toContain("`ListWorkspaces`");
+    expect(installation).toContain("`listWorkspaces`");
+    expect(installation).toContain("Do not call any `CreateTaskBatch_*`");
   });
 
   it("ships metadata and self-contained assets", async () => {

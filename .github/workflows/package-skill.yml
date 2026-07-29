@@ -20,9 +20,10 @@ jobs:
 
           test -f skills/nonce/SKILL.md
           test -f skills/reboot-report/SKILL.md
+          test -f INSTALL.md
           mkdir -p dist
 
-          zip -r dist/nonce-skills.zip skills \
+          zip -r dist/nonce-skills.zip INSTALL.md skills \
             -x '*/.DS_Store' \
             -x '*/__MACOSX/*'
 

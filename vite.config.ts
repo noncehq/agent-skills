@@ -58,7 +58,7 @@ export default defineConfig({
       },
       "archive:skills": {
         cache: false,
-        command: ["rm -f nonce-skills.zip", "zip -X -r -q nonce-skills.zip skills"],
+        command: ["rm -f nonce-skills.zip", "zip -X -r -q nonce-skills.zip INSTALL.md skills"],
         dependsOn: ["build"],
       },
       "generate:nonce-sdk": {

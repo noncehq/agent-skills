@@ -1,7 +1,7 @@
 ---
 name: reboot-report
 description: >-
-  Use this skill when the user wants a factual reboot analysis for one Nonce mining farm over a specific time range, delivered as a shareable HTML report or slide deck with findings, outcomes, revenue impact, and recommendations. Typical requests mention a farm reboot report, reboot review, restart effectiveness, or reboot-related losses. Use it together with the nonce skill for data access. Do not use it to perform reboots, answer generic mining-hardware questions, or analyze only a user-provided dataset that does not require Nonce.
+  Use this skill when the user wants a factual reboot analysis for one Nonce mining farm over a specific time range, delivered as a shareable HTML report or slide deck with findings, outcomes, revenue impact, and recommendations. Typical requests mention a farm reboot report, reboot review, restart effectiveness, or reboot-related losses. Use connected Nonce MCP tools or the nonce skill for data access. Do not use it to perform reboots, answer generic mining-hardware questions, or analyze only a user-provided dataset that does not require Nonce.
 ---
 
 # Reboot Report
@@ -10,17 +10,26 @@ Produce a read-only, externally shareable HTML report for one farm and one time
 window. Reconstruct facts first, then evaluate outcomes and revenue, and end with
 practical recommendations.
 
-## Dependency Boundary
+## Data Access Boundary
 
 - This skill owns the reboot-analysis and report workflow. It does not contain a
   Nonce client, authentication flow, or duplicate tool schemas.
-- Activate the `nonce` skill before collecting data. Follow its installed-root,
-  runtime bootstrap, authentication, schema-reading, task-runner, pagination,
-  and permission instructions as authoritative.
-- If `nonce` is unavailable, tell the user that the dependency must be installed
-  or enabled. Do not bypass it with direct REST or MCP calls.
-- Use only lower-camel-case read methods from the `nonce` SDK. Never call a
-  `createTaskBatch...` method in this workflow.
+- Use exactly one available data path for the whole report:
+  - **Nonce MCP path:** when the current session exposes authenticated tools from
+    `https://mcp.nonce.app/mcp`, use those tools and their live schemas directly.
+  - **`nonce` skill path:** when Nonce MCP tools are unavailable, activate the
+    sibling `nonce` skill and follow its runtime, authentication, schema,
+    task-runner, pagination, and permission instructions.
+- Prefer an already connected Nonce MCP path. If both paths are available, use
+  MCP unless the user asks for the `nonce` skill. Do not mix paths within one
+  report.
+- If the selected path fails, repair it or restart data collection on the other
+  path. Do not merge partial results collected under different paths.
+- If neither path is available, tell the user to connect Nonce MCP or install
+  the `nonce` skill from `https://github.com/noncehq/agent-skills`. Do not fall
+  back to direct REST calls.
+- This workflow is read-only. Never call a `CreateTaskBatch_*` MCP tool or a
+  `createTaskBatch...` SDK method.
 
 ## Inputs
 
@@ -31,22 +40,27 @@ Confirm only the missing items before querying:
 3. Reporting timezone.
 
 Use the user's existing wording when these are already clear. Do not ask them to
-provide workspace IDs, farm IDs, or write code; discover IDs through `nonce`.
+provide workspace IDs, farm IDs, or write code; discover IDs through the
+selected data path.
 
 ## Workflow
 
 1. Resolve this skill's installed root, the directory containing this
    `SKILL.md`, as `REBOOT_REPORT_SKILL_HOME` on macOS/Linux or
    `$RebootReportSkillHome` on Windows.
-2. Activate `nonce`, prepare its runtime, and authenticate if needed.
+2. Select and record the MCP or `nonce` skill data path using the rules above.
+   Complete that path's normal authentication flow when needed.
 3. Read `references/analysis.md`.
-4. In the `nonce` skill, read the method index and the schemas for the methods
-   needed by this report:
-   - `listWorkspaces` and `listFarms`
-   - `listMinerRebootEvents`
-   - `searchTaskBatches` and `getTaskBatchTasks`
-   - optionally `listMiners`, `getMinerStats`, `listFarmMetricsHistory`,
-     `listMinerHistory`, and `listBtcNetworkHistory`
+4. Inspect the selected path's schemas for the report operations:
+   - MCP path: `ListWorkspaces`, `ListFarms`, `ListMinerRebootEvents`,
+     `SearchTaskBatches`, and `GetTaskBatchTasks`; optionally `ListMiners`,
+     `GetMinerStats`, `ListFarmMetricsHistory`, `ListMinerHistory`, and
+     `ListBtcNetworkHistory`.
+   - `nonce` skill path: read its method index and schema files for
+     `listWorkspaces`, `listFarms`, `listMinerRebootEvents`,
+     `searchTaskBatches`, and `getTaskBatchTasks`; optionally `listMiners`,
+     `getMinerStats`, `listFarmMetricsHistory`, `listMinerHistory`, and
+     `listBtcNetworkHistory`.
 5. Query every page for the requested farm and time window. Filter task batches
    to `miner.system.reboot` and fetch their tasks. Keep detected reboot events,
    platform-issued reboot tasks, and their matched pairs as three distinct
@@ -90,8 +104,9 @@ provide workspace IDs, farm IDs, or write code; discover IDs through `nonce`.
 - Label inferred power events as suspected until corroborated by site records.
 - Show assumptions, sample sizes, unmatched counts, missing data, timezone, and
   the exact analysis window.
-- Use `listBtcNetworkHistory` as the primary hashprice source. Label estimates
-  with "约" and never present a window total as a daily value.
+- Use the selected path's BTC network history operation as the primary hashprice
+  source. Label estimates with "约" and never present a window total as a daily
+  value.
 - Use plain operator language. Avoid blame, unexplained internal field names,
   and long implementation instructions.
 - When evidence is insufficient, add the item to "待确认"; do not turn it into a
@@ -100,5 +115,6 @@ provide workspace IDs, farm IDs, or write code; discover IDs through `nonce`.
 ## Safety
 
 This workflow is read-only. If the user also asks to restart miners, finish or
-pause the report work and hand that request to `nonce`, where destructive-action
-preview and explicit confirmation are mandatory.
+pause the report work and handle that request separately through Nonce MCP or
+the `nonce` skill. Destructive-action preview and explicit confirmation remain
+mandatory.
