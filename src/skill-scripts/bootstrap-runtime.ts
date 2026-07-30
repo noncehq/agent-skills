@@ -11,6 +11,7 @@ import { normalizeProfile } from "../runtime/profile.js";
 import { getStateBaseDir, getStateProfileDir } from "../runtime/state-store.js";
 import { getCliArgv } from "./argv.js";
 import { runCliMain } from "./cli-main.js";
+import { isMainModule } from "./main-module.js";
 
 export const bootstrapCommandName = "nonce runtime-check";
 export const MINIMUM_NODE_MAJOR_VERSION = 22;
@@ -242,6 +243,6 @@ const main = async (): Promise<void> => {
   process.exitCode = exitCode;
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
   await runCliMain(main);
 }

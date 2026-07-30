@@ -1,5 +1,8 @@
 import { execFile } from "node:child_process";
-import { access, readFile, readdir } from "node:fs/promises";
+import { createServer } from "node:http";
+import { access, copyFile, mkdtemp, readFile, readdir, rm, symlink } from "node:fs/promises";
+import type { AddressInfo } from "node:net";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -168,6 +171,50 @@ describe("packaged Nonce security boundary", () => {
       "Invalid input for listFarms: / must have required property 'workspace_id'\n",
     );
     expect(authError.stderr).toBe("Unknown auth command: unknown\n");
+  });
+
+  it("prints one concise error when the OAuth callback port is unavailable", async () => {
+    const server = createServer();
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const port = String((server.address() as AddressInfo).port);
+
+    try {
+      const authError = await runExpectingFailure(join(skillRoot, "scripts", "auth.mjs"), [
+        "login",
+        "--port",
+        port,
+        "--timeout-ms",
+        "500",
+      ]);
+      expect(authError.stderr).toContain("EADDRINUSE");
+      expect(authError.stderr.trim().split("\n")).toHaveLength(1);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  it("runs packaged CLIs through paths that require URL escaping or resolve through symlinks", async () => {
+    const temporaryDirectory = await mkdtemp(join(tmpdir(), "nonce skill path "));
+    const sourceCli = join(skillRoot, "scripts", "auth.mjs");
+    const copiedCli = join(temporaryDirectory, "auth cli.mjs");
+    const linkedCli = join(temporaryDirectory, "auth-link.mjs");
+
+    try {
+      await copyFile(sourceCli, copiedCli);
+      await symlink(sourceCli, linkedCli);
+
+      const [{ stdout: copiedHelp }, { stdout: linkedHelp }] = await Promise.all([
+        execFileAsync(process.execPath, [copiedCli, "--help"]),
+        execFileAsync(process.execPath, [linkedCli, "--help"]),
+      ]);
+      expect(copiedHelp).toContain("auth.mjs login");
+      expect(linkedHelp).toContain("auth.mjs login");
+    } finally {
+      await rm(temporaryDirectory, { force: true, recursive: true });
+    }
   });
 
   it("keeps the canonical code-first example aligned with generated schemas", async () => {

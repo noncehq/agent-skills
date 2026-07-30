@@ -19,6 +19,7 @@ import { normalizeProfile } from "../runtime/profile.js";
 import { getCliArgv } from "./argv.js";
 import { runCliMain } from "./cli-main.js";
 import { parseTimeoutMs } from "./cli-options.js";
+import { isMainModule } from "./main-module.js";
 
 export const nonceCliCommandName = "nonce";
 
@@ -370,6 +371,6 @@ const main = async (): Promise<void> => {
   throw new Error(`Unknown Nonce command: ${command}`);
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
   await runCliMain(main);
 }

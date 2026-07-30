@@ -23,6 +23,7 @@ import { normalizeProfile } from "../runtime/profile.js";
 import { getCliArgv } from "./argv.js";
 import { runCliMain } from "./cli-main.js";
 import { parseTimeoutMs } from "./cli-options.js";
+import { isMainModule } from "./main-module.js";
 
 export const authCommandName = "nonce auth";
 
@@ -80,8 +81,8 @@ export const createCallbackListener = async (
 
   const wait = new Promise<{ code: string; state?: string }>((resolve, reject) => {
     timer = setTimeout(() => {
-      server.close();
       reject(new Error("Timed out waiting for OAuth callback"));
+      void closeServer();
     }, timeoutMs);
 
     server.on("request", (req, res) => {
@@ -136,15 +137,21 @@ export const createCallbackListener = async (
       }
     });
   });
+  void wait.catch(() => undefined);
 
-  await new Promise<void>((resolve, reject) => {
-    if (server.listening) {
-      resolve();
-      return;
-    }
-    server.once("listening", () => resolve());
-    server.once("error", reject);
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      if (server.listening) {
+        resolve();
+        return;
+      }
+      server.once("listening", () => resolve());
+      server.once("error", reject);
+    });
+  } catch (error) {
+    await closeServer();
+    throw error;
+  }
 
   return {
     close: closeServer,
@@ -461,6 +468,6 @@ const main = async (): Promise<void> => {
   throw new Error(`Unknown auth command: ${command}`);
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isMainModule(import.meta.url)) {
   await runCliMain(main);
 }
