@@ -177,6 +177,14 @@ describe("runtime SDK client", () => {
     await expect(
       allowedClient.createTaskBatchMinerSystemReboot(input, {
         confirmDestructive: true,
+        confirmation: "   ",
+      }),
+    ).rejects.toThrow("Pass { confirmDestructive: true");
+    expect(allowedHarness.calls).toHaveLength(0);
+
+    await expect(
+      allowedClient.createTaskBatchMinerSystemReboot(input, {
+        confirmDestructive: true,
         confirmation: "confirmed by user",
       }),
     ).resolves.toEqual({ success: true });

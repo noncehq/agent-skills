@@ -1,3 +1,6 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
+
 import { describe, expect, it } from "vite-plus/test";
 
 import { createCredentialStore } from "../src/runtime/credential-store.js";
@@ -6,12 +9,24 @@ import { normalizeProfile } from "../src/runtime/profile.js";
 import {
   assertState,
   consumeState,
+  createCallbackListener,
   hasCurrentLoginTokens,
   parseCallback,
 } from "../src/skill-scripts/auth.js";
 import { parseTimeoutMs } from "../src/skill-scripts/cli-options.js";
 
 describe("auth helpers", () => {
+  const reservePort = async (): Promise<number> => {
+    const server = createServer();
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const port = (server.address() as AddressInfo).port;
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    return port;
+  };
+
   it("parses callback URLs without exposing tokens", () => {
     expect(parseCallback("http://127.0.0.1:33418/callback?code=abc&state=xyz")).toEqual({
       code: "abc",
@@ -49,6 +64,51 @@ describe("auth helpers", () => {
     await expect(consumeState(provider, "expected-state")).rejects.toThrow(
       "no pending login state",
     );
+  });
+
+  it("validates and consumes callback state before reporting browser success", async () => {
+    let expectedState: string | undefined = "expected-state";
+    const port = await reservePort();
+    const provider = {
+      clearExpectedState: async () => {
+        expectedState = undefined;
+      },
+      expectedState: async () => expectedState,
+      redirectUrl: `http://127.0.0.1:${port}/callback`,
+    };
+    const listener = await createCallbackListener(provider, 2_000);
+    const callback = listener.wait();
+
+    const response = await fetch(
+      `http://127.0.0.1:${port}/callback?code=authorization-code&state=expected-state`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("callback accepted");
+    expect(expectedState).toBeUndefined();
+    await expect(callback).resolves.toEqual({
+      code: "authorization-code",
+      state: "expected-state",
+    });
+  });
+
+  it("returns an error page for a callback with invalid state", async () => {
+    const port = await reservePort();
+    const provider = {
+      clearExpectedState: async () => {},
+      expectedState: async () => "expected-state",
+      redirectUrl: `http://127.0.0.1:${port}/callback`,
+    };
+    const listener = await createCallbackListener(provider, 2_000);
+    const callbackError = listener.wait().catch((error: unknown) => error);
+
+    const response = await fetch(
+      `http://127.0.0.1:${port}/callback?code=authorization-code&state=wrong-state`,
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("authentication failed");
+    await expect(callbackError).resolves.toEqual(expect.any(Error));
   });
 
   it("prints the authorization URL without launching a subprocess", async () => {

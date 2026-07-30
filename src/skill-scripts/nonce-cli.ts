@@ -1,5 +1,6 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, isAbsolute, relative, resolve } from "node:path";
+import { mkdir, readFile, realpath, writeFile } from "node:fs/promises";
+import { platform } from "node:os";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
@@ -16,6 +17,7 @@ import {
 import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE } from "../runtime/constants.js";
 import { normalizeProfile } from "../runtime/profile.js";
 import { getCliArgv } from "./argv.js";
+import { runCliMain } from "./cli-main.js";
 import { parseTimeoutMs } from "./cli-options.js";
 
 export const nonceCliCommandName = "nonce";
@@ -73,13 +75,11 @@ const isManifestTool = (value: unknown): value is ManifestTool =>
 
 const readJson = async (url: URL): Promise<unknown> => JSON.parse(await readFile(url, "utf8"));
 
-export const loadToolCatalog = async (): Promise<CliToolDefinition[]> => {
-  const manifestUrl = new URL("../assets/tool-manifest.json", import.meta.url);
-  const schemasUrl = new URL("../assets/tool-schemas.json", import.meta.url);
-  const [manifestValue, schemasValue] = await Promise.all([
-    readJson(manifestUrl),
-    readJson(schemasUrl),
-  ]);
+export const buildToolCatalog = (
+  manifestValue: unknown,
+  schemasValue: unknown,
+  manifestSource = "generated Nonce tool manifest",
+): CliToolDefinition[] => {
   const manifestTools =
     isRecord(manifestValue) && Array.isArray(manifestValue.tools)
       ? manifestValue.tools.filter(isManifestTool)
@@ -88,7 +88,7 @@ export const loadToolCatalog = async (): Promise<CliToolDefinition[]> => {
     isRecord(schemasValue) && isRecord(schemasValue.tools) ? schemasValue.tools : {};
 
   if (manifestTools.length === 0) {
-    throw new Error(`Generated Nonce tool manifest is missing or empty: ${manifestUrl.toString()}`);
+    throw new Error(`Generated Nonce tool manifest is missing or empty: ${manifestSource}`);
   }
 
   return manifestTools.map((tool) => {
@@ -104,6 +104,16 @@ export const loadToolCatalog = async (): Promise<CliToolDefinition[]> => {
       readOnly: tool.readOnly,
     };
   });
+};
+
+export const loadToolCatalog = async (): Promise<CliToolDefinition[]> => {
+  const manifestUrl = new URL("../assets/tool-manifest.json", import.meta.url);
+  const schemasUrl = new URL("../assets/tool-schemas.json", import.meta.url);
+  const [manifestValue, schemasValue] = await Promise.all([
+    readJson(manifestUrl),
+    readJson(schemasUrl),
+  ]);
+  return buildToolCatalog(manifestValue, schemasValue, manifestUrl.toString());
 };
 
 export const resolveTool = (
@@ -181,9 +191,42 @@ const loadCallInput = async (options: Pick<CliCallOptions, "input" | "inputFile"
   return parseInputObject(options.input ?? "{}", "--input");
 };
 
-export const assertOutputOutsideSkillRoot = (outputPath: string, skillRoot: string): void => {
-  const relativePath = relative(resolve(skillRoot), resolve(outputPath));
-  if (relativePath === "" || (!relativePath.startsWith("..") && !isAbsolute(relativePath))) {
+const canonicalizeProspectivePath = async (value: string): Promise<string> => {
+  const missingSegments: string[] = [];
+  let current = resolve(value);
+
+  while (true) {
+    try {
+      return resolve(await realpath(current), ...missingSegments);
+    } catch (error) {
+      if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) throw error;
+      const parent = dirname(current);
+      if (parent === current) return resolve(value);
+      missingSegments.unshift(basename(current));
+      current = parent;
+    }
+  }
+};
+
+const normalizePathCase = (value: string, os: NodeJS.Platform): string =>
+  os === "darwin" || os === "win32" ? value.toLowerCase() : value;
+
+export const assertOutputOutsideSkillRoot = async (
+  outputPath: string,
+  skillRoot: string,
+  os: NodeJS.Platform = platform(),
+): Promise<void> => {
+  const [canonicalOutput, canonicalSkillRoot] = await Promise.all([
+    canonicalizeProspectivePath(outputPath),
+    canonicalizeProspectivePath(skillRoot),
+  ]);
+  const relativePath = relative(
+    normalizePathCase(canonicalSkillRoot, os),
+    normalizePathCase(canonicalOutput, os),
+  );
+  const outside =
+    relativePath === ".." || relativePath.startsWith(`..${sep}`) || isAbsolute(relativePath);
+  if (relativePath === "" || !outside) {
     throw new Error(
       "Nonce output files must be stored outside the installed skill directory so updates cannot overwrite them.",
     );
@@ -201,16 +244,16 @@ const writeResult = async (value: unknown, output: string | undefined): Promise<
 
   const outputPath = resolve(output);
   const installedSkillRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-  assertOutputOutsideSkillRoot(outputPath, installedSkillRoot);
+  await assertOutputOutsideSkillRoot(outputPath, installedSkillRoot);
   await mkdir(dirname(outputPath), { mode: 0o700, recursive: true });
   await writeFile(outputPath, serialize(value, true), { mode: 0o600 });
   process.stdout.write(`${JSON.stringify({ output: outputPath })}\n`);
 };
 
-const validateOutputOption = (output: string | undefined): void => {
+const validateOutputOption = async (output: string | undefined): Promise<void> => {
   if (!output) return;
   const installedSkillRoot = dirname(dirname(fileURLToPath(import.meta.url)));
-  assertOutputOutsideSkillRoot(resolve(output), installedSkillRoot);
+  await assertOutputOutsideSkillRoot(resolve(output), installedSkillRoot);
 };
 
 const listTools = async (): Promise<void> => {
@@ -236,7 +279,7 @@ const callTool = async (identifier: string, options: CliCallOptions): Promise<vo
   const input = await loadCallInput(options);
   validateToolInput(tool, input);
   assertToolCallAllowed(tool, options);
-  validateOutputOption(options.output);
+  await validateOutputOption(options.output);
   const timeoutMs = parseTimeoutMs(options.timeoutMs, "--timeout-ms", 60_000);
   const client = (await createNonceClient({
     allowDestructive: options.allowDestructive,
@@ -328,5 +371,5 @@ const main = async (): Promise<void> => {
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  await main();
+  await runCliMain(main);
 }

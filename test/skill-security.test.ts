@@ -10,6 +10,23 @@ const repoRoot = dirname(fileURLToPath(new URL("../package.json", import.meta.ur
 const skillRoot = join(repoRoot, "skills", "nonce");
 const execFileAsync = promisify(execFile);
 
+const runExpectingFailure = async (file: string, args: string[]) => {
+  try {
+    await execFileAsync(process.execPath, [file, ...args]);
+  } catch (error) {
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "stderr" in error &&
+      typeof error.stderr === "string"
+    ) {
+      return error as { stderr: string };
+    }
+    throw error;
+  }
+  throw new Error(`Expected ${file} to fail`);
+};
+
 const readSkillFiles = async (directory: string): Promise<string[]> => {
   const entries = await readdir(directory, { withFileTypes: true });
   const files = await Promise.all(
@@ -27,7 +44,8 @@ describe("packaged Nonce security boundary", () => {
     await access(join(skillRoot, "scripts", "nonce.mjs"));
     const clientModulePath = join(skillRoot, "scripts", "client.mjs");
     await access(clientModulePath);
-    await access(join(skillRoot, "scripts", "client.d.mts"));
+    const clientTypesPath = join(skillRoot, "scripts", "client.d.mts");
+    await access(clientTypesPath);
     const authCli = join(skillRoot, "scripts", "auth.mjs");
 
     for (const removedScript of [
@@ -63,6 +81,11 @@ describe("packaged Nonce security boundary", () => {
       createNonceClient(options?: Record<string, unknown>): Promise<unknown>;
     };
     expect(Object.keys(clientModule)).toEqual(["createNonceClient"]);
+    const clientTypes = await readFile(clientTypesPath, "utf8");
+    const declaredRuntimeExports = [
+      ...clientTypes.matchAll(/export declare (?:const|function|class) (\w+)/g),
+    ].map((match) => match[1]);
+    expect(declaredRuntimeExports).toEqual(Object.keys(clientModule));
     await expect(
       clientModule.createNonceClient({ endpoint: "https://example.test/mcp" }),
     ).rejects.toThrow("Unsupported Nonce client option: endpoint");
@@ -131,5 +154,46 @@ describe("packaged Nonce security boundary", () => {
     ).rejects.toMatchObject({
       stderr: expect.stringContaining("outside the installed skill directory"),
     });
+  });
+
+  it("prints concise messages for expected packaged CLI failures", async () => {
+    const nonceCli = join(skillRoot, "scripts", "nonce.mjs");
+    const authCli = join(skillRoot, "scripts", "auth.mjs");
+    const [nonceError, authError] = await Promise.all([
+      runExpectingFailure(nonceCli, ["call", "listFarms", "--input", "{}"]),
+      runExpectingFailure(authCli, ["unknown"]),
+    ]);
+
+    expect(nonceError.stderr).toBe(
+      "Invalid input for listFarms: / must have required property 'workspace_id'\n",
+    );
+    expect(authError.stderr).toBe("Unknown auth command: unknown\n");
+  });
+
+  it("keeps the canonical code-first example aligned with generated schemas", async () => {
+    const workflow = await readFile(join(skillRoot, "references", "workflow.md"), "utf8");
+    const schemas = JSON.parse(
+      await readFile(join(skillRoot, "assets", "tool-schemas.json"), "utf8"),
+    ) as {
+      tools: {
+        ListFarms: {
+          output: {
+            properties: {
+              data: { items: { properties: Record<string, unknown> } };
+            };
+          };
+        };
+      };
+    };
+    const farmProperties = schemas.tools.ListFarms.output.properties.data.items.properties;
+
+    expect(farmProperties).toHaveProperty("id");
+    expect(farmProperties).not.toHaveProperty("farm_id");
+    expect(workflow).toContain("farm_id: farm.id");
+    expect(workflow).not.toContain("farm.farm_id");
+    expect(workflow).toContain(
+      "notMiningCount: miners.filter((miner) => miner.is_mining === false).length",
+    );
+    expect(workflow).not.toContain('miner.status === "offline"');
   });
 });

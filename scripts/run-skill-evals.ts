@@ -454,6 +454,7 @@ const evaluateStaticSkillContract = async (repoRoot: string, checks: CheckResult
   const workflowText = await readText(join(skillRoot, "references/workflow.md"));
   const safetyText = await readText(join(skillRoot, "references/safety.md"));
   const authText = await readText(join(skillRoot, "references/auth.md"));
+  const toolSignaturesText = await readText(join(skillRoot, "references/tool-signatures.md"));
 
   addCheck(
     checks,
@@ -499,6 +500,8 @@ const evaluateStaticSkillContract = async (repoRoot: string, checks: CheckResult
     "--confirmation",
     "confirmDestructive: true",
     "compact JSON",
+    "farm_id: farm.id",
+    "notMiningCount",
   ]);
   addCheck(
     checks,
@@ -533,9 +536,34 @@ const evaluateStaticSkillContract = async (repoRoot: string, checks: CheckResult
   addCheck(
     checks,
     "workflow.code-first",
-    !workflowText.includes("never executes generated JavaScript") &&
+    includesAll(workflowText, [
+      ".nonce/code/",
+      "scripts/client.mjs",
+      "createNonceClient",
+      "Create one client",
+      "Do not print raw",
+    ]).length === 0 &&
+      !workflowText.includes("never executes generated JavaScript") &&
       !skillText.includes("through a fixed local CLI"),
     "the skill keeps agent-authored code as the primary MCP data-processing path",
+  );
+
+  const missingSharedTypeNeedles = includesAll(toolSignaturesText, [
+    "## Shared Types",
+    "NonceCallOptions",
+    "NonceReadonlyCallOptions",
+    "NonceDestructiveCallOptions",
+    "NonceClientOptions",
+    "confirmDestructive: true",
+    "confirmation: string",
+  ]);
+  addCheck(
+    checks,
+    "tool-signatures.shared-types",
+    missingSharedTypeNeedles.length === 0,
+    "tool signatures document the shared code-client options",
+    "error",
+    missingSharedTypeNeedles.join(", "),
   );
 
   const missingAuthNeedles = includesAll(authText, [

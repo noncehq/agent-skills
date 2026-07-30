@@ -1,6 +1,7 @@
 /* eslint-disable */
 // Generated file. Do not edit by hand.
 // Source of truth: checked Nonce method definitions; supplemental schemas only fill missing metadata.
+
 // Type reference for project code that imports scripts/client.mjs.
 
 export interface ListFarmsInput {
@@ -2717,13 +2718,6 @@ export interface ListBtcNetworkHistoryOutput {
    */
   error: null
 }
-export declare const nonceToolDefinitions: readonly {
-  readonly destructive: boolean
-  readonly methodName: string
-  readonly name: string
-  readonly readOnly: boolean
-}[]
-
 export interface NonceCallOptions {
   signal?: AbortSignal
   timeoutMs?: number

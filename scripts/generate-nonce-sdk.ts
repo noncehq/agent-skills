@@ -327,7 +327,7 @@ const generate = async (options: GenerateSdkOptions): Promise<void> => {
 
   await Promise.all([
     writeText(join(outputDir, "tool-signatures.ts"), artifacts.signatures),
-    writeText(clientTypesOutput, artifacts.signatures),
+    writeText(clientTypesOutput, artifacts.clientTypes),
     writeJson(join(outputDir, "tool-manifest.json"), artifacts.manifest),
     writeJson(join(outputDir, "tool-schemas.json"), artifacts.schemas),
     writeText(referenceOutput, artifacts.referenceMarkdown),

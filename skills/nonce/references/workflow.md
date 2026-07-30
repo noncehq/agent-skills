@@ -125,16 +125,16 @@ try {
   for (const farm of farms) {
     const miners = rows(
       await nonce.listMiners({
-        farm_id: farm.farm_id,
+        farm_id: farm.id,
         page: 1,
         pageSize: 10000,
         workspace_id: workspace.workspace_id,
       }),
     );
     summaries.push({
-      farm: farm.name ?? farm.farm_name ?? farm.farm_id,
+      farm: farm.name ?? farm.id,
       minerCount: miners.length,
-      offlineCount: miners.filter((miner) => miner.status === "offline").length,
+      notMiningCount: miners.filter((miner) => miner.is_mining === false).length,
     });
   }
 

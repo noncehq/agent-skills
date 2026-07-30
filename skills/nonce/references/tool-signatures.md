@@ -46,6 +46,29 @@ The fixed CLI remains available for one-off calls:
 
 For a destructive method, first present the exact target and expected effect and obtain explicit user confirmation. In code, create the client with `allowDestructive: true` and pass `confirmDestructive: true` plus the confirmation to that one method call. In the CLI, add both `--allow-destructive` and `--confirmation "<confirmed target and effect>"`.
 
+## Shared Types
+
+The complete generated client declaration is available at `scripts/client.d.mts`. These are the shared options used by every method:
+
+```ts
+interface NonceCallOptions {
+  signal?: AbortSignal
+  timeoutMs?: number
+}
+
+type NonceReadonlyCallOptions = NonceCallOptions
+
+interface NonceDestructiveCallOptions extends NonceCallOptions {
+  confirmDestructive: true
+  confirmation: string
+}
+
+interface NonceClientOptions {
+  allowDestructive?: boolean
+  profile?: string
+}
+```
+
 ## Methods
 
 - `listFarms` — ListFarms (read-only, required: workspace_id) → [schemas/list-farms.md](../assets/schemas/list-farms.md)

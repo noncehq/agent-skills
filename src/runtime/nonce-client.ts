@@ -83,7 +83,7 @@ const assertDestructiveConfirmation = (
     );
   }
   const destructiveOptions = options as DestructiveCallOptions | undefined;
-  if (destructiveOptions?.confirmDestructive !== true || !destructiveOptions.confirmation) {
+  if (destructiveOptions?.confirmDestructive !== true || !destructiveOptions.confirmation?.trim()) {
     throw new Error(
       `Tool ${definition.name} is destructive. Pass { confirmDestructive: true, confirmation: "..." } after explicit user confirmation.`,
     );

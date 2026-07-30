@@ -305,11 +305,16 @@ describe("SDK generator helpers", () => {
     expect(artifacts.signatures).toContain(
       "listFarms(input: ListFarmsInput, options?: NonceReadonlyCallOptions)",
     );
-    expect(artifacts.signatures).toContain(
+    expect(artifacts.signatures).toContain("export const nonceToolDefinitions =");
+    expect(artifacts.signatures).not.toContain("export declare function createNonceClient");
+    expect(artifacts.clientTypes).toContain(
       "export declare function createNonceClient(options?: NonceClientOptions)",
     );
+    expect(artifacts.clientTypes).not.toContain("nonceToolDefinitions");
     expect(artifacts.referenceMarkdown).toContain("compact index");
     expect(artifacts.referenceMarkdown).toContain("read its schema file under `assets/schemas/`");
+    expect(artifacts.referenceMarkdown).toContain("## Shared Types");
+    expect(artifacts.referenceMarkdown).toContain("interface NonceDestructiveCallOptions");
     expect(artifacts.referenceMarkdown).toContain("required: workspace_id");
     expect(artifacts.referenceMarkdown).toContain(
       "Runtime calls should go through the bundled `scripts/client.mjs` module",
@@ -427,6 +432,7 @@ describe("SDK generator helpers", () => {
     });
 
     expect(occurrences(artifacts.signatures, "export interface SharedItem")).toBe(1);
+    expect(occurrences(artifacts.clientTypes, "export interface SharedItem")).toBe(1);
     expect(artifacts.signatures).toContain("data: SharedItem[]");
 
     await expect(

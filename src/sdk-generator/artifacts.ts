@@ -43,6 +43,7 @@ export interface GeneratedTool {
 }
 
 export interface GeneratedArtifacts {
+  clientTypes: string;
   manifest: Record<string, unknown>;
   methodSchemaFiles: Map<string, string>;
   referenceMarkdown: string;
@@ -167,7 +168,6 @@ const generatedToolFromMcpTool = (
 const header = `/* eslint-disable */
 // Generated file. Do not edit by hand.
 // Source of truth: checked Nonce method definitions; supplemental schemas only fill missing metadata.
-// Type reference for project code that imports scripts/client.mjs.
 `;
 
 const requiredInputSummary = (tool: GeneratedTool): string | undefined => {
@@ -227,46 +227,7 @@ const dedupeTypeScriptDeclarations = (sources: string[]): string[] => {
   return declarations;
 };
 
-const renderSignatures = async (tools: GeneratedTool[]): Promise<string> => {
-  const declarationSources = (
-    await Promise.all(
-      tools.map(async (tool) => [
-        (await schemaToTypeScriptDeclaration(`${tool.typeBase}Input`, tool.inputSchema))
-          .declaration,
-        (await schemaToTypeScriptDeclaration(`${tool.typeBase}Output`, tool.outputSchema))
-          .declaration,
-      ]),
-    )
-  ).flat();
-  const declarations = dedupeTypeScriptDeclarations(declarationSources);
-
-  return `${header}
-${declarations.join("\n")}
-export declare const nonceToolDefinitions: readonly {
-  readonly destructive: boolean
-  readonly methodName: string
-  readonly name: string
-  readonly readOnly: boolean
-}[]
-
-export interface NonceCallOptions {
-  signal?: AbortSignal
-  timeoutMs?: number
-}
-
-export type NonceReadonlyCallOptions = NonceCallOptions
-
-export interface NonceDestructiveCallOptions extends NonceCallOptions {
-  confirmDestructive: true
-  confirmation: string
-}
-
-export interface NonceClientOptions {
-  allowDestructive?: boolean
-  profile?: string
-}
-
-export interface NonceClient {
+const renderClientInterface = (tools: GeneratedTool[]): string => `export interface NonceClient {
   close(): Promise<void>
 ${tools
   .map((tool) => {
@@ -281,11 +242,27 @@ ${tools
     return `  ${tool.methodName}(${input}, ${options}): Promise<${tool.typeBase}Output>`;
   })
   .join("\n")}
+}`;
+
+const renderSharedTypes = (): string => `export interface NonceCallOptions {
+  signal?: AbortSignal
+  timeoutMs?: number
 }
 
-export declare function createNonceClient(options?: NonceClientOptions): Promise<NonceClient>
+export type NonceReadonlyCallOptions = NonceCallOptions
 
-export interface NonceMethodSignatures {
+export interface NonceDestructiveCallOptions extends NonceCallOptions {
+  confirmDestructive: true
+  confirmation: string
+}
+
+export interface NonceClientOptions {
+  allowDestructive?: boolean
+  profile?: string
+}`;
+
+const renderMethodSignatures = (tools: GeneratedTool[]): string =>
+  `export interface NonceMethodSignatures {
 ${tools
   .map(
     (tool) => `  ${tool.methodName}: {
@@ -295,8 +272,56 @@ ${tools
   }`,
   )
   .join("\n")}
-}
-`;
+}`;
+
+const renderTypeArtifacts = async (
+  tools: GeneratedTool[],
+): Promise<{ clientTypes: string; signatures: string }> => {
+  const declarationSources = (
+    await Promise.all(
+      tools.map(async (tool) => [
+        (await schemaToTypeScriptDeclaration(`${tool.typeBase}Input`, tool.inputSchema))
+          .declaration,
+        (await schemaToTypeScriptDeclaration(`${tool.typeBase}Output`, tool.outputSchema))
+          .declaration,
+      ]),
+    )
+  ).flat();
+  const declarations = dedupeTypeScriptDeclarations(declarationSources);
+  const definitions = tools.map((tool) => ({
+    destructive: tool.destructive,
+    methodName: tool.methodName,
+    name: tool.name,
+    readOnly: tool.readOnly,
+  }));
+  const sharedTypes = renderSharedTypes();
+  const clientInterface = renderClientInterface(tools);
+  const methodSignatures = renderMethodSignatures(tools);
+
+  return {
+    clientTypes: `${header}
+// Type reference for project code that imports scripts/client.mjs.
+
+${declarations.join("\n")}
+${sharedTypes}
+
+${clientInterface}
+
+export declare function createNonceClient(options?: NonceClientOptions): Promise<NonceClient>
+
+${methodSignatures}
+`,
+    signatures: `${header}
+${declarations.join("\n")}
+export const nonceToolDefinitions = ${JSON.stringify(definitions, null, 2)} as const
+
+${sharedTypes}
+
+${clientInterface}
+
+${methodSignatures}
+`,
+  };
 };
 
 const methodFileName = (methodName: string): string =>
@@ -410,6 +435,31 @@ const renderReferenceMarkdown = (
     "",
     'For a destructive method, first present the exact target and expected effect and obtain explicit user confirmation. In code, create the client with `allowDestructive: true` and pass `confirmDestructive: true` plus the confirmation to that one method call. In the CLI, add both `--allow-destructive` and `--confirmation "<confirmed target and effect>"`.',
     "",
+    "## Shared Types",
+    "",
+    "The complete generated client declaration is available at `scripts/client.d.mts`. These are the shared options used by every method:",
+    "",
+    ...renderTypeScriptBlock(
+      [
+        "interface NonceCallOptions {",
+        "  signal?: AbortSignal",
+        "  timeoutMs?: number",
+        "}",
+        "",
+        "type NonceReadonlyCallOptions = NonceCallOptions",
+        "",
+        "interface NonceDestructiveCallOptions extends NonceCallOptions {",
+        "  confirmDestructive: true",
+        "  confirmation: string",
+        "}",
+        "",
+        "interface NonceClientOptions {",
+        "  allowDestructive?: boolean",
+        "  profile?: string",
+        "}",
+      ].join("\n"),
+    ),
+    "",
     "## Methods",
     "",
   ];
@@ -456,8 +506,10 @@ export const generateArtifacts = async (
     ]),
   );
   const methodSchemaFiles = new Map(methodSchemaFileEntries);
+  const typeArtifacts = await renderTypeArtifacts(tools);
 
   return {
+    clientTypes: typeArtifacts.clientTypes,
     manifest: {
       mcpEndpoint: options.mcpEndpoint,
       openapiOperationCount: options.openapiOperationCount,
@@ -482,7 +534,7 @@ export const generateArtifacts = async (
         ]),
       ),
     },
-    signatures: await renderSignatures(tools),
+    signatures: typeArtifacts.signatures,
     tools,
   };
 };

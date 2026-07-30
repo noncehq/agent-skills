@@ -21,6 +21,7 @@ import {
 } from "../runtime/oauth-provider.js";
 import { normalizeProfile } from "../runtime/profile.js";
 import { getCliArgv } from "./argv.js";
+import { runCliMain } from "./cli-main.js";
 import { parseTimeoutMs } from "./cli-options.js";
 
 export const authCommandName = "nonce auth";
@@ -48,13 +49,18 @@ export const parseCallback = (value: string): { code: string; state?: string } =
   return { code, state: url.searchParams.get("state") ?? undefined };
 };
 
-interface CallbackListener {
+export interface CallbackListener {
   close(): Promise<void>;
   wait(): Promise<{ code: string; state?: string }>;
 }
 
-const createCallbackListener = async (
-  provider: LocalNonceOAuthProvider,
+export type CallbackProvider = Pick<
+  LocalNonceOAuthProvider,
+  "clearExpectedState" | "expectedState" | "redirectUrl"
+>;
+
+export const createCallbackListener = async (
+  provider: CallbackProvider,
   timeoutMs: number,
 ): Promise<CallbackListener> => {
   const redirect = new URL(provider.redirectUrl);
@@ -79,30 +85,42 @@ const createCallbackListener = async (
     }, timeoutMs);
 
     server.on("request", (req, res) => {
-      try {
-        const requestUrl = new URL(req.url ?? "/", provider.redirectUrl);
-        if (requestUrl.pathname !== redirect.pathname) {
-          res.statusCode = 404;
-          res.end("Not found");
-          return;
-        }
+      void (async () => {
+        try {
+          const requestUrl = new URL(req.url ?? "/", provider.redirectUrl);
+          if (requestUrl.pathname !== redirect.pathname) {
+            res.statusCode = 404;
+            res.end("Not found");
+            return;
+          }
 
-        const code = requestUrl.searchParams.get("code");
-        if (!code) {
-          throw new Error("OAuth callback is missing code");
-        }
+          const code = requestUrl.searchParams.get("code");
+          if (!code) {
+            throw new Error("OAuth callback is missing code");
+          }
+          const state = requestUrl.searchParams.get("state") ?? undefined;
+          await consumeState(provider, state);
 
-        res.statusCode = 200;
-        res.setHeader("content-type", "text/plain; charset=utf-8");
-        res.setHeader("connection", "close");
-        res.end("Nonce authentication completed. You can close this window.", () => {
-          resolve({ code, state: requestUrl.searchParams.get("state") ?? undefined });
-          void closeServer();
-        });
-      } catch (error) {
-        reject(error);
-        void closeServer();
-      }
+          res.statusCode = 200;
+          res.setHeader("content-type", "text/plain; charset=utf-8");
+          res.setHeader("connection", "close");
+          res.end(
+            "Nonce callback accepted. Return to the terminal to finish authentication.",
+            () => {
+              resolve({ code, state });
+              void closeServer();
+            },
+          );
+        } catch (error) {
+          res.statusCode = 400;
+          res.setHeader("content-type", "text/plain; charset=utf-8");
+          res.setHeader("connection", "close");
+          res.end("Nonce authentication failed. Return to the terminal for details.", () => {
+            reject(error);
+            void closeServer();
+          });
+        }
+      })();
     });
 
     server.on("connection", (socket) => {
@@ -284,7 +302,6 @@ const login = async (
       ),
     ]);
     if (callback) {
-      await consumeState(provider, callback.state);
       await auth(provider, { authorizationCode: callback.code, serverUrl: provider.endpoint });
     }
     await status(options);
@@ -445,5 +462,5 @@ const main = async (): Promise<void> => {
 };
 
 if (import.meta.url === `file://${process.argv[1]}`) {
-  await main();
+  await runCliMain(main);
 }

@@ -55,10 +55,15 @@ export class FileCredentialStore implements CredentialStore {
   async set(key: string, value: string): Promise<void> {
     const file = credentialPath(this.baseDir, this.profile, key);
     const directory = dirname(file);
+    const profileDirectory = dirname(directory);
     await mkdir(directory, { recursive: true, mode: 0o700 });
     await writeFile(file, value, { mode: 0o600 });
     if (platform() !== "win32") {
-      await Promise.all([chmod(directory, 0o700), chmod(file, 0o600)]);
+      await Promise.all([
+        chmod(profileDirectory, 0o700),
+        chmod(directory, 0o700),
+        chmod(file, 0o600),
+      ]);
     }
   }
 }

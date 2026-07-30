@@ -3,6 +3,7 @@ import { describe, expect, it } from "vite-plus/test";
 import {
   assertOutputOutsideSkillRoot,
   assertToolCallAllowed,
+  buildToolCatalog,
   resolveTool,
   validateToolInput,
   type CliToolDefinition,
@@ -55,6 +56,20 @@ describe("declarative Nonce CLI", () => {
     ).toThrow("additional properties");
   });
 
+  it("fails closed when generated manifest and schema artifacts drift", () => {
+    expect(() => buildToolCatalog({ tools: [] }, { tools: {} })).toThrow(
+      "manifest is missing or empty",
+    );
+    expect(() =>
+      buildToolCatalog(
+        { tools: [readTool] },
+        {
+          tools: {},
+        },
+      ),
+    ).toThrow("Generated input schema is missing for ListWorkspaces");
+  });
+
   it("allows reads without approval but requires both write approval layers", () => {
     expect(() => assertToolCallAllowed(readTool, {})).not.toThrow();
     expect(() => assertToolCallAllowed(writeTool, {})).toThrow("--allow-destructive");
@@ -71,18 +86,25 @@ describe("declarative Nonce CLI", () => {
     ).not.toThrow();
   });
 
-  it("keeps durable output outside the installer-owned skill directory", () => {
-    expect(() =>
+  it("keeps durable output outside the installer-owned skill directory", async () => {
+    await expect(
       assertOutputOutsideSkillRoot(
         "/project/.agents/skills/nonce/result.json",
         "/project/.agents/skills/nonce",
       ),
-    ).toThrow("outside the installed skill directory");
-    expect(() =>
+    ).rejects.toThrow("outside the installed skill directory");
+    await expect(
+      assertOutputOutsideSkillRoot(
+        "/project/.agents/SKILLS/nonce/result.json",
+        "/project/.agents/skills/nonce",
+        "darwin",
+      ),
+    ).rejects.toThrow("outside the installed skill directory");
+    await expect(
       assertOutputOutsideSkillRoot(
         "/project/.nonce/results/result.json",
         "/project/.agents/skills/nonce",
       ),
-    ).not.toThrow();
+    ).resolves.toBeUndefined();
   });
 });
