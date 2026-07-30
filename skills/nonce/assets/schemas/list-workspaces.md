@@ -8,10 +8,16 @@ List Workspaces
 
 Returns all workspaces the authenticated user has access to, with their role (admin/member/viewer) in each. Call this first to get workspace_id values needed by all other tools.
 
-## Signature
+## Code
 
-```ts
-listWorkspaces(input?: ListWorkspacesInput, options?: ReadonlyCallOptions): Promise<ListWorkspacesOutput>
+```js
+const result = await nonce.listWorkspaces(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listWorkspaces --input-file ".nonce/requests/list-workspaces.json"
 ```
 
 ## Input

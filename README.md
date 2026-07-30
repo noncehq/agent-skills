@@ -2,14 +2,16 @@
 
 Skills for Nonce. This repository builds an installable skill collection:
 
-- `nonce` queries and operates Nonce mining resources through local JavaScript task code.
+- `nonce` lets agents write project-local JavaScript that queries and operates
+  Nonce MCP resources, processes large results in code, and returns compact
+  output. A fixed CLI remains available for one-off calls.
 - `reboot-report` analyzes one farm's reboot activity and produces a shareable HTML report. It uses either connected Nonce MCP tools or `nonce` for authenticated data access.
 
 ## Repository Structure
 
 ```
 src/
-├── runtime/          # Skill runtime, OAuth provider, credential storage, and Nonce client
+├── runtime/          # Restricted code client, OAuth storage, and internal MCP transport
 ├── sdk-generator/    # MCP/OpenAPI inspection and generated artifact writer
 └── skill-scripts/    # Source for installed skill scripts
 
@@ -17,7 +19,7 @@ scripts/
 └── generate-nonce-sdk.ts
 
 skills/               # Installable skill collection
-├── nonce/            # Nonce data-access skill and bundled runtime
+├── nonce/            # Nonce data-access skill, code client, and diagnostic CLI
 │   ├── SKILL.md
 │   ├── agents/
 │   ├── assets/
@@ -44,7 +46,8 @@ read-only verification flow.
 ### Prerequisites
 
 - [Vite+](https://github.com/vite-plus/vite-plus) available as `vp`
-- Node.js 22 or newer; the installed skill bootstrap pins the managed runtime to Node.js 24.17.0
+- Node.js 22 or 24 LTS. The installed skill checks the existing runtime and does
+  not download or install one.
 - A Nonce account for authenticated SDK generation or runtime testing
 
 Install dependencies:

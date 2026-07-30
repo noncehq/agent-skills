@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`, `miner_ids`, `params`
 
 Switch miner mining power mode. Affects hashrate and power consumption.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchMinerPowerModeUpdate(input: CreateTaskBatchMinerPowerModeUpdateInput, options: DestructiveCallOptions): Promise<CreateTaskBatchMinerPowerModeUpdateOutput>
+```js
+const result = await nonce.createTaskBatchMinerPowerModeUpdate(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchMinerPowerModeUpdate --input-file ".nonce/requests/create-task-batch-miner-power-mode-update.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

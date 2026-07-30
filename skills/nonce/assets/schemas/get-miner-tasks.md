@@ -10,10 +10,16 @@ List Miner Tasks
 
 Returns task execution history for a specific miner. Includes task name, status (pending/running/succeeded/failed), parameters, and timestamps. Filter by task_name or status.
 
-## Signature
+## Code
 
-```ts
-getMinerTasks(input: GetMinerTasksInput, options?: ReadonlyCallOptions): Promise<GetMinerTasksOutput>
+```js
+const result = await nonce.getMinerTasks(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call getMinerTasks --input-file ".nonce/requests/get-miner-tasks.json"
 ```
 
 ## Input

@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`, `params`
 
 Trigger agent IP diagnosis and upload a CSV report. Uses local diagnostic context first unless refresh is requested.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchAgentIpDiagnosisCreate(input: CreateTaskBatchAgentIpDiagnosisCreateInput, options: DestructiveCallOptions): Promise<CreateTaskBatchAgentIpDiagnosisCreateOutput>
+```js
+const result = await nonce.createTaskBatchAgentIpDiagnosisCreate(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchAgentIpDiagnosisCreate --input-file ".nonce/requests/create-task-batch-agent-ip-diagnosis-create.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

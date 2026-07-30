@@ -20,10 +20,16 @@ Exceeding the range limit returns 400 with the allowed maximum.
 
 **Usage hint for AI agents:** `10min` granularity is expensive. Prefer `hour` or coarser for routine monitoring. Use `10min` only for targeted diagnostics on a specific miner and avoid repeated calls for the same miner within a short period.
 
-## Signature
+## Code
 
-```ts
-listMinerHistory(input: ListMinerHistoryInput, options?: ReadonlyCallOptions): Promise<ListMinerHistoryOutput>
+```js
+const result = await nonce.listMinerHistory(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listMinerHistory --input-file ".nonce/requests/list-miner-history.json"
 ```
 
 ## Input

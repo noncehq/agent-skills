@@ -162,6 +162,32 @@ describe("SDK generator helpers", () => {
     ).rejects.toThrow("refresh token");
   });
 
+  it("does not misclassify OAuth network failures as expired credentials", async () => {
+    const { provider } = createRefreshProvider({
+      access_token: "old-access-token",
+      refresh_token: "saved-refresh-token",
+      token_type: "Bearer",
+    });
+
+    await expect(
+      refreshNonceAccessToken(provider, {
+        discoverOAuthServerInfo: async () => ({
+          authorizationServerUrl: "https://auth.nonce.test",
+        }),
+        refreshAuthorization: async () => {
+          const socketError = Object.assign(new Error("socket disconnected"), {
+            code: "ECONNRESET",
+          });
+          throw new TypeError("fetch failed", { cause: socketError });
+        },
+        registerClient: async () => {
+          throw new Error("client registration should not run when client information is cached");
+        },
+        selectResourceURL: async () => new URL("https://mcp.nonce.app/mcp"),
+      }),
+    ).rejects.toThrow("not classified as invalid");
+  });
+
   it("normalizes MCP tool names into SDK method names", () => {
     expect(methodNameForTool("CreateTaskBatch_MinerPower_modeUpdate")).toBe(
       "createTaskBatchMinerPowerModeUpdate",
@@ -271,23 +297,36 @@ describe("SDK generator helpers", () => {
 
     expect(artifacts.tools[0]?.inputSchemaSource).toBe("mcp");
     expect(artifacts.tools[0]?.outputSchemaSource).toBe("openapi");
-    expect(artifacts.signatures).toContain("listFarms(input: ListFarmsInput");
+    expect(artifacts.signatures).toContain("listFarms: {");
+    expect(artifacts.signatures).toContain("input: ListFarmsInput");
+    expect(artifacts.signatures).toContain("output: ListFarmsOutput");
     expect(artifacts.signatures).toContain("export interface ListFarmsOutput");
+    expect(artifacts.signatures).toContain("export interface NonceClient");
+    expect(artifacts.signatures).toContain(
+      "listFarms(input: ListFarmsInput, options?: NonceReadonlyCallOptions)",
+    );
+    expect(artifacts.signatures).toContain(
+      "export declare function createNonceClient(options?: NonceClientOptions)",
+    );
     expect(artifacts.referenceMarkdown).toContain("compact index");
-    expect(artifacts.referenceMarkdown).toContain(
-      "read the method's schema file under `assets/schemas/`",
-    );
+    expect(artifacts.referenceMarkdown).toContain("read its schema file under `assets/schemas/`");
     expect(artifacts.referenceMarkdown).toContain("required: workspace_id");
-    expect(artifacts.referenceMarkdown).toContain("Runtime calls must go through the local SDK");
-    expect(artifacts.referenceMarkdown).toContain("credentialDirWritable: false");
-    expect(artifacts.referenceMarkdown).toContain("taskDirWritable: true");
     expect(artifacts.referenceMarkdown).toContain(
-      "await import(process.env.NONCE_SKILL_RUNTIME_URL)",
+      "Runtime calls should go through the bundled `scripts/client.mjs` module",
     );
-    expect(artifacts.referenceMarkdown).toContain("const client = await createNonceClient()");
-    expect(artifacts.referenceMarkdown).toContain("console.log(JSON.stringify({ farms }))");
-    expect(artifacts.referenceMarkdown).toContain("Shared Types");
-    expect(artifacts.referenceMarkdown).toContain("DestructiveCallOptions");
+    expect(artifacts.referenceMarkdown).toContain("credentialDirWritable: false");
+    expect(artifacts.referenceMarkdown).toContain("dataDirWritable: false");
+    expect(artifacts.referenceMarkdown).toContain(".nonce/requests/list-farms.json");
+    expect(artifacts.referenceMarkdown).toContain(".nonce/results/list-farms.json");
+    expect(artifacts.referenceMarkdown).toContain(
+      '"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs"',
+    );
+    expect(artifacts.referenceMarkdown).toContain(".nonce/code/");
+    expect(artifacts.referenceMarkdown).toContain("createNonceClient");
+    expect(artifacts.referenceMarkdown).toContain("Log only the compact result");
+    expect(artifacts.referenceMarkdown).toContain("--allow-destructive");
+    expect(artifacts.referenceMarkdown).toContain("--confirmation");
+    expect(artifacts.referenceMarkdown).not.toContain("NONCE_SKILL_RUNTIME_URL");
     expect(artifacts.referenceMarkdown).toContain("schemas/list-farms.md");
     expect(artifacts.referenceMarkdown).not.toContain('profile: "default"');
 
@@ -296,6 +335,10 @@ describe("SDK generator helpers", () => {
     expect(listFarmsFile).toBeTruthy();
     expect(listFarmsFile).toContain("# listFarms");
     expect(listFarmsFile).toContain("## Purpose");
+    expect(listFarmsFile).toContain("## Code");
+    expect(listFarmsFile).toContain("## CLI");
+    expect(listFarmsFile).toContain("await nonce.listFarms(");
+    expect(listFarmsFile).toContain('"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs"');
     expect(listFarmsFile).toContain("List farms visible in a workspace.");
     expect(listFarmsFile).toContain("export interface ListFarmsInput");
     expect(listFarmsFile).toContain("export interface ListFarmsOutput");

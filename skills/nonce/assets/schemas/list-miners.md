@@ -10,10 +10,16 @@ List Miners
 
 Returns real-time status for all miners in a farm. Includes hashrate, power consumption, temperature, run status, hardware model, tags, and anomaly flags. Pool configuration is not included. Supports filtering by status, MAC address, or serial number. Results are paginated.
 
-## Signature
+## Code
 
-```ts
-listMiners(input: ListMinersInput, options?: ReadonlyCallOptions): Promise<ListMinersOutput>
+```js
+const result = await nonce.listMiners(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listMiners --input-file ".nonce/requests/list-miners.json"
 ```
 
 ## Input

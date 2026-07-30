@@ -10,10 +10,16 @@ Search Miners
 
 Search miners in the farm with operator-object filters. Supports id, agent_id, serial number, MAC address, lifecycle status, and health status criteria. Omit body for an unfiltered first-page list.
 
-## Signature
+## Code
 
-```ts
-searchMiners(input: SearchMinersInput, options?: ReadonlyCallOptions): Promise<SearchMinersOutput>
+```js
+const result = await nonce.searchMiners(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call searchMiners --input-file ".nonce/requests/search-miners.json"
 ```
 
 ## Input

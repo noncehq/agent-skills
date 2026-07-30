@@ -31,6 +31,7 @@ import {
 export const generateSdkCommandName = "nonce generate-sdk";
 
 interface GenerateSdkOptions {
+  clientTypesOutput?: string;
   endpoint?: string;
   openapiUrl?: string;
   outputDir?: string;
@@ -115,6 +116,36 @@ const authorizationRefreshDependencies: AuthorizationRefreshDependencies = {
 const authLoginHint =
   "Run `vp node -- skills/nonce/scripts/auth.mjs login` from the repository root first.";
 
+const networkErrorCodes = new Set([
+  "ECONNABORTED",
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ENETUNREACH",
+  "ENOTFOUND",
+  "EPIPE",
+  "ETIMEDOUT",
+]);
+
+const isNetworkError = (error: unknown): boolean => {
+  let current = error;
+  const seen = new Set<unknown>();
+
+  while (current instanceof Error && !seen.has(current)) {
+    seen.add(current);
+    if (
+      ("code" in current &&
+        typeof current.code === "string" &&
+        networkErrorCodes.has(current.code)) ||
+      current.message.toLowerCase().includes("fetch failed")
+    ) {
+      return true;
+    }
+    current = current.cause;
+  }
+
+  return false;
+};
+
 export const refreshNonceAccessToken = async (
   provider: NonceOAuthProvider,
   dependencies: AuthorizationRefreshDependencies = authorizationRefreshDependencies,
@@ -164,6 +195,12 @@ export const refreshNonceAccessToken = async (
     );
     await provider.saveTokens(refreshedTokens);
   } catch (error) {
+    if (isNetworkError(error)) {
+      throw new Error(
+        "Could not reach the Nonce OAuth server while refreshing saved credentials. Check network or TLS connectivity and retry; the saved refresh token was not classified as invalid.",
+        { cause: error },
+      );
+    }
     throw new Error(`Saved Nonce OAuth refresh token is invalid or expired. ${authLoginHint}`, {
       cause: error,
     });
@@ -198,7 +235,6 @@ const inspectMcp = async (
 ): Promise<McpInspection> => {
   const provider = createOAuthProvider({
     endpoint: options.endpoint,
-    openBrowser: false,
     profile: normalizeProfile(options.profile),
   });
   await refreshNonceAccessToken(provider);
@@ -256,6 +292,7 @@ export const removeStaleGeneratedSchemas = async (
 
 const generate = async (options: GenerateSdkOptions): Promise<void> => {
   const endpoint = options.endpoint ?? DEFAULT_MCP_ENDPOINT;
+  const clientTypesOutput = options.clientTypesOutput ?? "skills/nonce/scripts/client.d.mts";
   const profile = normalizeProfile(options.profile ?? DEFAULT_PROFILE);
   const outputDir = options.outputDir ?? "skills/nonce/assets";
   const openapiUrl = options.openapiUrl ?? DEFAULT_OPENAPI_URL;
@@ -290,6 +327,7 @@ const generate = async (options: GenerateSdkOptions): Promise<void> => {
 
   await Promise.all([
     writeText(join(outputDir, "tool-signatures.ts"), artifacts.signatures),
+    writeText(clientTypesOutput, artifacts.signatures),
     writeJson(join(outputDir, "tool-manifest.json"), artifacts.manifest),
     writeJson(join(outputDir, "tool-schemas.json"), artifacts.schemas),
     writeText(referenceOutput, artifacts.referenceMarkdown),
@@ -300,6 +338,7 @@ const generate = async (options: GenerateSdkOptions): Promise<void> => {
     JSON.stringify(
       {
         command: generateSdkCommandName,
+        clientTypesOutput,
         endpoint,
         openapiOperationCount: openApiIndex.operationCount,
         openapiUrl,
@@ -320,6 +359,11 @@ const main = async (): Promise<void> => {
     .name("nonce generate-sdk")
     .description(
       "Generate TypeScript interfaces and SDK method signatures from Nonce method definitions",
+    )
+    .option(
+      "--client-types-output <path>",
+      "generated declaration file for scripts/client.mjs",
+      "skills/nonce/scripts/client.d.mts",
     )
     .option("--endpoint <url>", "Nonce endpoint", DEFAULT_MCP_ENDPOINT)
     .option("--openapi-url <url>", "OpenAPI supplement URL", DEFAULT_OPENAPI_URL)

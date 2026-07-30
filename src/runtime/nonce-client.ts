@@ -12,7 +12,6 @@ export interface CreateNonceClientOptions {
   allowDestructive?: boolean;
   endpoint?: string;
   name?: string;
-  openBrowser?: boolean;
   profile?: string;
   version?: string;
 }
@@ -40,11 +39,6 @@ export interface ToolDefinition {
   name: string;
 }
 
-export interface RunnerAuthorizationSnapshot {
-  allowDestructive: boolean;
-  runnerMode: boolean;
-}
-
 interface McpClientLike {
   callTool(
     request: { arguments: Record<string, unknown>; name: string },
@@ -64,37 +58,8 @@ export interface NonceClientRuntimeDependencies {
   createClient?: (metadata: ClientMetadata) => McpClientLike;
   createProvider?: typeof createOAuthProvider;
   createTransport?: (endpoint: string, provider: ReturnType<typeof createOAuthProvider>) => unknown;
-  runnerAuthorization?: RunnerAuthorizationSnapshot;
   toolDefinitions?: readonly ToolDefinition[];
 }
-
-const RUNNER_AUTHORIZATION_GLOBAL = "__nonceSkillRunnerAuthorization";
-
-const createRunnerAuthorizationSnapshot = (): RunnerAuthorizationSnapshot =>
-  Object.freeze({
-    allowDestructive: process.env.NONCE_ALLOW_DESTRUCTIVE === "1",
-    runnerMode: process.env.NONCE_RUNNER_MODE === "1",
-  });
-
-const getRunnerAuthorizationSnapshot = (): RunnerAuthorizationSnapshot => {
-  const globalRecord = globalThis as typeof globalThis & {
-    [RUNNER_AUTHORIZATION_GLOBAL]?: RunnerAuthorizationSnapshot;
-  };
-  if (globalRecord[RUNNER_AUTHORIZATION_GLOBAL]) {
-    return globalRecord[RUNNER_AUTHORIZATION_GLOBAL];
-  }
-
-  const snapshot = createRunnerAuthorizationSnapshot();
-  Object.defineProperty(globalThis, RUNNER_AUTHORIZATION_GLOBAL, {
-    configurable: false,
-    enumerable: false,
-    value: snapshot,
-    writable: false,
-  });
-  return snapshot;
-};
-
-export const nonceRunnerAuthorizationSnapshot = getRunnerAuthorizationSnapshot();
 
 const toRequestOptions = (
   options: ReadonlyCallOptions | DestructiveCallOptions | undefined,
@@ -110,14 +75,12 @@ const assertDestructiveConfirmation = (
   definition: ToolDefinition,
   options: ReadonlyCallOptions | DestructiveCallOptions | undefined,
   allowDestructive: boolean,
-  runnerMode: boolean,
 ): void => {
   if (!definition.destructive) return;
   if (!allowDestructive) {
-    const enablement = runnerMode
-      ? "Run the task runner with --allow-destructive after explicit user confirmation"
-      : "Create the client with allowDestructive: true after explicit user confirmation";
-    throw new Error(`Tool ${definition.name} is destructive. ${enablement}.`);
+    throw new Error(
+      `Tool ${definition.name} is destructive. Enable it only after explicit user confirmation.`,
+    );
   }
   const destructiveOptions = options as DestructiveCallOptions | undefined;
   if (destructiveOptions?.confirmDestructive !== true || !destructiveOptions.confirmation) {
@@ -184,20 +147,8 @@ const loadGeneratedToolDefinitions = async (): Promise<readonly ToolDefinition[]
   return tools;
 };
 
-export const resolveDestructiveAllowance = (
-  allowDestructiveOption: boolean | undefined,
-  runnerAuthorization: RunnerAuthorizationSnapshot = nonceRunnerAuthorizationSnapshot,
-): boolean => {
-  if (runnerAuthorization.runnerMode) {
-    if (allowDestructiveOption === true && !runnerAuthorization.allowDestructive) {
-      throw new Error(
-        "Destructive calls through the task runner require the --allow-destructive flag.",
-      );
-    }
-    return runnerAuthorization.allowDestructive;
-  }
-  return allowDestructiveOption ?? process.env.NONCE_ALLOW_DESTRUCTIVE === "1";
-};
+export const resolveDestructiveAllowance = (allowDestructiveOption: boolean | undefined): boolean =>
+  allowDestructiveOption === true;
 
 const createDefaultClient = (metadata: ClientMetadata): McpClientLike =>
   new Client(metadata) as unknown as McpClientLike;
@@ -214,17 +165,12 @@ export const createNonceClientWithDependencies = async (
   options: CreateNonceClientOptions = {},
   dependencies: NonceClientRuntimeDependencies = {},
 ): Promise<NonceClient> => {
-  const endpoint = options.endpoint ?? process.env.NONCE_MCP_ENDPOINT ?? DEFAULT_MCP_ENDPOINT;
+  const endpoint = options.endpoint ?? DEFAULT_MCP_ENDPOINT;
   const toolDefinitions = dependencies.toolDefinitions ?? (await loadGeneratedToolDefinitions());
-  const runnerAuthorization = dependencies.runnerAuthorization ?? nonceRunnerAuthorizationSnapshot;
-  const allowDestructive = resolveDestructiveAllowance(
-    options.allowDestructive,
-    runnerAuthorization,
-  );
+  const allowDestructive = resolveDestructiveAllowance(options.allowDestructive);
   const provider = (dependencies.createProvider ?? createOAuthProvider)({
     endpoint,
-    openBrowser: options.openBrowser ?? false,
-    profile: normalizeProfile(options.profile ?? process.env.NONCE_PROFILE ?? DEFAULT_PROFILE),
+    profile: normalizeProfile(options.profile ?? DEFAULT_PROFILE),
   });
   const client = (dependencies.createClient ?? createDefaultClient)({
     name: options.name ?? "nonce-skill-runtime",
@@ -245,12 +191,7 @@ export const createNonceClientWithDependencies = async (
       input: Record<string, unknown> | undefined,
       callOptions: ReadonlyCallOptions | DestructiveCallOptions | undefined,
     ): Promise<unknown> => {
-      assertDestructiveConfirmation(
-        definition,
-        callOptions,
-        allowDestructive,
-        runnerAuthorization.runnerMode,
-      );
+      assertDestructiveConfirmation(definition, callOptions, allowDestructive);
       const result = await client.callTool(
         {
           arguments: input ?? {},

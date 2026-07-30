@@ -478,29 +478,47 @@ const evaluateStaticSkillContract = async (repoRoot: string, checks: CheckResult
 
   const missingWorkflowNeedles = includesAll(workflowText, [
     "NONCE_SKILL_HOME",
-    "node scripts/bootstrap-runtime.mjs --json",
+    "NONCE_NODE",
+    "scripts/bootstrap-runtime.mjs",
+    "--project-dir",
     "references/tool-signatures.md",
     "assets/schemas/",
-    "process.env.NONCE_SKILL_RUNTIME_URL",
+    ".nonce/code/",
+    "scripts/client.mjs",
+    "createNonceClient",
+    "Create one client",
+    "finally",
+    "Do not print raw",
+    "scripts/nonce.mjs",
+    "--input-file",
+    "--output",
     "--profile",
-    "--endpoint",
+    "https://mcp.nonce.app/mcp",
+    "does not accept an endpoint override",
     "--allow-destructive",
-    "compact JSON stdout",
+    "--confirmation",
+    "confirmDestructive: true",
+    "compact JSON",
   ]);
   addCheck(
     checks,
     "workflow.contracts",
     missingWorkflowNeedles.length === 0,
-    "workflow reference preserves path setup, schema reading, runner flags, and compact JSON rules",
+    "workflow reference preserves path setup, code-first MCP composition, CLI fallback, and compact output rules",
     "error",
     missingWorkflowNeedles.join(", "),
   );
 
   const missingSafetyNeedles = includesAll(safetyText, [
+    "Agent-authored code runs with the",
+    "scripts/client.mjs",
+    "Filter and aggregate MCP data inside the process",
     "CreateTaskBatch_*",
     "explicit user confirmation",
+    "allowDestructive: true",
     "confirmDestructive: true",
     "--allow-destructive",
+    "--confirmation",
     "Do not broaden the operation",
   ]);
   addCheck(
@@ -512,10 +530,19 @@ const evaluateStaticSkillContract = async (repoRoot: string, checks: CheckResult
     missingSafetyNeedles.join(", "),
   );
 
+  addCheck(
+    checks,
+    "workflow.code-first",
+    !workflowText.includes("never executes generated JavaScript") &&
+      !skillText.includes("through a fixed local CLI"),
+    "the skill keeps agent-authored code as the primary MCP data-processing path",
+  );
+
   const missingAuthNeedles = includesAll(authText, [
-    "node scripts/auth.mjs status",
-    "node scripts/auth.mjs login",
-    "node scripts/auth.mjs verify",
+    "scripts/auth.mjs",
+    "status",
+    "login",
+    "verify",
     "Never print access tokens",
   ]);
   addCheck(

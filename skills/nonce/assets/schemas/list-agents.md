@@ -10,10 +10,16 @@ List Agents
 
 Returns all agents (edge devices) in the workspace. Each agent is deployed in a farm and monitors/manages local miners. Includes agent status, version, uptime, timestamps, and the farm it belongs to.
 
-## Signature
+## Code
 
-```ts
-listAgents(input: ListAgentsInput, options?: ReadonlyCallOptions): Promise<ListAgentsOutput>
+```js
+const result = await nonce.listAgents(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listAgents --input-file ".nonce/requests/list-agents.json"
 ```
 
 ## Input

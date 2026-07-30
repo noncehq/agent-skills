@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`, `updates`
 
 Update miner rack and position metadata in inventory. Metadata-only; does not affect mining operation.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchMinerRackLocationUpdate(input: CreateTaskBatchMinerRackLocationUpdateInput, options: DestructiveCallOptions): Promise<CreateTaskBatchMinerRackLocationUpdateOutput>
+```js
+const result = await nonce.createTaskBatchMinerRackLocationUpdate(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchMinerRackLocationUpdate --input-file ".nonce/requests/create-task-batch-miner-rack-location-update.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

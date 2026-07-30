@@ -114,7 +114,6 @@ describe("runtime SDK client", () => {
     expect(harness.metadata).toEqual({ name: "runtime-test", version: "1.2.3" });
     expect(harness.providerOptions).toMatchObject({
       endpoint: "https://example.test/mcp",
-      openBrowser: false,
       profile: "test-local",
     });
     expect(harness.connectedTransport).toMatchObject({ endpoint: "https://example.test/mcp" });
@@ -149,51 +148,41 @@ describe("runtime SDK client", () => {
   });
 
   it("blocks destructive tools before callTool unless both guard layers are satisfied", async () => {
-    const previousAllowDestructive = process.env.NONCE_ALLOW_DESTRUCTIVE;
-    delete process.env.NONCE_ALLOW_DESTRUCTIVE;
     const input: CreateTaskBatchMinerSystemRebootInput = {
       farm_id: "farm-1",
       miner_ids: ["miner-1"],
       task_name: "miner.system.reboot",
       workspace_id: "workspace-1",
     };
-    try {
-      const blockedHarness = createHarness([{ structuredContent: { success: true } }]);
-      const blockedClient = (await createNonceClientWithDependencies(
-        {},
-        blockedHarness.dependencies,
-      )) as unknown as RuntimeClientForTest;
+    const blockedHarness = createHarness([{ structuredContent: { success: true } }]);
+    const blockedClient = (await createNonceClientWithDependencies(
+      {},
+      blockedHarness.dependencies,
+    )) as unknown as RuntimeClientForTest;
 
-      await expect(
-        blockedClient.createTaskBatchMinerSystemReboot(input, {
-          confirmDestructive: true,
-          confirmation: "confirmed by user",
-        }),
-      ).rejects.toThrow("CreateTaskBatch_MinerSystemReboot is destructive");
-      expect(blockedHarness.calls).toHaveLength(0);
+    await expect(
+      blockedClient.createTaskBatchMinerSystemReboot(input, {
+        confirmDestructive: true,
+        confirmation: "confirmed by user",
+      }),
+    ).rejects.toThrow("CreateTaskBatch_MinerSystemReboot is destructive");
+    expect(blockedHarness.calls).toHaveLength(0);
 
-      const allowedHarness = createHarness([{ structuredContent: { success: true } }]);
-      const allowedClient = (await createNonceClientWithDependencies(
-        { allowDestructive: true },
-        allowedHarness.dependencies,
-      )) as unknown as RuntimeClientForTest;
+    const allowedHarness = createHarness([{ structuredContent: { success: true } }]);
+    const allowedClient = (await createNonceClientWithDependencies(
+      { allowDestructive: true },
+      allowedHarness.dependencies,
+    )) as unknown as RuntimeClientForTest;
 
-      await expect(
-        allowedClient.createTaskBatchMinerSystemReboot(input, {
-          confirmDestructive: true,
-          confirmation: "confirmed by user",
-        }),
-      ).resolves.toEqual({ success: true });
-      expect(allowedHarness.calls[0]?.request).toEqual({
-        arguments: input,
-        name: "CreateTaskBatch_MinerSystemReboot",
-      });
-    } finally {
-      if (previousAllowDestructive === undefined) {
-        delete process.env.NONCE_ALLOW_DESTRUCTIVE;
-      } else {
-        process.env.NONCE_ALLOW_DESTRUCTIVE = previousAllowDestructive;
-      }
-    }
+    await expect(
+      allowedClient.createTaskBatchMinerSystemReboot(input, {
+        confirmDestructive: true,
+        confirmation: "confirmed by user",
+      }),
+    ).resolves.toEqual({ success: true });
+    expect(allowedHarness.calls[0]?.request).toEqual({
+      arguments: input,
+      name: "CreateTaskBatch_MinerSystemReboot",
+    });
   });
 });

@@ -9,14 +9,12 @@ import type {
   OAuthClientMetadata,
   OAuthTokens,
 } from "@modelcontextprotocol/sdk/shared/auth.js";
-import open from "open";
 
 import { DEFAULT_CALLBACK_PORT, DEFAULT_MCP_ENDPOINT, OAUTH_CALLBACK_PATH } from "./constants.js";
 import { createCredentialStore, type CredentialStore } from "./credential-store.js";
 import { normalizeProfile } from "./profile.js";
 import { createStateStore, type StateStore } from "./state-store.js";
 
-type AuthorizationUrlOpener = (url: string) => Promise<unknown>;
 type MessageSink = (message: string) => void;
 
 const jsonGet = async <T>(store: CredentialStore, key: string): Promise<T | undefined> => {
@@ -30,8 +28,6 @@ const jsonSet = async <T>(store: CredentialStore, key: string, value: T): Promis
 
 export interface OAuthProviderOptions {
   endpoint?: string;
-  openBrowser?: boolean;
-  openAuthorizationUrl?: AuthorizationUrlOpener;
   profile?: string;
   redirectUrl?: string;
 }
@@ -52,47 +48,23 @@ export const redirectToAuthorizationUrl = async (
   authorizationUrl: URL,
   options: {
     log?: MessageSink;
-    openAuthorizationUrl?: AuthorizationUrlOpener;
-    openBrowser: boolean;
-    warn?: MessageSink;
-  },
+  } = {},
 ): Promise<void> => {
   const log = options.log ?? console.log;
-  const warn = options.warn ?? console.error;
-  const authorizationUrlString = authorizationUrl.toString();
-  const printManualLogin = (browserOpen: "failed" | "skipped", reason?: string): void => {
-    log(JSON.stringify({ authorizationUrl: authorizationUrlString, browserOpen, reason }));
-  };
-
-  if (!options.openBrowser) {
-    printManualLogin("skipped");
-    return;
-  }
-
-  try {
-    await (options.openAuthorizationUrl ?? open)(authorizationUrlString);
-  } catch (error) {
-    const reason = error instanceof Error ? error.message : String(error);
-    warn(`Warning: failed to open browser; printing authorization URL for manual login. ${reason}`);
-    printManualLogin("failed", reason);
-  }
+  log(JSON.stringify({ authorizationUrl: authorizationUrl.toString(), browserOpen: "skipped" }));
 };
 
 export class LocalNonceOAuthProvider implements NonceOAuthProvider {
   readonly endpoint: string;
   readonly credentialStoreKind: string;
   private readonly credentials: CredentialStore;
-  private readonly openAuthorizationUrl: AuthorizationUrlOpener;
   private readonly stateStore: StateStore;
   private readonly profile: string;
-  private readonly shouldOpenBrowser: boolean;
   private readonly redirect: string;
 
   constructor(options: OAuthProviderOptions = {}) {
     this.endpoint = options.endpoint ?? DEFAULT_MCP_ENDPOINT;
     this.profile = normalizeProfile(options.profile);
-    this.openAuthorizationUrl = options.openAuthorizationUrl ?? open;
-    this.shouldOpenBrowser = options.openBrowser ?? true;
     this.redirect =
       options.redirectUrl ?? `http://127.0.0.1:${DEFAULT_CALLBACK_PORT}${OAUTH_CALLBACK_PATH}`;
     this.credentials = createCredentialStore({
@@ -149,10 +121,7 @@ export class LocalNonceOAuthProvider implements NonceOAuthProvider {
       createdAt: new Date().toISOString(),
       redirectUrl: this.redirect,
     });
-    await redirectToAuthorizationUrl(authorizationUrl, {
-      openAuthorizationUrl: this.openAuthorizationUrl,
-      openBrowser: this.shouldOpenBrowser,
-    });
+    await redirectToAuthorizationUrl(authorizationUrl);
   }
 
   async saveCodeVerifier(codeVerifier: string): Promise<void> {
@@ -200,6 +169,10 @@ export class LocalNonceOAuthProvider implements NonceOAuthProvider {
 
   async expectedState(): Promise<string | undefined> {
     return this.credentials.get("oauth-state");
+  }
+
+  async clearExpectedState(): Promise<void> {
+    await this.credentials.delete("oauth-state");
   }
 }
 

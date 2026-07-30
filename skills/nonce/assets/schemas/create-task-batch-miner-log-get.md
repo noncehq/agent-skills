@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`, `miner_ids`
 
 Collect diagnostic logs from miner ASIC. Dispatches a command to the device; a signed download URL is returned on task success.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchMinerLogGet(input: CreateTaskBatchMinerLogGetInput, options: DestructiveCallOptions): Promise<CreateTaskBatchMinerLogGetOutput>
+```js
+const result = await nonce.createTaskBatchMinerLogGet(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchMinerLogGet --input-file ".nonce/requests/create-task-batch-miner-log-get.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

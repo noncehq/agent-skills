@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`, `miner_ids`, `params`
 
 Lock or unlock miner pool configuration via auth package. Prevents unauthorized pool changes while locked.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchMinerPoolLock(input: CreateTaskBatchMinerPoolLockInput, options: DestructiveCallOptions): Promise<CreateTaskBatchMinerPoolLockOutput>
+```js
+const result = await nonce.createTaskBatchMinerPoolLock(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchMinerPoolLock --input-file ".nonce/requests/create-task-batch-miner-pool-lock.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

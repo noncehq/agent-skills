@@ -1,18 +1,39 @@
 # Authentication
 
-Use the local auth runner for Nonce authentication.
+Use the fixed local auth command for Nonce authentication.
 
 - Default endpoint: `https://mcp.nonce.app/mcp`.
-- Run commands with the installed skill root as the working directory. The skill root is the directory containing `SKILL.md`; do not assume any fixed filesystem path.
-- Complete the path setup in `references/workflow.md` first, and keep the printed `NONCE_SKILL_HOME` or `$NonceSkillHome` value visible for later commands.
-- Credentials are saved as local profile files.
-- Check status with `node scripts/auth.mjs status`.
-- Start browser login with `node scripts/auth.mjs login`; it exits after the local callback completes. By default it tries to open a browser.
-- In clearly headless Linux environments, or if browser launch fails, `login` prints an `authorizationUrl` JSON object and waits for the callback flow.
-- For manual browser launch, run `node scripts/auth.mjs login --no-open`, open the printed authorization URL, and let the redirect reach the local callback server.
-- If the redirect cannot reach the local callback server, keep `login --no-open` running and complete the exchange from another terminal with `node scripts/auth.mjs callback "<callback-url-or-code>"`. Quote pasted callback URLs because they can contain shell metacharacters such as `&`. The login process exits after it detects the saved token.
-- Verify the saved token with `node scripts/auth.mjs verify`; this initializes the local connection and lists available methods, but does not call any business method.
-- Clear tokens with `node scripts/auth.mjs logout`; use `--all` to remove client registration and discovery state too.
+- Keep the current project as the working directory. Complete the path setup in
+  `references/workflow.md` first and reuse its exact Node executable and
+  installed skill root.
+- The examples below use macOS/Linux variables. On PowerShell, invoke the same
+  subcommand with
+  `& $NonceNode (Join-Path $NonceSkillHome "scripts\auth.mjs")`.
+- Credentials are saved as local profile files. On POSIX systems, the command
+  resets profile directories to mode `0700` and credential files to mode
+  `0600`. On Windows, files stay under the current user's application-data
+  profile and inherit that profile's ACLs; the command does not launch a
+  permission-changing subprocess.
+- Check status with
+  `"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/auth.mjs" status`.
+- Start login with
+  `"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/auth.mjs" login`; it prints an
+  `authorizationUrl` JSON object and exits after the local callback completes.
+  Open that HTTPS URL in a browser. The auth script never launches a browser
+  subprocess.
+- If the redirect cannot reach the local callback server, keep `login` running
+  and complete the exchange from another terminal with
+  `"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/auth.mjs" callback "<callback-url>"`.
+  Quote pasted callback URLs because they can contain shell metacharacters such
+  as `&`. The callback must contain the pending OAuth state; a missing or
+  mismatched state is rejected.
+- Verify the saved token with
+  `"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/auth.mjs" verify`; this initializes
+  the local connection and lists available methods, but does not call any
+  business method.
+- Clear tokens with
+  `"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/auth.mjs" logout`; use `--all` to
+  remove client registration and discovery state too.
 - Store discovery state and client registration metadata separately from tokens.
 - Never print access tokens, refresh tokens, PKCE verifiers, or authorization codes.
-- Support browser launch and manual callback paste flows.
+- Support the printed-link and manual callback paste flows.

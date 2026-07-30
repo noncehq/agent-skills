@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`, `miner_ids`, `params`
 
 Add or remove operator-managed tags on miners. Metadata-only; does not affect mining operation.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchMinerTagsUpdate(input: CreateTaskBatchMinerTagsUpdateInput, options: DestructiveCallOptions): Promise<CreateTaskBatchMinerTagsUpdateOutput>
+```js
+const result = await nonce.createTaskBatchMinerTagsUpdate(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchMinerTagsUpdate --input-file ".nonce/requests/create-task-batch-miner-tags-update.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

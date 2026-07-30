@@ -1,6 +1,5 @@
-import { spawn } from "node:child_process";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { platform, userInfo } from "node:os";
+import { chmod, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { platform } from "node:os";
 import { dirname, join } from "node:path";
 
 import { normalizeProfile } from "./profile.js";
@@ -15,36 +14,6 @@ export interface CredentialStore {
   set(key: string, value: string): Promise<void>;
 }
 
-const SUBPROCESS_TIMEOUT_MS = 30_000;
-
-const run = async (
-  command: string,
-  args: string[],
-): Promise<{ code: number; stdout: string; stderr: string }> =>
-  new Promise((resolve, reject) => {
-    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
-    const timer = setTimeout(() => {
-      child.kill();
-      reject(new Error(`${command} timed out after ${SUBPROCESS_TIMEOUT_MS}ms`));
-    }, SUBPROCESS_TIMEOUT_MS);
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
-    child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
-    child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      reject(error);
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve({
-        code: code ?? 1,
-        stdout: Buffer.concat(stdout).toString("utf8"),
-        stderr: Buffer.concat(stderr).toString("utf8"),
-      });
-    });
-  });
-
 export const getCredentialDirectory = (baseDir: string, profile: string): string => {
   const safeProfile = normalizeProfile(profile);
   return join(baseDir, safeProfile, "credentials");
@@ -58,17 +27,6 @@ const credentialPath = (
 ): string => {
   const safeKey = key.replaceAll(/[^a-zA-Z0-9_.-]/g, "-");
   return join(getCredentialDirectory(baseDir, profile), `${safeKey}.${extension}`);
-};
-
-export const restrictFileToCurrentUser = async (file: string): Promise<void> => {
-  const username = userInfo().username;
-  if (!username) return;
-  const result = await run("icacls", [file, "/inheritance:r", "/grant:r", `${username}:F`]);
-  if (result.code !== 0) {
-    throw new Error(
-      `Failed to restrict Windows credential file permissions: ${result.stderr.trim()}`,
-    );
-  }
 };
 
 export class FileCredentialStore implements CredentialStore {
@@ -96,10 +54,11 @@ export class FileCredentialStore implements CredentialStore {
 
   async set(key: string, value: string): Promise<void> {
     const file = credentialPath(this.baseDir, this.profile, key);
-    await mkdir(dirname(file), { recursive: true, mode: 0o700 });
+    const directory = dirname(file);
+    await mkdir(directory, { recursive: true, mode: 0o700 });
     await writeFile(file, value, { mode: 0o600 });
-    if (platform() === "win32") {
-      await restrictFileToCurrentUser(file);
+    if (platform() !== "win32") {
+      await Promise.all([chmod(directory, 0o700), chmod(file, 0o600)]);
     }
   }
 }

@@ -18,10 +18,16 @@ To list the miners behind any count, call Search Miners (POST) with the predicat
 - stale: status: { in: ["stale"] }
 - abnormal subtype <type> (each key of by_abnormal_type: fan, power, temperature, hashboard, network, firmware, unknown, control_board, pool, low_hashrate): status: { nin: ["stale"] }, anomaly_filters: [<type>]
 
-## Signature
+## Code
 
-```ts
-getMinerStats(input: GetMinerStatsInput, options?: ReadonlyCallOptions): Promise<GetMinerStatsOutput>
+```js
+const result = await nonce.getMinerStats(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call getMinerStats --input-file ".nonce/requests/get-miner-stats.json"
 ```
 
 ## Input

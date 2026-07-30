@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`, `miner_ids`
 
 Mark miner as deleted in inventory. Reversible only via database operation. Use after physical decommission.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchMinerRecordDelete(input: CreateTaskBatchMinerRecordDeleteInput, options: DestructiveCallOptions): Promise<CreateTaskBatchMinerRecordDeleteOutput>
+```js
+const result = await nonce.createTaskBatchMinerRecordDelete(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchMinerRecordDelete --input-file ".nonce/requests/create-task-batch-miner-record-delete.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

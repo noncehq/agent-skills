@@ -10,10 +10,16 @@ List Miner Reboot Events
 
 Returns detected miner reboot events for a farm. Each event includes miner identity (ip, model, make, serial_number) and before/after snapshots (uptime, hashrate, wattage, temperature, anomaly_flags, mining_mode). Hashrate impact averages use T-30~T-5min before reboot and T+15~T+60min after reboot. Filter by miner_id and time range. Default range is last 7 days, max 30 days.
 
-## Signature
+## Code
 
-```ts
-listMinerRebootEvents(input: ListMinerRebootEventsInput, options?: ReadonlyCallOptions): Promise<ListMinerRebootEventsOutput>
+```js
+const result = await nonce.listMinerRebootEvents(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listMinerRebootEvents --input-file ".nonce/requests/list-miner-reboot-events.json"
 ```
 
 ## Input
