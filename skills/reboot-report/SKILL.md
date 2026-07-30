@@ -19,7 +19,7 @@ practical recommendations.
     `https://mcp.nonce.app/mcp`, use those tools and their live schemas directly.
   - **`nonce` skill path:** when Nonce MCP tools are unavailable, activate the
     sibling `nonce` skill and follow its runtime, authentication, schema,
-    task-runner, pagination, and permission instructions.
+    code-client, pagination, compact-output, and permission instructions.
 - Prefer an already connected Nonce MCP path. If both paths are available, use
   MCP unless the user asks for the `nonce` skill. Do not mix paths within one
   report.
@@ -29,7 +29,7 @@ practical recommendations.
   the `nonce` skill from `https://github.com/noncehq/agent-skills`. Do not fall
   back to direct REST calls.
 - This workflow is read-only. Never call a `CreateTaskBatch_*` MCP tool or a
-  `createTaskBatch...` SDK method.
+  `createTaskBatch...` code-client or CLI method.
 
 ## Inputs
 

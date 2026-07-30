@@ -1,13 +1,12 @@
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import type { Socket } from "node:net";
-import { platform as currentPlatform } from "node:os";
+import { parseArgs, type ParseArgsOptionsConfig } from "node:util";
 
 import { auth } from "@modelcontextprotocol/sdk/client/auth.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { OAuthTokens } from "@modelcontextprotocol/sdk/shared/auth.js";
-import { Command } from "commander";
 
 import {
   DEFAULT_CALLBACK_PORT,
@@ -22,53 +21,25 @@ import {
 } from "../runtime/oauth-provider.js";
 import { normalizeProfile } from "../runtime/profile.js";
 import { getCliArgv } from "./argv.js";
+import { runCliMain } from "./cli-main.js";
 import { parseTimeoutMs } from "./cli-options.js";
+import { isMainModule } from "./main-module.js";
 
 export const authCommandName = "nonce auth";
 
 interface SharedAuthOptions {
-  endpoint?: string;
   profile?: string;
 }
 
-interface BrowserLaunchEnvironment {
-  env?: Record<string, string | undefined>;
-  platform?: NodeJS.Platform;
-}
-
 const createProviderFromOptions = (
-  options: SharedAuthOptions & { open?: boolean; port?: string },
+  options: SharedAuthOptions & { port?: string },
 ): LocalNonceOAuthProvider => {
   const port = Number(options.port ?? DEFAULT_CALLBACK_PORT);
   return createOAuthProvider({
-    endpoint: options.endpoint ?? DEFAULT_MCP_ENDPOINT,
-    openBrowser: shouldOpenBrowser(options),
+    endpoint: DEFAULT_MCP_ENDPOINT,
     profile: normalizeProfile(options.profile ?? DEFAULT_PROFILE),
     redirectUrl: `http://127.0.0.1:${port}${OAUTH_CALLBACK_PATH}`,
   });
-};
-
-export const isClearlyHeadlessLinux = (environment: BrowserLaunchEnvironment = {}): boolean => {
-  const env = environment.env ?? process.env;
-  const os = environment.platform ?? currentPlatform();
-  if (os !== "linux") return false;
-  return !(
-    env.BROWSER ||
-    env.DISPLAY ||
-    env.MIR_SOCKET ||
-    env.WAYLAND_DISPLAY ||
-    env.WSL_DISTRO_NAME ||
-    env.WSL_INTEROP
-  );
-};
-
-export const shouldOpenBrowser = (
-  options: { open?: boolean },
-  environment: BrowserLaunchEnvironment = {},
-): boolean => {
-  if (options.open === false) return false;
-  if (options.open === true) return true;
-  return !isClearlyHeadlessLinux(environment);
 };
 
 export const parseCallback = (value: string): { code: string; state?: string } => {
@@ -79,13 +50,18 @@ export const parseCallback = (value: string): { code: string; state?: string } =
   return { code, state: url.searchParams.get("state") ?? undefined };
 };
 
-interface CallbackListener {
+export interface CallbackListener {
   close(): Promise<void>;
   wait(): Promise<{ code: string; state?: string }>;
 }
 
-const createCallbackListener = async (
-  provider: LocalNonceOAuthProvider,
+export type CallbackProvider = Pick<
+  LocalNonceOAuthProvider,
+  "clearExpectedState" | "expectedState" | "redirectUrl"
+>;
+
+export const createCallbackListener = async (
+  provider: CallbackProvider,
   timeoutMs: number,
 ): Promise<CallbackListener> => {
   const redirect = new URL(provider.redirectUrl);
@@ -105,35 +81,47 @@ const createCallbackListener = async (
 
   const wait = new Promise<{ code: string; state?: string }>((resolve, reject) => {
     timer = setTimeout(() => {
-      server.close();
       reject(new Error("Timed out waiting for OAuth callback"));
+      void closeServer();
     }, timeoutMs);
 
     server.on("request", (req, res) => {
-      try {
-        const requestUrl = new URL(req.url ?? "/", provider.redirectUrl);
-        if (requestUrl.pathname !== redirect.pathname) {
-          res.statusCode = 404;
-          res.end("Not found");
-          return;
-        }
+      void (async () => {
+        try {
+          const requestUrl = new URL(req.url ?? "/", provider.redirectUrl);
+          if (requestUrl.pathname !== redirect.pathname) {
+            res.statusCode = 404;
+            res.end("Not found");
+            return;
+          }
 
-        const code = requestUrl.searchParams.get("code");
-        if (!code) {
-          throw new Error("OAuth callback is missing code");
-        }
+          const code = requestUrl.searchParams.get("code");
+          if (!code) {
+            throw new Error("OAuth callback is missing code");
+          }
+          const state = requestUrl.searchParams.get("state") ?? undefined;
+          await consumeState(provider, state);
 
-        res.statusCode = 200;
-        res.setHeader("content-type", "text/plain; charset=utf-8");
-        res.setHeader("connection", "close");
-        res.end("Nonce authentication completed. You can close this window.", () => {
-          resolve({ code, state: requestUrl.searchParams.get("state") ?? undefined });
-          void closeServer();
-        });
-      } catch (error) {
-        reject(error);
-        void closeServer();
-      }
+          res.statusCode = 200;
+          res.setHeader("content-type", "text/plain; charset=utf-8");
+          res.setHeader("connection", "close");
+          res.end(
+            "Nonce callback accepted. Return to the terminal to finish authentication.",
+            () => {
+              resolve({ code, state });
+              void closeServer();
+            },
+          );
+        } catch (error) {
+          res.statusCode = 400;
+          res.setHeader("content-type", "text/plain; charset=utf-8");
+          res.setHeader("connection", "close");
+          res.end("Nonce authentication failed. Return to the terminal for details.", () => {
+            reject(error);
+            void closeServer();
+          });
+        }
+      })();
     });
 
     server.on("connection", (socket) => {
@@ -149,15 +137,21 @@ const createCallbackListener = async (
       }
     });
   });
+  void wait.catch(() => undefined);
 
-  await new Promise<void>((resolve, reject) => {
-    if (server.listening) {
-      resolve();
-      return;
-    }
-    server.once("listening", () => resolve());
-    server.once("error", reject);
-  });
+  try {
+    await new Promise<void>((resolve, reject) => {
+      if (server.listening) {
+        resolve();
+        return;
+      }
+      server.once("listening", () => resolve());
+      server.once("error", reject);
+    });
+  } catch (error) {
+    await closeServer();
+    throw error;
+  }
 
   return {
     close: closeServer,
@@ -165,17 +159,28 @@ const createCallbackListener = async (
   };
 };
 
-const assertState = async (
-  provider: LocalNonceOAuthProvider,
+export const assertState = async (
+  provider: Pick<LocalNonceOAuthProvider, "expectedState">,
   receivedState: string | undefined,
 ): Promise<void> => {
   const expectedState = await provider.expectedState();
-  if (expectedState && receivedState && expectedState !== receivedState) {
+  if (!expectedState) {
+    throw new Error("OAuth callback has no pending login state");
+  }
+  if (!receivedState) {
+    throw new Error("OAuth callback is missing state for the pending login");
+  }
+  if (expectedState !== receivedState) {
     throw new Error("OAuth callback state does not match the pending login state");
   }
-  if (expectedState && !receivedState) {
-    console.error("Warning: OAuth callback did not include a state parameter (CSRF check skipped)");
-  }
+};
+
+export const consumeState = async (
+  provider: Pick<LocalNonceOAuthProvider, "clearExpectedState" | "expectedState">,
+  receivedState: string | undefined,
+): Promise<void> => {
+  await assertState(provider, receivedState);
+  await provider.clearExpectedState();
 };
 
 interface TokenWaitBaseline {
@@ -272,7 +277,7 @@ const status = async (options: SharedAuthOptions): Promise<void> => {
 };
 
 const login = async (
-  options: SharedAuthOptions & { open?: boolean; port?: string; timeoutMs?: string },
+  options: SharedAuthOptions & { port?: string; timeoutMs?: string },
 ): Promise<void> => {
   const provider = createProviderFromOptions(options);
   const timeoutMs = parseTimeoutMs(options.timeoutMs, "--timeout-ms", 180_000);
@@ -304,7 +309,6 @@ const login = async (
       ),
     ]);
     if (callback) {
-      await assertState(provider, callback.state);
       await auth(provider, { authorizationCode: callback.code, serverUrl: provider.endpoint });
     }
     await status(options);
@@ -320,7 +324,7 @@ const callback = async (
 ): Promise<void> => {
   const provider = createProviderFromOptions(options);
   const parsed = parseCallback(callbackValue);
-  await assertState(provider, parsed.state);
+  await consumeState(provider, parsed.state);
   await auth(provider, { authorizationCode: parsed.code, serverUrl: provider.endpoint });
   await status(options);
 };
@@ -329,9 +333,7 @@ const verify = async (options: SharedAuthOptions): Promise<void> => {
   const provider = createProviderFromOptions(options);
   const tokens = await provider.tokens();
   if (!tokens?.access_token && !tokens?.refresh_token) {
-    throw new Error(
-      "Not authenticated. Run `node scripts/auth.mjs login` from the skill directory first.",
-    );
+    throw new Error("Not authenticated. Run the bundled `auth.mjs login` command first.");
   }
 
   const client = new Client({ name: "nonce-skill-smoke", version: "0.0.0" });
@@ -373,55 +375,99 @@ const logout = async (options: SharedAuthOptions & { all?: boolean }): Promise<v
   await status(options);
 };
 
-const addSharedOptions = (command: Command): Command =>
-  command
-    .option("--endpoint <url>", "Nonce endpoint", DEFAULT_MCP_ENDPOINT)
-    .option("--profile <name>", "credential profile", DEFAULT_PROFILE);
+const sharedAuthOptions = {
+  profile: { default: DEFAULT_PROFILE, type: "string" },
+} as const satisfies ParseArgsOptionsConfig;
 
-const main = async (): Promise<void> => {
-  const program = new Command()
-    .name("nonce auth")
-    .description("Authenticate the local Nonce SDK runtime");
+const parseAuthArgs = (
+  args: string[],
+  options: ParseArgsOptionsConfig = {},
+): ReturnType<typeof parseArgs> =>
+  parseArgs({
+    allowPositionals: true,
+    args,
+    options: { ...sharedAuthOptions, ...options },
+    strict: true,
+  });
 
-  addSharedOptions(
-    program.command("status").description("show local authentication status"),
-  ).action(status);
+const sharedAuthValues = (
+  values: Record<string, boolean | string | (boolean | string)[] | undefined>,
+) => ({
+  profile: values.profile as string,
+});
 
-  addSharedOptions(
-    program
-      .command("login")
-      .description("start OAuth login using a local callback server")
-      .option("--no-open", "print the authorization URL instead of opening a browser")
-      .option("--port <port>", "local callback port", String(DEFAULT_CALLBACK_PORT))
-      .option("--timeout-ms <ms>", "callback wait timeout", "180000"),
-  ).action(login);
-
-  addSharedOptions(
-    program
-      .command("callback")
-      .description("exchange a pasted OAuth callback URL or authorization code")
-      .argument("<callback>", "callback URL or authorization code")
-      .option("--port <port>", "local callback port", String(DEFAULT_CALLBACK_PORT)),
-  ).action(callback);
-
-  addSharedOptions(
-    program
-      .command("verify")
-      .description(
-        "verify saved credentials by initializing the local connection and listing methods",
-      ),
-  ).action(verify);
-
-  addSharedOptions(
-    program
-      .command("logout")
-      .description("clear saved OAuth tokens")
-      .option("--all", "also clear client registration and discovery state"),
-  ).action(logout);
-
-  program.parse(getCliArgv());
+const assertPositionals = (command: string, positionals: string[], expected: number): void => {
+  if (positionals.length !== expected) {
+    throw new Error(`${command} expects ${expected} positional argument(s)`);
+  }
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  await main();
+const printHelp = (): void => {
+  console.log(`Nonce authentication
+
+Usage:
+  auth.mjs status [--profile <name>]
+  auth.mjs login [--port <port>] [--timeout-ms <ms>] [--profile <name>]
+  auth.mjs callback <callback-url> [--port <port>] [--profile <name>]
+  auth.mjs verify [--profile <name>]
+  auth.mjs logout [--all] [--profile <name>]`);
+};
+
+const main = async (): Promise<void> => {
+  const [command, ...args] = getCliArgv().slice(2);
+  if (!command || command === "--help" || command === "-h" || command === "help") {
+    printHelp();
+    return;
+  }
+
+  if (command === "status" || command === "verify") {
+    const { positionals, values } = parseAuthArgs(args);
+    assertPositionals(command, positionals, 0);
+    await (command === "status" ? status : verify)(sharedAuthValues(values));
+    return;
+  }
+
+  if (command === "login") {
+    const { positionals, values } = parseAuthArgs(args, {
+      port: { default: String(DEFAULT_CALLBACK_PORT), type: "string" },
+      "timeout-ms": { default: "180000", type: "string" },
+    });
+    assertPositionals(command, positionals, 0);
+    await login({
+      ...sharedAuthValues(values),
+      port: values.port as string,
+      timeoutMs: values["timeout-ms"] as string,
+    });
+    return;
+  }
+
+  if (command === "callback") {
+    const { positionals, values } = parseAuthArgs(args, {
+      port: { default: String(DEFAULT_CALLBACK_PORT), type: "string" },
+    });
+    assertPositionals(command, positionals, 1);
+    await callback(positionals[0] ?? "", {
+      ...sharedAuthValues(values),
+      port: values.port as string,
+    });
+    return;
+  }
+
+  if (command === "logout") {
+    const { positionals, values } = parseAuthArgs(args, {
+      all: { default: false, type: "boolean" },
+    });
+    assertPositionals(command, positionals, 0);
+    await logout({
+      ...sharedAuthValues(values),
+      all: values.all as boolean,
+    });
+    return;
+  }
+
+  throw new Error(`Unknown auth command: ${command}`);
+};
+
+if (isMainModule(import.meta.url)) {
+  await runCliMain(main);
 }

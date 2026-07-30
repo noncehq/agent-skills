@@ -4,8 +4,8 @@ import type { PackUserConfig } from "vite-plus/pack";
 const scriptEntries = {
   auth: "src/skill-scripts/auth.ts",
   "bootstrap-runtime": "src/skill-scripts/bootstrap-runtime.ts",
-  "run-task": "src/skill-scripts/run-task.ts",
-  "skill-runtime": "src/runtime/index.ts",
+  client: "src/skill-scripts/client.ts",
+  nonce: "src/skill-scripts/nonce-cli.ts",
 } as const;
 
 const checkIgnorePatterns = [
@@ -14,12 +14,24 @@ const checkIgnorePatterns = [
   "skills/nonce/assets/tool-schemas.json",
   "skills/nonce/assets/schemas/*.md",
   "skills/nonce/references/tool-signatures.md",
+  "skills/nonce/scripts/client.d.mts",
   "skills/nonce/scripts/**/*.mjs",
   "skills/reboot-report/assets/template.html",
 ];
 
 const createScriptPack = ([name, entry]: [string, string]): PackUserConfig => ({
-  clean: [`skills/nonce/scripts/${name}.mjs`, `skills/nonce/scripts/${name}.js`],
+  clean: [
+    `skills/nonce/scripts/${name}.mjs`,
+    `skills/nonce/scripts/${name}.js`,
+    ...(name === "nonce"
+      ? [
+          "skills/nonce/scripts/run-task.mjs",
+          "skills/nonce/scripts/run-task.js",
+          "skills/nonce/scripts/skill-runtime.mjs",
+          "skills/nonce/scripts/skill-runtime.js",
+        ]
+      : []),
+  ],
   dts: false,
   deps: {
     onlyBundle: false,
@@ -32,6 +44,12 @@ const createScriptPack = ([name, entry]: [string, string]): PackUserConfig => ({
   minify: true,
   name: `nonce-${name}`,
   outDir: "skills/nonce/scripts",
+  plugins: [
+    {
+      name: "trim-generated-trailing-whitespace",
+      renderChunk: (code) => code.replace(/[ \t]+$/gm, ""),
+    },
+  ],
 });
 
 export default defineConfig({

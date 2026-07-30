@@ -2,7 +2,7 @@ import { describe, expect, it } from "vite-plus/test";
 
 import {
   MINIMUM_NODE_MAJOR_VERSION,
-  buildSandboxWriteDiagnostics,
+  buildRuntimeWriteDiagnostics,
   isNodeVersionSupported,
   isSupportedPlatform,
   runtimeCheckExitCode,
@@ -21,6 +21,8 @@ describe("bootstrap runtime helpers", () => {
     expect(isNodeVersionSupported("v22.0.0")).toBe(true);
     expect(isNodeVersionSupported("24.17.0")).toBe(true);
     expect(isNodeVersionSupported("v21.9.0")).toBe(false);
+    expect(isNodeVersionSupported("v25.0.0")).toBe(false);
+    expect(isNodeVersionSupported("v26.5.0")).toBe(false);
     expect(isNodeVersionSupported("not-a-version")).toBe(false);
   });
 
@@ -30,67 +32,50 @@ describe("bootstrap runtime helpers", () => {
     expect(runtimeCheckExitCode({ nodeVersionOk: false, supported: true })).toBe(1);
   });
 
-  it("recommends an external task directory when the installed skill root is not writable", () => {
-    const diagnostics = buildSandboxWriteDiagnostics({
+  it("requires project-owned data to be writable outside the installed skill", () => {
+    const diagnostics = buildRuntimeWriteDiagnostics({
       credentialDirProbe: {
         path: "/state/nonce-skill/test-local/credentials",
         writable: true,
       },
-      fallbackTaskDir: { path: "/tmp/nonce-skill-tasks", writable: true },
-      profile: "test-local",
-      skillRoot: "/readonly/nonce",
-      skillRootProbe: {
-        error: "EACCES",
-        path: "/readonly/nonce/.nonce-skill/diagnostics",
+      dataDirProbe: {
+        error: "EROFS",
+        path: "/project/.nonce",
         writable: false,
       },
+      profile: "test-local",
       stateDirProbe: { path: "/state/nonce-skill", writable: true },
       stateProfileDirProbe: { path: "/state/nonce-skill/test-local", writable: true },
-      taskDirProbe: {
-        error: "EROFS",
-        path: "/readonly/nonce/.nonce-skill/tasks",
-        writable: false,
-      },
     });
 
     expect(diagnostics).toMatchObject({
       credentialDirWritable: true,
+      dataDir: "/project/.nonce",
+      dataDirWritable: false,
       profile: "test-local",
-      recommendedTaskDir: "/tmp/nonce-skill-tasks",
-      skillRootWritable: false,
       stateProfileDirWritable: true,
       stateDirWritable: true,
-      taskDirWritable: false,
     });
-    expect(diagnostics.diagnostics).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          path: "/readonly/nonce/.nonce-skill/diagnostics",
-          severity: "warning",
-        }),
-        expect.objectContaining({
-          path: "/readonly/nonce/.nonce-skill/tasks",
-          remediation: expect.stringContaining("/tmp/nonce-skill-tasks"),
-          severity: "warning",
-        }),
-      ]),
-    );
+    expect(diagnostics.diagnostics).toEqual([
+      expect.objectContaining({
+        path: "/project/.nonce",
+        remediation: expect.stringContaining("--project-dir"),
+        severity: "error",
+      }),
+    ]);
   });
 
   it("reports OAuth credential cache permission failures separately", () => {
-    const diagnostics = buildSandboxWriteDiagnostics({
+    const diagnostics = buildRuntimeWriteDiagnostics({
       credentialDirProbe: {
         error: "EACCES",
         path: "/state/nonce-skill/test-local/credentials",
         writable: false,
       },
-      fallbackTaskDir: { path: "/tmp/nonce-skill-tasks", writable: true },
+      dataDirProbe: { path: "/project/.nonce", writable: true },
       profile: "test-local",
-      skillRoot: "/installed/nonce",
-      skillRootProbe: { path: "/installed/nonce/.nonce-skill/diagnostics", writable: true },
       stateDirProbe: { path: "/state/nonce-skill", writable: true },
       stateProfileDirProbe: { path: "/state/nonce-skill/test-local", writable: true },
-      taskDirProbe: { path: "/installed/nonce/.nonce-skill/tasks", writable: true },
     });
 
     expect(diagnostics).toMatchObject({

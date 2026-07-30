@@ -1,17 +1,32 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
+
 import { describe, expect, it } from "vite-plus/test";
 
 import { createCredentialStore } from "../src/runtime/credential-store.js";
 import { redirectToAuthorizationUrl } from "../src/runtime/oauth-provider.js";
 import { normalizeProfile } from "../src/runtime/profile.js";
 import {
+  assertState,
+  consumeState,
+  createCallbackListener,
   hasCurrentLoginTokens,
-  isClearlyHeadlessLinux,
   parseCallback,
-  shouldOpenBrowser,
 } from "../src/skill-scripts/auth.js";
 import { parseTimeoutMs } from "../src/skill-scripts/cli-options.js";
 
 describe("auth helpers", () => {
+  const reservePort = async (): Promise<number> => {
+    const server = createServer();
+    await new Promise<void>((resolve, reject) => {
+      server.once("error", reject);
+      server.listen(0, "127.0.0.1", resolve);
+    });
+    const port = (server.address() as AddressInfo).port;
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    return port;
+  };
+
   it("parses callback URLs without exposing tokens", () => {
     expect(parseCallback("http://127.0.0.1:33418/callback?code=abc&state=xyz")).toEqual({
       code: "abc",
@@ -23,53 +38,91 @@ describe("auth helpers", () => {
     expect(() => normalizeProfile("../secret")).toThrow("Profile may only contain");
   });
 
-  it("uses browser login unless disabled or the Linux environment is clearly headless", () => {
-    expect(shouldOpenBrowser({ open: false })).toBe(false);
-    expect(shouldOpenBrowser({ open: true }, { env: {}, platform: "linux" })).toBe(true);
-    expect(shouldOpenBrowser({}, { env: {}, platform: "darwin" })).toBe(true);
-    expect(shouldOpenBrowser({}, { env: { DISPLAY: ":0" }, platform: "linux" })).toBe(true);
-    expect(shouldOpenBrowser({}, { env: { BROWSER: "xdg-open" }, platform: "linux" })).toBe(true);
-    expect(
-      shouldOpenBrowser({}, { env: { WSL_INTEROP: "/run/WSL/1_interop" }, platform: "linux" }),
-    ).toBe(true);
-    expect(shouldOpenBrowser({}, { env: {}, platform: "linux" })).toBe(false);
-    expect(isClearlyHeadlessLinux({ env: {}, platform: "linux" })).toBe(true);
+  it("fails closed when an OAuth callback omits or changes the pending state", async () => {
+    const provider = {
+      expectedState: async () => "expected-state",
+    };
+
+    await expect(assertState(provider, undefined)).rejects.toThrow("missing state");
+    await expect(assertState(provider, "other-state")).rejects.toThrow("does not match");
+    await expect(assertState(provider, "expected-state")).resolves.toBeUndefined();
+    await expect(
+      assertState({ expectedState: async () => undefined }, "unexpected-state"),
+    ).rejects.toThrow("no pending login state");
   });
 
-  it("prints the authorization URL when browser launch is skipped or fails", async () => {
-    const skippedLogs: string[] = [];
-    const failedLogs: string[] = [];
-    const warnings: string[] = [];
+  it("consumes a valid OAuth state exactly once", async () => {
+    let expectedState: string | undefined = "expected-state";
+    const provider = {
+      clearExpectedState: async () => {
+        expectedState = undefined;
+      },
+      expectedState: async () => expectedState,
+    };
+
+    await expect(consumeState(provider, "expected-state")).resolves.toBeUndefined();
+    await expect(consumeState(provider, "expected-state")).rejects.toThrow(
+      "no pending login state",
+    );
+  });
+
+  it("validates and consumes callback state before reporting browser success", async () => {
+    let expectedState: string | undefined = "expected-state";
+    const port = await reservePort();
+    const provider = {
+      clearExpectedState: async () => {
+        expectedState = undefined;
+      },
+      expectedState: async () => expectedState,
+      redirectUrl: `http://127.0.0.1:${port}/callback`,
+    };
+    const listener = await createCallbackListener(provider, 2_000);
+    const callback = listener.wait();
+
+    const response = await fetch(
+      `http://127.0.0.1:${port}/callback?code=authorization-code&state=expected-state`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("callback accepted");
+    expect(expectedState).toBeUndefined();
+    await expect(callback).resolves.toEqual({
+      code: "authorization-code",
+      state: "expected-state",
+    });
+  });
+
+  it("returns an error page for a callback with invalid state", async () => {
+    const port = await reservePort();
+    const provider = {
+      clearExpectedState: async () => {},
+      expectedState: async () => "expected-state",
+      redirectUrl: `http://127.0.0.1:${port}/callback`,
+    };
+    const listener = await createCallbackListener(provider, 2_000);
+    const callbackError = listener.wait().catch((error: unknown) => error);
+
+    const response = await fetch(
+      `http://127.0.0.1:${port}/callback?code=authorization-code&state=wrong-state`,
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toContain("authentication failed");
+    await expect(callbackError).resolves.toEqual(expect.any(Error));
+  });
+
+  it("prints the authorization URL without launching a subprocess", async () => {
+    const logs: string[] = [];
     const authorizationUrl = new URL("https://example.test/oauth");
 
     await redirectToAuthorizationUrl(authorizationUrl, {
-      log: (message) => skippedLogs.push(message),
-      openAuthorizationUrl: async () => {
-        throw new Error("should not open");
-      },
-      openBrowser: false,
-      warn: (message) => warnings.push(message),
-    });
-    await redirectToAuthorizationUrl(authorizationUrl, {
-      log: (message) => failedLogs.push(message),
-      openAuthorizationUrl: async () => {
-        throw new Error("no browser");
-      },
-      openBrowser: true,
-      warn: (message) => warnings.push(message),
+      log: (message) => logs.push(message),
     });
 
-    expect(JSON.parse(skippedLogs[0] ?? "{}")).toMatchObject({
+    expect(JSON.parse(logs[0] ?? "{}")).toEqual({
       authorizationUrl: "https://example.test/oauth",
       browserOpen: "skipped",
     });
-    expect(JSON.parse(failedLogs[0] ?? "{}")).toMatchObject({
-      authorizationUrl: "https://example.test/oauth",
-      browserOpen: "failed",
-      reason: "no browser",
-    });
-    expect(warnings).toHaveLength(1);
-    expect(warnings[0]).toContain("failed to open browser");
   });
 
   it("only treats tokens saved for the current login as manual callback success", () => {

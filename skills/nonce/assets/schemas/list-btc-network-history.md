@@ -8,10 +8,16 @@ List BTC Network History
 
 Returns historical BTC network reference data as a time-series wrapper. Each snapshot contains bitcoin price, hashprice (USD and BTC), network hashrate, and difficulty. Default range is the last 7 days.
 
-## Signature
+## Code
 
-```ts
-listBtcNetworkHistory(input?: ListBtcNetworkHistoryInput, options?: ReadonlyCallOptions): Promise<ListBtcNetworkHistoryOutput>
+```js
+const result = await nonce.listBtcNetworkHistory(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listBtcNetworkHistory --input-file ".nonce/requests/list-btc-network-history.json"
 ```
 
 ## Input

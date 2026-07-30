@@ -12,10 +12,16 @@ Returns historical metrics for a farm. Use from_date and to_date query parameter
 
 Range limits: `hour` up to 7 days, `day` up to 90 days.
 
-## Signature
+## Code
 
-```ts
-listFarmMetricsHistory(input: ListFarmMetricsHistoryInput, options?: ReadonlyCallOptions): Promise<ListFarmMetricsHistoryOutput>
+```js
+const result = await nonce.listFarmMetricsHistory(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listFarmMetricsHistory --input-file ".nonce/requests/list-farm-metrics-history.json"
 ```
 
 ## Input

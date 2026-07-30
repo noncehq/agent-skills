@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`, `miner_ids`
 
 Reboot miner ASIC. Brief downtime. Use after firmware update or when miner is unresponsive.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchMinerSystemReboot(input: CreateTaskBatchMinerSystemRebootInput, options: DestructiveCallOptions): Promise<CreateTaskBatchMinerSystemRebootOutput>
+```js
+const result = await nonce.createTaskBatchMinerSystemReboot(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchMinerSystemReboot --input-file ".nonce/requests/create-task-batch-miner-system-reboot.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

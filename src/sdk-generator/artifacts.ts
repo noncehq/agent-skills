@@ -43,6 +43,7 @@ export interface GeneratedTool {
 }
 
 export interface GeneratedArtifacts {
+  clientTypes: string;
   manifest: Record<string, unknown>;
   methodSchemaFiles: Map<string, string>;
   referenceMarkdown: string;
@@ -169,19 +170,6 @@ const header = `/* eslint-disable */
 // Source of truth: checked Nonce method definitions; supplemental schemas only fill missing metadata.
 `;
 
-const optionsType = (tool: GeneratedTool): string =>
-  tool.destructive ? "DestructiveCallOptions" : "ReadonlyCallOptions";
-
-const methodSignature = (tool: GeneratedTool): string => {
-  const inputType = `${tool.typeBase}Input`;
-  const outputType = `${tool.typeBase}Output`;
-  const input = tool.inputOptional ? `input?: ${inputType}` : `input: ${inputType}`;
-  const options = tool.destructive
-    ? `options: ${optionsType(tool)}`
-    : `options?: ${optionsType(tool)}`;
-  return `  ${tool.methodName}(${input}, ${options}): Promise<${outputType}>`;
-};
-
 const requiredInputSummary = (tool: GeneratedTool): string | undefined => {
   const required = requiredProperties(tool.inputSchema);
   if (required.length === 0) return undefined;
@@ -239,7 +227,56 @@ const dedupeTypeScriptDeclarations = (sources: string[]): string[] => {
   return declarations;
 };
 
-const renderSignatures = async (tools: GeneratedTool[]): Promise<string> => {
+const renderClientInterface = (tools: GeneratedTool[]): string => `export interface NonceClient {
+  close(): Promise<void>
+${tools
+  .map((tool) => {
+    const input = tool.inputOptional
+      ? tool.destructive
+        ? `input: ${tool.typeBase}Input | undefined`
+        : `input?: ${tool.typeBase}Input`
+      : `input: ${tool.typeBase}Input`;
+    const options = tool.destructive
+      ? "options: NonceDestructiveCallOptions"
+      : "options?: NonceReadonlyCallOptions";
+    return `  ${tool.methodName}(${input}, ${options}): Promise<${tool.typeBase}Output>`;
+  })
+  .join("\n")}
+}`;
+
+const renderSharedTypes = (): string => `export interface NonceCallOptions {
+  signal?: AbortSignal
+  timeoutMs?: number
+}
+
+export type NonceReadonlyCallOptions = NonceCallOptions
+
+export interface NonceDestructiveCallOptions extends NonceCallOptions {
+  confirmDestructive: true
+  confirmation: string
+}
+
+export interface NonceClientOptions {
+  allowDestructive?: boolean
+  profile?: string
+}`;
+
+const renderMethodSignatures = (tools: GeneratedTool[]): string =>
+  `export interface NonceMethodSignatures {
+${tools
+  .map(
+    (tool) => `  ${tool.methodName}: {
+    destructive: ${tool.destructive}
+    input: ${tool.typeBase}Input
+    output: ${tool.typeBase}Output
+  }`,
+  )
+  .join("\n")}
+}`;
+
+const renderTypeArtifacts = async (
+  tools: GeneratedTool[],
+): Promise<{ clientTypes: string; signatures: string }> => {
   const declarationSources = (
     await Promise.all(
       tools.map(async (tool) => [
@@ -251,35 +288,40 @@ const renderSignatures = async (tools: GeneratedTool[]): Promise<string> => {
     )
   ).flat();
   const declarations = dedupeTypeScriptDeclarations(declarationSources);
-
   const definitions = tools.map((tool) => ({
     destructive: tool.destructive,
     methodName: tool.methodName,
     name: tool.name,
     readOnly: tool.readOnly,
   }));
+  const sharedTypes = renderSharedTypes();
+  const clientInterface = renderClientInterface(tools);
+  const methodSignatures = renderMethodSignatures(tools);
 
-  return `${header}
-export interface CallOptions {
-  signal?: AbortSignal
-  timeoutMs?: number
-}
+  return {
+    clientTypes: `${header}
+// Type reference for project code that imports scripts/client.mjs.
 
-export type ReadonlyCallOptions = CallOptions
+${declarations.join("\n")}
+${sharedTypes}
 
-export interface DestructiveCallOptions extends CallOptions {
-  confirmDestructive: true
-  confirmation: string
-}
+${clientInterface}
 
+export declare function createNonceClient(options?: NonceClientOptions): Promise<NonceClient>
+
+${methodSignatures}
+`,
+    signatures: `${header}
 ${declarations.join("\n")}
 export const nonceToolDefinitions = ${JSON.stringify(definitions, null, 2)} as const
 
-export interface NonceClient {
-  close(): Promise<void>
-${tools.map(methodSignature).join("\n")}
-}
-`;
+${sharedTypes}
+
+${clientInterface}
+
+${methodSignatures}
+`,
+  };
 };
 
 const methodFileName = (methodName: string): string =>
@@ -293,13 +335,6 @@ const renderMethodSignatureFile = async (tool: GeneratedTool): Promise<string> =
     schemaToTypeScriptDeclaration(`${tool.typeBase}Output`, tool.outputSchema),
   ]);
   const required = requiredProperties(tool.inputSchema);
-
-  const inputType = `${tool.typeBase}Input`;
-  const outputType = `${tool.typeBase}Output`;
-  const input = tool.inputOptional ? `input?: ${inputType}` : `input: ${inputType}`;
-  const options = tool.destructive
-    ? `options: DestructiveCallOptions`
-    : `options?: ReadonlyCallOptions`;
 
   const markers = [
     tool.readOnly ? "read-only" : undefined,
@@ -317,9 +352,22 @@ const renderMethodSignatureFile = async (tool: GeneratedTool): Promise<string> =
   }
 
   lines.push(
-    "## Signature",
+    "## Code",
     "",
-    ...renderTypeScriptBlock(`${tool.methodName}(${input}, ${options}): Promise<${outputType}>`),
+    "```js",
+    tool.destructive
+      ? `const result = await nonce.${tool.methodName}(input, {\n  confirmDestructive: true,\n  confirmation: "<confirmed target and effect>",\n})`
+      : `const result = await nonce.${tool.methodName}(input)`,
+    "```",
+    "",
+  );
+
+  lines.push(
+    "## CLI",
+    "",
+    "```bash",
+    `"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call ${tool.methodName} --input-file ".nonce/requests/${methodFileName(tool.methodName).replace(/\.md$/, ".json")}"${tool.destructive ? ' --allow-destructive --confirmation "<confirmed target and effect>"' : ""}`,
+    "```",
     "",
     "## Input",
     "",
@@ -346,42 +394,68 @@ const renderReferenceMarkdown = (
     `- Default endpoint: \`${options.mcpEndpoint}\``,
     `- Method count: ${tools.length}`,
     "",
-    "This file is a compact index. Before writing JavaScript task code, read the method's schema file under `assets/schemas/` for the full `<MethodType>Input` / `<MethodType>Output` interfaces.",
+    "This file is a compact index. Before calling a method, read its schema file under `assets/schemas/` for the full `<MethodType>Input` / `<MethodType>Output` interfaces.",
     "",
-    "Do not call schema/reference endpoints for business operations. Runtime calls must go through the local SDK.",
+    "Do not call schema/reference endpoints for business operations. Runtime calls should go through the bundled `scripts/client.mjs` module from project-local code under `.nonce/code/`. Use `scripts/nonce.mjs` only for a one-off call or diagnosis.",
     "",
-    "Before authenticating, run `node scripts/bootstrap-runtime.mjs --json` with `--profile` when needed. Treat `stateDirWritable: false`, `stateProfileDirWritable: false`, or `credentialDirWritable: false` as auth blockers because OAuth state and credential cache files cannot be written.",
+    'Before authenticating, run `node "$NONCE_SKILL_HOME/scripts/bootstrap-runtime.mjs" --project-dir "$PWD" --json` with `--profile` when needed. Assign the reported `nodePath` to `NONCE_NODE` and use that exact executable for auth and method calls. Treat `stateDirWritable: false`, `stateProfileDirWritable: false`, `credentialDirWritable: false`, or `dataDirWritable: false` as blockers.',
     "",
-    "Task files can live under `<installed skill root>/.nonce-skill/tasks/` when the runtime check reports `taskDirWritable: true`, or under `recommendedTaskDir` / another writable directory when the installed skill root is read-only.",
+    "Store agent-authored code and reusable data under the project-owned `.nonce/` directory, never under the installed skill root. Skill updates may replace the entire installed directory.",
     "",
-    "Import the runtime SDK from the runner-provided `NONCE_SKILL_RUNTIME_URL` so task files do not depend on their filesystem location. Runner task code should receive profile and endpoint selection from runner flags rather than hardcoding them.",
+    "The client keeps OAuth credentials internal and fixes the endpoint to `https://mcp.nonce.app/mcp`. Create one client, compose the required MCP calls in the same process, filter or aggregate their results in code, and close the client in `finally`.",
     "",
     "```js",
-    "const { createNonceClient } = await import(process.env.NONCE_SKILL_RUNTIME_URL);",
+    'import { join } from "node:path"',
+    'import { pathToFileURL } from "node:url"',
     "",
-    "const client = await createNonceClient();",
+    "const skillHome = process.argv[2]",
+    'if (!skillHome) throw new Error("Pass NONCE_SKILL_HOME as the first script argument")',
+    'const clientUrl = pathToFileURL(join(skillHome, "scripts", "client.mjs")).href',
+    "const { createNonceClient } = await import(clientUrl)",
+    "const nonce = await createNonceClient()",
+    "",
     "try {",
-    '  const farms = await client.listFarms({ workspace_id: "..." });',
-    "  console.log(JSON.stringify({ farms }));",
+    '  const result = await nonce.listFarms({ workspace_id: "..." })',
+    "  const rows = result?.data?.data ?? result?.data ?? []",
+    "  console.log(JSON.stringify({ farmCount: rows.length }))",
     "} finally {",
-    "  await client.close();",
+    "  await nonce.close()",
     "}",
     "```",
     "",
+    "Log only the compact result needed for the next decision. Do not print full MCP responses. Keep large intermediate data inside the process or write it under `.nonce/` when it must persist.",
+    "",
+    "The fixed CLI remains available for one-off calls:",
+    "",
+    "```bash",
+    '"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listFarms \\',
+    '  --input-file ".nonce/requests/list-farms.json" \\',
+    '  --output ".nonce/results/list-farms.json"',
+    "```",
+    "",
+    'For a destructive method, first present the exact target and expected effect and obtain explicit user confirmation. In code, create the client with `allowDestructive: true` and pass `confirmDestructive: true` plus the confirmation to that one method call. In the CLI, add both `--allow-destructive` and `--confirmation "<confirmed target and effect>"`.',
+    "",
     "## Shared Types",
+    "",
+    "The complete generated client declaration is available at `scripts/client.d.mts`. These are the shared options used by every method:",
     "",
     ...renderTypeScriptBlock(
       [
-        "interface CallOptions {",
+        "interface NonceCallOptions {",
         "  signal?: AbortSignal",
         "  timeoutMs?: number",
         "}",
         "",
-        "type ReadonlyCallOptions = CallOptions",
+        "type NonceReadonlyCallOptions = NonceCallOptions",
         "",
-        "interface DestructiveCallOptions extends CallOptions {",
+        "interface NonceDestructiveCallOptions extends NonceCallOptions {",
         "  confirmDestructive: true",
         "  confirmation: string",
+        "}",
+        "",
+        "interface NonceClientOptions {",
+        "  allowDestructive?: boolean",
+        "  profile?: string",
         "}",
       ].join("\n"),
     ),
@@ -391,12 +465,6 @@ const renderReferenceMarkdown = (
   ];
 
   for (const tool of tools) {
-    const input = tool.inputOptional
-      ? `input?: ${tool.typeBase}Input`
-      : `input: ${tool.typeBase}Input`;
-    const options = tool.destructive
-      ? `options: DestructiveCallOptions`
-      : `options?: ReadonlyCallOptions`;
     const markers = [
       tool.readOnly ? "read-only" : undefined,
       tool.destructive ? "destructive" : undefined,
@@ -404,7 +472,7 @@ const renderReferenceMarkdown = (
     ].filter(Boolean);
     const fileName = methodFileName(tool.methodName);
     lines.push(
-      `- \`${tool.methodName}(${input}, ${options}): Promise<${tool.typeBase}Output>\` — ${tool.name} (${markers.join(", ")}) → [schemas/${fileName}](../assets/schemas/${fileName})`,
+      `- \`${tool.methodName}\` — ${tool.name} (${markers.join(", ")}) → [schemas/${fileName}](../assets/schemas/${fileName})`,
     );
   }
 
@@ -438,8 +506,10 @@ export const generateArtifacts = async (
     ]),
   );
   const methodSchemaFiles = new Map(methodSchemaFileEntries);
+  const typeArtifacts = await renderTypeArtifacts(tools);
 
   return {
+    clientTypes: typeArtifacts.clientTypes,
     manifest: {
       mcpEndpoint: options.mcpEndpoint,
       openapiOperationCount: options.openapiOperationCount,
@@ -464,7 +534,7 @@ export const generateArtifacts = async (
         ]),
       ),
     },
-    signatures: await renderSignatures(tools),
+    signatures: typeArtifacts.signatures,
     tools,
   };
 };

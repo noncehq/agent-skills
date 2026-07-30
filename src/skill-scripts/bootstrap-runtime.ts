@@ -1,22 +1,21 @@
 import { randomUUID } from "node:crypto";
-import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
 import { mkdir, rm, rmdir, writeFile } from "node:fs/promises";
-import { homedir, platform, tmpdir } from "node:os";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-
-import { Command } from "commander";
+import { platform } from "node:os";
+import { join, resolve } from "node:path";
+import { parseArgs } from "node:util";
 
 import { getCredentialDirectory } from "../runtime/credential-store.js";
 import { DEFAULT_MCP_ENDPOINT, DEFAULT_PROFILE } from "../runtime/constants.js";
 import { normalizeProfile } from "../runtime/profile.js";
 import { getStateBaseDir, getStateProfileDir } from "../runtime/state-store.js";
 import { getCliArgv } from "./argv.js";
+import { runCliMain } from "./cli-main.js";
+import { isMainModule } from "./main-module.js";
 
-export const bootstrapCommandName = "nonce bootstrap-runtime";
-export const EXPECTED_NODE_VERSION = "24.17.0";
+export const bootstrapCommandName = "nonce runtime-check";
 export const MINIMUM_NODE_MAJOR_VERSION = 22;
+export const SUPPORTED_NODE_MAJOR_VERSIONS = [22, 24] as const;
 
 export const runtimeCheckExitCode = (result: {
   nodeVersionOk: boolean;
@@ -28,7 +27,7 @@ export const isSupportedPlatform = (os: NodeJS.Platform): boolean =>
 
 export const isNodeVersionSupported = (version: string): boolean => {
   const major = Number(version.replace(/^v/, "").split(".")[0]);
-  return Number.isInteger(major) && major >= MINIMUM_NODE_MAJOR_VERSION;
+  return SUPPORTED_NODE_MAJOR_VERSIONS.some((supported) => supported === major);
 };
 
 export interface WriteProbeResult {
@@ -41,46 +40,35 @@ export interface WriteDiagnostic {
   message: string;
   path: string;
   remediation: string;
-  severity: "error" | "warning";
+  severity: "error";
 }
 
-export interface SandboxWriteDiagnostics {
+export interface RuntimeWriteDiagnostics {
   credentialDir: string;
   credentialDirWritable: boolean;
+  dataDir: string;
+  dataDirWritable: boolean;
   diagnostics: WriteDiagnostic[];
   profile: string;
-  recommendedTaskDir?: string;
-  skillRoot: string;
-  skillRootWritable: boolean;
   stateDir: string;
   stateDirWritable: boolean;
   stateProfileDir: string;
   stateProfileDirWritable: boolean;
-  taskDir: string;
-  taskDirWritable: boolean;
 }
 
-export interface SandboxWriteProbeSet {
+export interface RuntimeWriteProbeSet {
   credentialDirProbe: WriteProbeResult;
-  fallbackTaskDir: WriteProbeResult;
+  dataDirProbe: WriteProbeResult;
   profile: string;
-  skillRoot: string;
-  skillRootProbe: WriteProbeResult;
   stateDirProbe: WriteProbeResult;
   stateProfileDirProbe: WriteProbeResult;
-  taskDirProbe: WriteProbeResult;
 }
-
-export const resolveInstalledSkillRoot = (): string =>
-  dirname(dirname(fileURLToPath(import.meta.url)));
 
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
 const probeWritableDirectory = async (directory: string): Promise<WriteProbeResult> => {
   const directoryExisted = existsSync(directory);
-  const parent = dirname(directory);
-  const parentExisted = existsSync(parent);
   const probeFile = join(directory, `.nonce-write-test-${process.pid}-${randomUUID()}`);
 
   try {
@@ -88,46 +76,31 @@ const probeWritableDirectory = async (directory: string): Promise<WriteProbeResu
     await writeFile(probeFile, "ok\n", { flag: "wx", mode: 0o600 });
     await rm(probeFile, { force: true });
     if (!directoryExisted) await rmdir(directory).catch(() => undefined);
-    if (!parentExisted) await rmdir(parent).catch(() => undefined);
     return { path: directory, writable: true };
   } catch (error) {
     await rm(probeFile, { force: true }).catch(() => undefined);
     if (!directoryExisted) await rmdir(directory).catch(() => undefined);
-    if (!parentExisted) await rmdir(parent).catch(() => undefined);
     return { error: errorMessage(error), path: directory, writable: false };
   }
 };
 
 const failureDetail = (probe: WriteProbeResult): string => (probe.error ? ` ${probe.error}` : "");
 
-export const buildSandboxWriteDiagnostics = ({
+export const buildRuntimeWriteDiagnostics = ({
   credentialDirProbe,
-  fallbackTaskDir,
+  dataDirProbe,
   profile,
-  skillRoot,
-  skillRootProbe,
   stateDirProbe,
   stateProfileDirProbe,
-  taskDirProbe,
-}: SandboxWriteProbeSet): SandboxWriteDiagnostics => {
+}: RuntimeWriteProbeSet): RuntimeWriteDiagnostics => {
   const diagnostics: WriteDiagnostic[] = [];
-
-  if (!skillRootProbe.writable) {
-    diagnostics.push({
-      message: `Cannot write runtime diagnostics under the installed skill root.${failureDetail(skillRootProbe)}`,
-      path: skillRootProbe.path,
-      remediation:
-        "Keep using the installed skill root for scripts, but create task files in an external writable directory.",
-      severity: "warning",
-    });
-  }
 
   if (!stateDirProbe.writable) {
     diagnostics.push({
       message: `Cannot write Nonce state base directory.${failureDetail(stateDirProbe)}`,
       path: stateDirProbe.path,
       remediation:
-        "Set XDG_STATE_HOME to a writable directory before auth, or on Windows set APPDATA to a writable profile directory.",
+        "Set XDG_STATE_HOME to a writable directory, or on Windows set APPDATA to a writable profile directory.",
       severity: "error",
     });
   }
@@ -137,7 +110,7 @@ export const buildSandboxWriteDiagnostics = ({
       message: `Cannot write OAuth state files for profile ${profile}.${failureDetail(stateProfileDirProbe)}`,
       path: stateProfileDirProbe.path,
       remediation:
-        "Fix this profile directory's permissions or set XDG_STATE_HOME/APPDATA to a writable directory before auth.",
+        "Fix this profile directory's permissions or set XDG_STATE_HOME/APPDATA to a writable directory.",
       severity: "error",
     });
   }
@@ -147,174 +120,99 @@ export const buildSandboxWriteDiagnostics = ({
       message: `Cannot write OAuth credential cache for profile ${profile}.${failureDetail(credentialDirProbe)}`,
       path: credentialDirProbe.path,
       remediation:
-        "Fix this credentials directory's permissions or set XDG_STATE_HOME/APPDATA to a writable directory before auth.",
+        "Fix this credentials directory's permissions or set XDG_STATE_HOME/APPDATA to a writable directory.",
       severity: "error",
     });
   }
 
-  if (!taskDirProbe.writable) {
+  if (!dataDirProbe.writable) {
     diagnostics.push({
-      message: `Cannot write task files under the default task directory.${failureDetail(taskDirProbe)}`,
-      path: taskDirProbe.path,
-      remediation: fallbackTaskDir.writable
-        ? `Create task files under ${fallbackTaskDir.path} and run them with an absolute path or --cwd.`
-        : "Create task files in another writable directory and run them with an absolute path or --cwd.",
-      severity: fallbackTaskDir.writable ? "warning" : "error",
+      message: `Cannot write project-owned Nonce data.${failureDetail(dataDirProbe)}`,
+      path: dataDirProbe.path,
+      remediation: "Choose a writable project directory with --project-dir.",
+      severity: "error",
     });
   }
 
   return {
     credentialDir: credentialDirProbe.path,
     credentialDirWritable: credentialDirProbe.writable,
+    dataDir: dataDirProbe.path,
+    dataDirWritable: dataDirProbe.writable,
     diagnostics,
     profile,
-    recommendedTaskDir: taskDirProbe.writable
-      ? taskDirProbe.path
-      : fallbackTaskDir.writable
-        ? fallbackTaskDir.path
-        : undefined,
-    skillRoot,
-    skillRootWritable: skillRootProbe.writable,
     stateDir: stateDirProbe.path,
     stateDirWritable: stateDirProbe.writable,
     stateProfileDir: stateProfileDirProbe.path,
     stateProfileDirWritable: stateProfileDirProbe.writable,
-    taskDir: taskDirProbe.path,
-    taskDirWritable: taskDirProbe.writable,
   };
 };
 
-export const createSandboxWriteDiagnostics = async (
-  skillRoot = resolveInstalledSkillRoot(),
+export const createRuntimeWriteDiagnostics = async (
+  projectDir = process.cwd(),
   profile = DEFAULT_PROFILE,
-): Promise<SandboxWriteDiagnostics> => {
+): Promise<RuntimeWriteDiagnostics> => {
   const normalizedProfile = normalizeProfile(profile);
   const stateDir = getStateBaseDir();
   const stateProfileDir = getStateProfileDir(stateDir, normalizedProfile);
   const credentialDir = getCredentialDirectory(stateDir, normalizedProfile);
-  const taskDir = join(skillRoot, ".nonce-skill", "tasks");
-  const fallbackTaskDir = join(tmpdir(), "nonce-skill-tasks");
-  const [skillRootProbe, stateDirProbe, taskDirProbe, fallbackTaskDirProbe] = await Promise.all([
-    probeWritableDirectory(join(skillRoot, ".nonce-skill", "diagnostics")),
-    probeWritableDirectory(stateDir),
-    probeWritableDirectory(taskDir),
-    probeWritableDirectory(fallbackTaskDir),
-  ]);
+  const dataDir = join(resolve(projectDir), ".nonce");
+  const stateDirProbe = await probeWritableDirectory(stateDir);
   const stateProfileDirProbe = await probeWritableDirectory(stateProfileDir);
   const credentialDirProbe = await probeWritableDirectory(credentialDir);
+  const dataDirProbe = await probeWritableDirectory(dataDir);
 
-  return buildSandboxWriteDiagnostics({
+  return buildRuntimeWriteDiagnostics({
     credentialDirProbe,
-    fallbackTaskDir: fallbackTaskDirProbe,
+    dataDirProbe,
     profile: normalizedProfile,
-    skillRoot,
-    skillRootProbe,
     stateDirProbe,
     stateProfileDirProbe,
-    taskDirProbe,
   });
 };
-
-const resolveVpCommand = (): string => {
-  const executable = platform() === "win32" ? "vp.cmd" : "vp";
-  const home = process.env.VP_HOME ?? join(homedir(), ".vite-plus");
-  const managedVp = join(home, "bin", executable);
-  return existsSync(managedVp) ? managedVp : "vp";
-};
-
-const SUBPROCESS_TIMEOUT_MS = 30_000;
-
-const run = async (
-  command: string,
-  args: string[],
-): Promise<{ code: number; stdout: string; stderr: string }> =>
-  new Promise((resolve) => {
-    const child = spawn(command, args, { stdio: ["ignore", "pipe", "pipe"] });
-    const timer = setTimeout(() => {
-      child.kill();
-      resolve({
-        code: 124,
-        stdout: "",
-        stderr: `${command} timed out after ${SUBPROCESS_TIMEOUT_MS}ms`,
-      });
-    }, SUBPROCESS_TIMEOUT_MS);
-    const stdout: Buffer[] = [];
-    const stderr: Buffer[] = [];
-    child.stdout.on("data", (chunk) => stdout.push(Buffer.from(chunk)));
-    child.stderr.on("data", (chunk) => stderr.push(Buffer.from(chunk)));
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      resolve({ code: 127, stdout: "", stderr: error.message });
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve({
-        code: code ?? 1,
-        stdout: Buffer.concat(stdout).toString("utf8"),
-        stderr: Buffer.concat(stderr).toString("utf8"),
-      });
-    });
-  });
 
 const main = async (): Promise<void> => {
-  const program = new Command()
-    .name("nonce bootstrap-runtime")
-    .description("Inspect the local runtime required by the Nonce skill")
-    .option("--profile <name>", "credential profile used for auth cache checks", DEFAULT_PROFILE)
-    .option("--json", "print JSON output", false);
-
-  program.parse(getCliArgv());
-  const options = program.opts<{ json: boolean; profile: string }>();
+  const { positionals, values } = parseArgs({
+    allowPositionals: true,
+    args: getCliArgv().slice(2),
+    options: {
+      json: { default: false, type: "boolean" },
+      profile: { default: DEFAULT_PROFILE, type: "string" },
+      "project-dir": { default: process.cwd(), type: "string" },
+    },
+    strict: true,
+  });
+  if (positionals.length > 0) {
+    throw new Error(`Unexpected runtime-check arguments: ${positionals.join(" ")}`);
+  }
+  const options = {
+    json: values.json,
+    profile: values.profile,
+    projectDir: values["project-dir"],
+  };
   const os = platform();
   const supported = isSupportedPlatform(os);
-  const vpCommand = resolveVpCommand();
-  const expectedNodeVersion = EXPECTED_NODE_VERSION;
-  const vpVersion = await run(vpCommand, ["--version"]);
-  const envCurrent = await run(vpCommand, ["env", "current", "--json"]);
-  const envDoctor = await run(vpCommand, ["env", "doctor"]);
-  const envInfo =
-    envCurrent.code === 0
-      ? (JSON.parse(envCurrent.stdout) as { node_path?: string; version?: string })
-      : {};
-  const vpManagedNodeVersionOk = envInfo.version === expectedNodeVersion;
-  const writeDiagnostics = await createSandboxWriteDiagnostics(
-    resolveInstalledSkillRoot(),
-    options.profile,
-  );
-
+  const writeDiagnostics = await createRuntimeWriteDiagnostics(options.projectDir, options.profile);
   const result = {
     command: bootstrapCommandName,
     credentialDir: writeDiagnostics.credentialDir,
     credentialDirWritable: writeDiagnostics.credentialDirWritable,
+    dataDir: writeDiagnostics.dataDir,
+    dataDirWritable: writeDiagnostics.dataDirWritable,
     diagnostics: writeDiagnostics.diagnostics,
     endpoint: DEFAULT_MCP_ENDPOINT,
-    minimumNodeMajorVersion: MINIMUM_NODE_MAJOR_VERSION,
     node: process.version,
     nodePath: process.execPath,
     nodeVersionOk: isNodeVersionSupported(process.version),
     platform: os,
     profile: writeDiagnostics.profile,
-    recommendedRunner: "node",
-    recommendedTaskDir: writeDiagnostics.recommendedTaskDir,
-    skillRoot: writeDiagnostics.skillRoot,
-    skillRootWritable: writeDiagnostics.skillRootWritable,
+    recommendedRunner: process.execPath,
     stateDir: writeDiagnostics.stateDir,
     stateDirWritable: writeDiagnostics.stateDirWritable,
     stateProfileDir: writeDiagnostics.stateProfileDir,
     stateProfileDirWritable: writeDiagnostics.stateProfileDirWritable,
     supported,
-    taskDir: writeDiagnostics.taskDir,
-    taskDirWritable: writeDiagnostics.taskDirWritable,
-    vp: vpVersion.stdout.trim(),
-    vpCommand,
-    vpEnvDoctorOk: envDoctor.code === 0,
-    vpEnvCurrent: {
-      expectedVersion: expectedNodeVersion,
-      nodePath: envInfo.node_path,
-      version: envInfo.version,
-    },
-    vpEnvCurrentOk: envCurrent.code === 0,
-    vpManagedNodeVersionOk,
+    supportedNodeMajorVersions: SUPPORTED_NODE_MAJOR_VERSIONS,
   };
   const exitCode = runtimeCheckExitCode(result);
 
@@ -328,24 +226,15 @@ const main = async (): Promise<void> => {
   console.log(
     `Platform: ${result.platform}${result.supported ? "" : " (supported platforms: macOS, Linux, Windows)"}`,
   );
-  console.log(`Vite+: ${result.vp || "not found"}`);
   console.log(
-    `Node: ${result.node} (${result.nodePath})${result.nodeVersionOk ? "" : ` (expected >=${result.minimumNodeMajorVersion})`}`,
+    `Node: ${result.node} (${result.nodePath})${result.nodeVersionOk ? "" : ` (supported majors: ${result.supportedNodeMajorVersions.join(", ")})`}`,
   );
-  console.log(
-    `Vite+ Node version: ${result.vpEnvCurrent.version ?? "unknown"}${result.vpManagedNodeVersionOk ? "" : ` (recommended ${result.vpEnvCurrent.expectedVersion ?? "unknown"})`}`,
-  );
-  console.log(`vp env current: ${result.vpEnvCurrentOk ? "ok" : "failed"}`);
-  console.log(`vp env doctor: ${result.vpEnvDoctorOk ? "ok" : "failed"}`);
   console.log(`Recommended runner: ${result.recommendedRunner}`);
   console.log(`Profile: ${result.profile}`);
-  console.log(`State base directory writable: ${result.stateDirWritable ? "yes" : "no"}`);
   console.log(`OAuth state directory writable: ${result.stateProfileDirWritable ? "yes" : "no"}`);
   console.log(`OAuth credential cache writable: ${result.credentialDirWritable ? "yes" : "no"}`);
-  console.log(`Task directory writable: ${result.taskDirWritable ? "yes" : "no"}`);
-  if (result.recommendedTaskDir) {
-    console.log(`Recommended task directory: ${result.recommendedTaskDir}`);
-  }
+  console.log(`Project data directory: ${result.dataDir}`);
+  console.log(`Project data directory writable: ${result.dataDirWritable ? "yes" : "no"}`);
   for (const diagnostic of result.diagnostics) {
     console.log(
       `${diagnostic.severity.toUpperCase()}: ${diagnostic.message} ${diagnostic.remediation}`,
@@ -354,6 +243,6 @@ const main = async (): Promise<void> => {
   process.exitCode = exitCode;
 };
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  await main();
+if (isMainModule(import.meta.url)) {
+  await runCliMain(main);
 }

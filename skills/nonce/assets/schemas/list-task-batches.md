@@ -10,10 +10,16 @@ List Task Batches
 
 Returns task batches for a farm. Each batch represents a group of tasks dispatched to miners (e.g. reboot, pool update). Includes batch status, task counts (total/succeeded/failed), and creation info. Filter by task_name.
 
-## Signature
+## Code
 
-```ts
-listTaskBatches(input: ListTaskBatchesInput, options?: ReadonlyCallOptions): Promise<ListTaskBatchesOutput>
+```js
+const result = await nonce.listTaskBatches(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listTaskBatches --input-file ".nonce/requests/list-task-batches.json"
 ```
 
 ## Input

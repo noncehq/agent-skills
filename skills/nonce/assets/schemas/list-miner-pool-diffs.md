@@ -12,10 +12,16 @@ List Pool Diffs
 
 Returns pool change events for all miners in a farm within the time range. This endpoint operates at farm-level scope; per-miner filtering is not supported. Use this to detect unauthorized pool changes or verify pool update tasks completed successfully. Each record shows the before/after pool URLs and worker names.
 
-## Signature
+## Code
 
-```ts
-listMinerPoolDiffs(input: ListMinerPoolDiffsInput, options?: ReadonlyCallOptions): Promise<ListMinerPoolDiffsOutput>
+```js
+const result = await nonce.listMinerPoolDiffs(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listMinerPoolDiffs --input-file ".nonce/requests/list-miner-pool-diffs.json"
 ```
 
 ## Input

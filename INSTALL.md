@@ -42,8 +42,9 @@ npx skills add noncehq/agent-skills \
 ```
 
 Replace `codex` with `claude-code` when appropriate. The `nonce` skill provides
-the local runtime, authentication flow, generated method schemas, and guarded
-task runner.
+the detection-only runtime check, authentication flow, generated method
+schemas, a code-first client for the complete Nonce MCP tool set, and a
+schema-validated CLI for one-off calls.
 
 Install at project scope by default. Add `--global` only when the user asks to
 make the skills available across projects.
@@ -61,7 +62,7 @@ make the skills available across projects.
 - MCP path: complete the MCP client's normal Nonce authorization flow when
   needed, then call `ListWorkspaces`.
 - `nonce` skill path: follow the installed skill's runtime and authentication
-  instructions, then call `listWorkspaces`.
+  instructions, then call `listWorkspaces` through `scripts/nonce.mjs`.
 
 The verification is successful only when the read-only workspace query returns.
 Report the selected data path and verification result. Do not claim that Nonce
@@ -76,7 +77,12 @@ is connected after installation alone.
    npx skills list --global --json
    ```
 
-2. Update `reboot-report` in every scope where it is already installed. If
+2. Before replacing an older `nonce` installation, resolve its installed skill
+   root. If `<installed skill root>/.nonce-skill/tasks/` exists, copy its
+   contents to the current project's `.nonce/code/legacy/` directory and
+   verify the copied files. The installed skill directory is update-owned and
+   must not remain the only copy of user-created files.
+3. Update `reboot-report` in every scope where it is already installed. If
    `nonce` is installed in the same scope, update both skills together. For a
    project installation, use one of:
 
@@ -87,17 +93,17 @@ is connected after installation alone.
 
    For a global installation, replace `--project` with `--global`.
 
-3. Do not install `nonce` as a side effect of updating an MCP-based setup. Do
+4. Do not install `nonce` as a side effect of updating an MCP-based setup. Do
    not remove either skill or change its project/global scope.
-4. Confirm the expected `SKILL.md` files still exist. If the agent does not
+5. Confirm the expected `SKILL.md` files still exist. If the agent does not
    reload an updated skill immediately, start a new task or session.
-5. Re-run the selected path's read-only workspace query: `ListWorkspaces` for
+6. Re-run the selected path's read-only workspace query: `ListWorkspaces` for
    MCP or `listWorkspaces` for the `nonce` skill. Report the updated skills,
    scope, and verification result.
 
 ## Safety
 
-- Do not call any `CreateTaskBatch_*` MCP tool or `createTaskBatch...` SDK method
+- Do not call any `CreateTaskBatch_*` MCP tool, code-client method, or CLI method
   during installation, update, or verification.
 - Never print access tokens, refresh tokens, authorization codes, or PKCE
   verifiers.

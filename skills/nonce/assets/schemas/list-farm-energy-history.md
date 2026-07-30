@@ -14,10 +14,16 @@ Use `start_time` and `end_time` query parameters to specify the date range (ISO 
 
 Requires FARM_READ permission on the target farm.
 
-## Signature
+## Code
 
-```ts
-listFarmEnergyHistory(input: ListFarmEnergyHistoryInput, options?: ReadonlyCallOptions): Promise<ListFarmEnergyHistoryOutput>
+```js
+const result = await nonce.listFarmEnergyHistory(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listFarmEnergyHistory --input-file ".nonce/requests/list-farm-energy-history.json"
 ```
 
 ## Input

@@ -103,9 +103,9 @@
       }
     },
     {
-      "id": "trigger.zh.metrics.task-code",
+      "id": "trigger.zh.metrics-summary",
       "split": "train",
-      "category": "trigger.automation.javascript",
+      "category": "trigger.reporting.metrics",
       "language": "zh",
       "query": "帮我看一下这个矿场最近一周的算力变化，整理成一份简洁结果。",
       "expected": {
@@ -297,9 +297,9 @@
       }
     },
     {
-      "id": "trigger.zh.pool-diffs-script",
+      "id": "trigger.zh.pool-diffs-audit",
       "split": "validation",
-      "category": "trigger.automation.javascript",
+      "category": "trigger.audit.pool-config",
       "language": "zh",
       "query": "帮我批量检查这些矿机的矿池配置有没有和预期不一致的地方。",
       "expected": {

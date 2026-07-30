@@ -13,10 +13,16 @@ Returns batch summary and per-status task counts. Does not include individual ta
 Poll this endpoint every 30 seconds until `status` reaches a terminal value. Terminal values: `succeed`, `failed`, `partial_succeed`. Once terminal, fetch task results via the /tasks sub-resource.
 Recommended max poll duration: 24 hours.
 
-## Signature
+## Code
 
-```ts
-getTaskBatch(input: GetTaskBatchInput, options?: ReadonlyCallOptions): Promise<GetTaskBatchOutput>
+```js
+const result = await nonce.getTaskBatch(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call getTaskBatch --input-file ".nonce/requests/get-task-batch.json"
 ```
 
 ## Input

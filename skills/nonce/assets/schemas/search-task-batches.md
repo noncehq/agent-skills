@@ -10,10 +10,16 @@ Search Task Batches
 
 Search task batches in the farm with operator-object filters. Supports status, task_name, actor_type, and created_at criteria. Each batch represents a group of tasks dispatched to miners. Omit body for an unfiltered first-page list. Automation-created batches include metadata.filterSummary with per-stage filter counts (total, passed, skippedUptime, skippedAnomaly, skippedNonNormal, skippedRebootLimit, skippedTemperature, temperatureBypassedZeroHashrate) — useful for diagnosing why automation filtered out miners.
 
-## Signature
+## Code
 
-```ts
-searchTaskBatches(input: SearchTaskBatchesInput, options?: ReadonlyCallOptions): Promise<SearchTaskBatchesOutput>
+```js
+const result = await nonce.searchTaskBatches(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call searchTaskBatches --input-file ".nonce/requests/search-task-batches.json"
 ```
 
 ## Input

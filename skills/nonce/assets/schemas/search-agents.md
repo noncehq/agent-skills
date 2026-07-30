@@ -10,10 +10,16 @@ Search Agents
 
 Search agents in the workspace with operator-object filters. Returns paginated agents filtered by optional farm_id / status criteria. Each agent is an edge device deployed in a farm that monitors/manages local miners. Omit body for an unfiltered first-page list.
 
-## Signature
+## Code
 
-```ts
-searchAgents(input: SearchAgentsInput, options?: ReadonlyCallOptions): Promise<SearchAgentsOutput>
+```js
+const result = await nonce.searchAgents(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call searchAgents --input-file ".nonce/requests/search-agents.json"
 ```
 
 ## Input

@@ -1,26 +1,39 @@
 ---
 name: nonce
 description: >-
-  Use this skill when the user needs to query, inspect, or operate Nonce mining resources: workspaces, farms, miners, agents, task batches, miner tasks, metrics, history, or operational actions. Also use it when the user asks for JavaScript automation against Nonce resources. Do not use it for generic Bitcoin mining questions or unrelated Node/API work.
+  Use this skill when the user needs to query, analyze, automate, or operate Nonce mining resources: workspaces, farms, miners, agents, task batches, miner tasks, metrics, history, or operational actions. It provides code-first access to the complete Nonce MCP tool set so the agent can filter and aggregate data before returning a compact result. Do not use it for generic Bitcoin mining questions or unrelated Node/API work.
 ---
 
 # Nonce
 
 Nonce manages your Bitcoin mining workspaces, farms, miners, agents, task batches, and miner tasks.
 
-Use this skill to work with those resources through the local SDK/runner. Determine the user's intent, write task-specific code against the SDK, run it locally.
+Write project-local JavaScript that imports the bundled Nonce client, composes
+the required MCP methods, and returns only the filtered or aggregated result
+needed by the model. The client exposes the complete Nonce MCP read and write
+tool set.
 
 ## Before Use
 
 - Resolve every relative path in this skill from the installed skill root, the directory containing this `SKILL.md`. Do not assume any fixed filesystem path.
-- Before running scripts or writing task code, record the resolved installed skill root in context as `NONCE_SKILL_HOME` on macOS/Linux or `$NonceSkillHome` on Windows. Read `references/workflow.md` for the path setup command that prints the value back to the session.
-- If the local SDK/runner environment is missing or broken, initialize or repair it before authentication or business queries. Read `references/workflow.md` for the concrete commands.
+- Record the installed skill root and exact existing Node executable. Keep the
+  user's project as the working directory.
+- Run the detection-only runtime check before authentication or business queries. It never installs software.
 - If credentials are missing or expired, complete Nonce authentication before business queries. Read `references/auth.md` for status, login, callback, and logout flows.
 - Support macOS, Linux, and Windows.
 
 ## Operating Rules
 
-- Before writing task code, read `references/tool-signatures.md` for the method index, then read the specific method's schema file under `assets/schemas/` for full Input and Output interfaces.
+- Read `references/workflow.md`, then read only the selected methods' schema
+  files under `assets/schemas/`.
+- Write code under the current project's `.nonce/code/` directory. Import only
+  `scripts/client.mjs` from the installed skill.
+- Create one client per script, perform pagination, joins, filtering, and
+  aggregation in that process, and close it in `finally`.
+- Do not print full MCP responses. Return compact JSON with only the evidence,
+  counts, samples, or conclusions required for the next decision.
+- Use `scripts/nonce.mjs` only for one-off calls and diagnostics, not as the
+  primary analysis workflow.
 - If the user asks for a one-farm reboot analysis delivered as an HTML report or
   slide deck, also activate the sibling `reboot-report` skill. Keep using this
   skill for runtime, authentication, schemas, and data access; let
@@ -30,25 +43,33 @@ Use this skill to work with those resources through the local SDK/runner. Determ
 - Prefer the narrowest method and scope that satisfy the user's request.
 - Most operations need `workspace_id`; farm and miner operations usually also need `farm_id` or `miner_id`.
 - For permission errors, report the role or scope limit. Do not broaden the operation to bypass the limit.
+- Store reusable code and data under the current project's `.nonce/` directory.
+  Never write user data under the installed skill root.
 
 ## Gotchas
 
-- Run path setup and runtime check first. If the installed skill root is not writable, write task files under the runtime check's `recommendedTaskDir` or another writable directory.
+- Run path setup and the runtime check first. Use the reported `nodePath` for
+  authentication and every later script or CLI call.
 - Treat `stateDirWritable`, `stateProfileDirWritable`, and `credentialDirWritable` runtime check failures as auth blockers before starting OAuth login.
-- Task files should import the SDK from the runner-provided `NONCE_SKILL_RUNTIME_URL`, not from a hardcoded relative path.
+- Treat `dataDirWritable: false` as a blocker for file-backed requests or
+  results. Choose a writable project with `--project-dir`.
 - Credentials are stored as local profile files.
+- Agent-authored code runs with the host agent's filesystem and network
+  permissions. Do not treat the bundled client as a sandbox.
 
 ## Safety
 
 - Treat every `CreateTaskBatch_*` method as destructive because it can affect physical miners or operational/inventory state, even when the action appears read-like.
 - Before any `CreateTaskBatch_*` call, explain the target and expected effect and obtain explicit user confirmation.
-- Treat the local runner as a guardrail for generated task code, not as a sandbox for untrusted code.
+- In code, enable destructive methods only for the confirmed script and pass
+  `confirmDestructive: true` plus a non-empty `confirmation` to that call.
+- For the one-off CLI, use both `--allow-destructive` and `--confirmation`.
 - Read `references/safety.md` before implementing or running task-batch operations.
 
 ## References
 
-- `references/workflow.md`: local task-code workflow, runner usage, host integration, and runtime repair.
-- `references/auth.md`: authentication, profiles, credential storage, and endpoint configuration.
+- `references/workflow.md`: path setup, code-first MCP access, compact output, and CLI fallback.
+- `references/auth.md`: authentication, profiles, credential storage, and the fixed Nonce endpoint.
 - `references/tool-signatures.md`: method index and shared types.
 - `assets/schemas/`: per-method Input/Output interfaces and signatures.
 - `references/safety.md`: destructive-operation guardrails.

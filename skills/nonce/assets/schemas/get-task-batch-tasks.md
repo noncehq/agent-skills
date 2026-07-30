@@ -10,10 +10,16 @@ List Task Batch Tasks
 
 Returns individual tasks within a batch, paginated. Use `status` query parameter to filter by task status (e.g. `failed` to inspect failures). Each task includes miner reference, execution timestamps, and result/error details.
 
-## Signature
+## Code
 
-```ts
-getTaskBatchTasks(input: GetTaskBatchTasksInput, options?: ReadonlyCallOptions): Promise<GetTaskBatchTasksOutput>
+```js
+const result = await nonce.getTaskBatchTasks(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call getTaskBatchTasks --input-file ".nonce/requests/get-task-batch-tasks.json"
 ```
 
 ## Input

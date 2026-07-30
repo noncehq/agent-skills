@@ -26,6 +26,7 @@ describe("runtime file stores", () => {
       const stateFile = join(baseDir, "test-local", "pending-authorization.json");
       expect(await readFile(stateFile, "utf8")).toContain('"authorizationUrl"');
       if (process.platform !== "win32") {
+        expect((await stat(join(baseDir, "test-local"))).mode & 0o777).toBe(0o700);
         expect((await stat(stateFile)).mode & 0o777).toBe(0o600);
       }
 
@@ -49,6 +50,8 @@ describe("runtime file stores", () => {
       const credentialFile = join(baseDir, "test-local", "credentials", "oauth-tokens.secret");
       expect(await readFile(credentialFile, "utf8")).toBe("secret-json");
       if (process.platform !== "win32") {
+        expect((await stat(join(baseDir, "test-local"))).mode & 0o777).toBe(0o700);
+        expect((await stat(join(baseDir, "test-local", "credentials"))).mode & 0o777).toBe(0o700);
         expect((await stat(credentialFile)).mode & 0o777).toBe(0o600);
       }
 

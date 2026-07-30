@@ -10,10 +10,16 @@ List Farms
 
 Returns all farms in the workspace. Use this to get farm IDs for subsequent farm-specific queries. Each farm includes ID, name, and hosting fee rate. Call ListWorkspaces first to get the workspace_id.
 
-## Signature
+## Code
 
-```ts
-listFarms(input: ListFarmsInput, options?: ReadonlyCallOptions): Promise<ListFarmsOutput>
+```js
+const result = await nonce.listFarms(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listFarms --input-file ".nonce/requests/list-farms.json"
 ```
 
 ## Input

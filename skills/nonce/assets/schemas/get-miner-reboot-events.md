@@ -10,10 +10,16 @@ Get Miner Reboot Events with Impact
 
 Returns reboot events for a specific miner with time-window hashrate averages (before: T-30~T-5min, after: T+15~T+60min) to assess reboot impact. Each event includes miner identity and before/after snapshots (uptime, hashrate, wattage, temperature, anomaly_flags, mining_mode). Filter by time range. Default range is last 7 days, max 30 days.
 
-## Signature
+## Code
 
-```ts
-getMinerRebootEvents(input: GetMinerRebootEventsInput, options?: ReadonlyCallOptions): Promise<GetMinerRebootEventsOutput>
+```js
+const result = await nonce.getMinerRebootEvents(input)
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call getMinerRebootEvents --input-file ".nonce/requests/get-miner-reboot-events.json"
 ```
 
 ## Input

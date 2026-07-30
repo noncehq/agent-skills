@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`, `miner_ids`, `params`
 
 Flash firmware to miner. Extended downtime; miner reboots after install.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchMinerFirmwareUpdate(input: CreateTaskBatchMinerFirmwareUpdateInput, options: DestructiveCallOptions): Promise<CreateTaskBatchMinerFirmwareUpdateOutput>
+```js
+const result = await nonce.createTaskBatchMinerFirmwareUpdate(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchMinerFirmwareUpdate --input-file ".nonce/requests/create-task-batch-miner-firmware-update.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

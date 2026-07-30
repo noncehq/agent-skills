@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`
 
 Trigger agent network scan to discover miners. Long-running; populates miner inventory on completion.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchAgentScanCreate(input: CreateTaskBatchAgentScanCreateInput, options: DestructiveCallOptions): Promise<CreateTaskBatchAgentScanCreateOutput>
+```js
+const result = await nonce.createTaskBatchAgentScanCreate(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchAgentScanCreate --input-file ".nonce/requests/create-task-batch-agent-scan-create.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

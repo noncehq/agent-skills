@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`
 
 Trigger agent to self-upgrade to a newer binary. Agent restarts after install; brief control-plane downtime, no miner impact.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchAgentSelfUpdate(input: CreateTaskBatchAgentSelfUpdateInput, options: DestructiveCallOptions): Promise<CreateTaskBatchAgentSelfUpdateOutput>
+```js
+const result = await nonce.createTaskBatchAgentSelfUpdate(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchAgentSelfUpdate --input-file ".nonce/requests/create-task-batch-agent-self-update.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

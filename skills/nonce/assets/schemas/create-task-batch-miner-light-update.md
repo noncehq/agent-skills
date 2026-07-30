@@ -8,10 +8,19 @@ Required: `workspace_id`, `farm_id`, `task_name`, `miner_ids`, `params`
 
 Toggle miner LED indicator. Use for physical identification on the rack.
 
-## Signature
+## Code
 
-```ts
-createTaskBatchMinerLightUpdate(input: CreateTaskBatchMinerLightUpdateInput, options: DestructiveCallOptions): Promise<CreateTaskBatchMinerLightUpdateOutput>
+```js
+const result = await nonce.createTaskBatchMinerLightUpdate(input, {
+  confirmDestructive: true,
+  confirmation: "<confirmed target and effect>",
+})
+```
+
+## CLI
+
+```bash
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createTaskBatchMinerLightUpdate --input-file ".nonce/requests/create-task-batch-miner-light-update.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input

@@ -2,6 +2,8 @@
 // Generated file. Do not edit by hand.
 // Source of truth: checked Nonce method definitions; supplemental schemas only fill missing metadata.
 
+// Type reference for project code that imports scripts/client.mjs.
+
 export interface ListFarmsInput {
   workspace_id: string
   /**
@@ -2716,195 +2718,6 @@ export interface ListBtcNetworkHistoryOutput {
    */
   error: null
 }
-export const nonceToolDefinitions = [
-  {
-    "destructive": false,
-    "methodName": "listFarms",
-    "name": "ListFarms",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "listMiners",
-    "name": "ListMiners",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "searchMiners",
-    "name": "SearchMiners",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "getMinerStats",
-    "name": "GetMinerStats",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "listFarmMetricsHistory",
-    "name": "ListFarmMetricsHistory",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "listFarmEnergyHistory",
-    "name": "ListFarmEnergyHistory",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "listMinerHistory",
-    "name": "ListMinerHistory",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "getMinerTasks",
-    "name": "GetMinerTasks",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "listMinerRebootEvents",
-    "name": "ListMinerRebootEvents",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "getMinerRebootEvents",
-    "name": "GetMinerRebootEvents",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "listMinerPoolDiffs",
-    "name": "ListMinerPoolDiffs",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "listAgents",
-    "name": "ListAgents",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "searchAgents",
-    "name": "SearchAgents",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "listTaskBatches",
-    "name": "ListTaskBatches",
-    "readOnly": true
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchMinerSystemReboot",
-    "name": "CreateTaskBatch_MinerSystemReboot",
-    "readOnly": false
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchMinerLogGet",
-    "name": "CreateTaskBatch_MinerLogGet",
-    "readOnly": false
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchMinerLightUpdate",
-    "name": "CreateTaskBatch_MinerLightUpdate",
-    "readOnly": false
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchMinerPowerModeUpdate",
-    "name": "CreateTaskBatch_MinerPower_modeUpdate",
-    "readOnly": false
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchMinerFirmwareUpdate",
-    "name": "CreateTaskBatch_MinerFirmwareUpdate",
-    "readOnly": false
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchMinerPoolLock",
-    "name": "CreateTaskBatch_MinerPoolLock",
-    "readOnly": false
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchAgentScanCreate",
-    "name": "CreateTaskBatch_AgentScanCreate",
-    "readOnly": false
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchAgentIpDiagnosisCreate",
-    "name": "CreateTaskBatch_AgentIp_diagnosisCreate",
-    "readOnly": false
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchAgentSelfUpdate",
-    "name": "CreateTaskBatch_AgentSelfUpdate",
-    "readOnly": false
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchMinerTagsUpdate",
-    "name": "CreateTaskBatch_MinerTagsUpdate",
-    "readOnly": false
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchMinerRecordDelete",
-    "name": "CreateTaskBatch_MinerRecordDelete",
-    "readOnly": false
-  },
-  {
-    "destructive": true,
-    "methodName": "createTaskBatchMinerRackLocationUpdate",
-    "name": "CreateTaskBatch_MinerRack_locationUpdate",
-    "readOnly": false
-  },
-  {
-    "destructive": false,
-    "methodName": "searchTaskBatches",
-    "name": "SearchTaskBatches",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "getTaskBatch",
-    "name": "GetTaskBatch",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "getTaskBatchTasks",
-    "name": "GetTaskBatchTasks",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "listWorkspaces",
-    "name": "ListWorkspaces",
-    "readOnly": true
-  },
-  {
-    "destructive": false,
-    "methodName": "listBtcNetworkHistory",
-    "name": "ListBtcNetworkHistory",
-    "readOnly": true
-  }
-] as const
-
 export interface NonceCallOptions {
   signal?: AbortSignal
   timeoutMs?: number
@@ -2956,6 +2769,8 @@ export interface NonceClient {
   listWorkspaces(input?: ListWorkspacesInput, options?: NonceReadonlyCallOptions): Promise<ListWorkspacesOutput>
   listBtcNetworkHistory(input?: ListBtcNetworkHistoryInput, options?: NonceReadonlyCallOptions): Promise<ListBtcNetworkHistoryOutput>
 }
+
+export declare function createNonceClient(options?: NonceClientOptions): Promise<NonceClient>
 
 export interface NonceMethodSignatures {
   listFarms: {
