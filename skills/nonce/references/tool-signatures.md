@@ -9,11 +9,9 @@ This file is a compact index. Before calling a method, read its schema file unde
 
 Do not call schema/reference endpoints for business operations. Runtime calls should go through the bundled `scripts/client.mjs` module from project-local code under `.nonce/code/`. Use `scripts/nonce.mjs` only for a one-off call or diagnosis.
 
-Before authenticating, run `node "$NONCE_SKILL_HOME/scripts/bootstrap-runtime.mjs" --project-dir "$PWD" --json` with `--profile` when needed. Assign the reported `nodePath` to `NONCE_NODE` and use that exact executable for auth and method calls. Treat `stateDirWritable: false`, `stateProfileDirWritable: false`, `credentialDirWritable: false`, or `dataDirWritable: false` as blockers.
-
 Store agent-authored code and reusable data under the project-owned `.nonce/` directory, never under the installed skill root. Skill updates may replace the entire installed directory.
 
-The client keeps OAuth credentials internal and fixes the endpoint to `https://mcp.nonce.app/mcp`. Create one client, compose the required MCP calls in the same process, filter or aggregate their results in code, and close the client in `finally`.
+The client keeps OAuth credentials internal and fixes the endpoint to `https://mcp.nonce.app/mcp`. Create one client, compose the required methods in the same process, filter or aggregate their results in code, and close the client in the end.
 
 ```js
 import { join } from "node:path"

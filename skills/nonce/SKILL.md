@@ -1,26 +1,22 @@
 ---
 name: nonce
 description: >-
-  Use this skill when the user needs to query, analyze, automate, or operate Nonce mining resources: workspaces, farms, miners, agents, task batches, miner tasks, metrics, history, or operational actions. It provides code-first access to the complete Nonce MCP tool set so the agent can filter and aggregate data before returning a compact result. Do not use it for generic Bitcoin mining questions or unrelated Node/API work.
+  Use this skill when a task requires current Nonce data or an operational action involving workspaces, farms, miners, agents, task batches, miner tasks, metrics, or history. Write project-local code with the bundled Nonce client to combine methods, filter or aggregate data, and return only the compact evidence required by the task. For a one-farm reboot report or slide deck, pair it with the reboot-report skill and limit this skill to data collection and preprocessing. Do not use it for generic Bitcoin mining questions or unrelated Node/API work.
 ---
 
 # Nonce
 
 Nonce manages your Bitcoin mining workspaces, farms, miners, agents, task batches, and miner tasks.
 
-Write project-local JavaScript that imports the bundled Nonce client, composes
-the required MCP methods, and returns only the filtered or aggregated result
-needed by the model. The client exposes the complete Nonce MCP read and write
-tool set.
+Use the bundled Nonce client, compose methods, and return only the filtered or aggregated result.
 
 ## Before Use
 
 - Resolve every relative path in this skill from the installed skill root, the directory containing this `SKILL.md`. Do not assume any fixed filesystem path.
 - Record the installed skill root and exact existing Node executable. Keep the
   user's project as the working directory.
-- Run the detection-only runtime check before authentication or business queries. It never installs software.
-- If credentials are missing or expired, complete Nonce authentication before business queries. Read `references/auth.md` for status, login, callback, and logout flows.
-- Support macOS, Linux, and Windows.
+- Run the detection-only runtime check before authentication or business queries.
+- If credentials are missing or expired, complete Nonce authentication before business queries. Read `references/auth.md` for details.
 
 ## Operating Rules
 
@@ -30,10 +26,8 @@ tool set.
   `scripts/client.mjs` from the installed skill.
 - Create one client per script, perform pagination, joins, filtering, and
   aggregation in that process, and close it in `finally`.
-- Do not print full MCP responses. Return compact JSON with only the evidence,
+- Do not print full responses. Return compact JSON with only the evidence,
   counts, samples, or conclusions required for the next decision.
-- Use `scripts/nonce.mjs` only for one-off calls and diagnostics, not as the
-  primary analysis workflow.
 - If the user asks for a one-farm reboot analysis delivered as an HTML report or
   slide deck, also activate the sibling `reboot-report` skill. Keep using this
   skill for runtime, authentication, schemas, and data access; let
@@ -68,7 +62,7 @@ tool set.
 
 ## References
 
-- `references/workflow.md`: path setup, code-first MCP access, compact output, and CLI fallback.
+- `references/workflow.md`: path setup, code-first client access, compact output, and CLI fallback.
 - `references/auth.md`: authentication, profiles, credential storage, and the fixed Nonce endpoint.
 - `references/tool-signatures.md`: method index and shared types.
 - `assets/schemas/`: per-method Input/Output interfaces and signatures.

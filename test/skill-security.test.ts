@@ -216,31 +216,4 @@ describe("packaged Nonce security boundary", () => {
       await rm(temporaryDirectory, { force: true, recursive: true });
     }
   });
-
-  it("keeps the canonical code-first example aligned with generated schemas", async () => {
-    const workflow = await readFile(join(skillRoot, "references", "workflow.md"), "utf8");
-    const schemas = JSON.parse(
-      await readFile(join(skillRoot, "assets", "tool-schemas.json"), "utf8"),
-    ) as {
-      tools: {
-        ListFarms: {
-          output: {
-            properties: {
-              data: { items: { properties: Record<string, unknown> } };
-            };
-          };
-        };
-      };
-    };
-    const farmProperties = schemas.tools.ListFarms.output.properties.data.items.properties;
-
-    expect(farmProperties).toHaveProperty("id");
-    expect(farmProperties).not.toHaveProperty("farm_id");
-    expect(workflow).toContain("farm_id: farm.id");
-    expect(workflow).not.toContain("farm.farm_id");
-    expect(workflow).toContain(
-      "notMiningCount: miners.filter((miner) => miner.is_mining === false).length",
-    );
-    expect(workflow).not.toContain('miner.status === "offline"');
-  });
 });

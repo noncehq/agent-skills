@@ -5,7 +5,9 @@ Skills for Nonce. This repository builds an installable skill collection:
 - `nonce` lets agents write project-local JavaScript that queries and operates
   Nonce MCP resources, processes large results in code, and returns compact
   output. A fixed CLI remains available for one-off calls.
-- `reboot-report` analyzes one farm's reboot activity and produces a shareable HTML report. It uses either connected Nonce MCP tools or `nonce` for authenticated data access.
+- `reboot-report` analyzes one farm's reboot activity and produces a shareable
+  HTML report. It prefers `nonce` for code-first data collection and
+  preprocessing, with already connected Nonce tools as a fallback.
 
 ## Repository Structure
 
@@ -36,10 +38,10 @@ test/                 # Runtime, generator, metadata, and smoke tests
 ```
 
 `skills/` is the collection root. Each direct child containing `SKILL.md` is an
-independently discoverable skill. `reboot-report` needs one Nonce data path: an
-existing Nonce MCP connection or the sibling `nonce` skill. See
-[`INSTALL.md`](INSTALL.md) for the selection, installation, update, and
-read-only verification flow.
+independently discoverable skill. `reboot-report` prefers the sibling `nonce`
+skill for its data path and can fall back to already connected Nonce tools when
+`nonce` is unavailable. See [`INSTALL.md`](INSTALL.md) for the installation,
+update, and read-only verification flow.
 
 ## Development
 

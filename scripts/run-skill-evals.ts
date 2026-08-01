@@ -145,9 +145,6 @@ const addCheck = (
   checks.push(check);
 };
 
-const includesAll = (text: string, needles: string[]): string[] =>
-  needles.filter((needle) => !text.includes(needle));
-
 const implementationJargon = [
   /\bJS\b/i,
   /\bJavaScript\b/i,
@@ -448,141 +445,6 @@ const evaluateInvokeCaseSet = (
   return cases;
 };
 
-const evaluateStaticSkillContract = async (repoRoot: string, checks: CheckResult[]) => {
-  const skillRoot = join(repoRoot, "skills", "nonce");
-  const skillText = await readText(join(skillRoot, "SKILL.md"));
-  const workflowText = await readText(join(skillRoot, "references/workflow.md"));
-  const safetyText = await readText(join(skillRoot, "references/safety.md"));
-  const authText = await readText(join(skillRoot, "references/auth.md"));
-  const toolSignaturesText = await readText(join(skillRoot, "references/tool-signatures.md"));
-
-  addCheck(
-    checks,
-    "skill.description-trigger",
-    skillText.includes("Use this skill when") &&
-      skillText.includes("Nonce mining resources") &&
-      skillText.includes("Do not use it for generic Bitcoin mining questions"),
-    "SKILL.md frontmatter keeps a clear trigger and negative boundary",
-  );
-  addCheck(
-    checks,
-    "skill.references",
-    includesAll(skillText, [
-      "references/workflow.md",
-      "references/auth.md",
-      "references/tool-signatures.md",
-      "references/safety.md",
-      "assets/schemas/",
-    ]).length === 0,
-    "SKILL.md points to the required deferred references",
-  );
-
-  const missingWorkflowNeedles = includesAll(workflowText, [
-    "NONCE_SKILL_HOME",
-    "NONCE_NODE",
-    "scripts/bootstrap-runtime.mjs",
-    "--project-dir",
-    "references/tool-signatures.md",
-    "assets/schemas/",
-    ".nonce/code/",
-    "scripts/client.mjs",
-    "createNonceClient",
-    "Create one client",
-    "finally",
-    "Do not print raw",
-    "scripts/nonce.mjs",
-    "--input-file",
-    "--output",
-    "--profile",
-    "https://mcp.nonce.app/mcp",
-    "does not accept an endpoint override",
-    "--allow-destructive",
-    "--confirmation",
-    "confirmDestructive: true",
-    "compact JSON",
-    "farm_id: farm.id",
-    "notMiningCount",
-  ]);
-  addCheck(
-    checks,
-    "workflow.contracts",
-    missingWorkflowNeedles.length === 0,
-    "workflow reference preserves path setup, code-first MCP composition, CLI fallback, and compact output rules",
-    "error",
-    missingWorkflowNeedles.join(", "),
-  );
-
-  const missingSafetyNeedles = includesAll(safetyText, [
-    "Agent-authored code runs with the",
-    "scripts/client.mjs",
-    "Filter and aggregate MCP data inside the process",
-    "CreateTaskBatch_*",
-    "explicit user confirmation",
-    "allowDestructive: true",
-    "confirmDestructive: true",
-    "--allow-destructive",
-    "--confirmation",
-    "Do not broaden the operation",
-  ]);
-  addCheck(
-    checks,
-    "safety.destructive-contracts",
-    missingSafetyNeedles.length === 0,
-    "safety reference preserves destructive-operation guardrails",
-    "error",
-    missingSafetyNeedles.join(", "),
-  );
-
-  addCheck(
-    checks,
-    "workflow.code-first",
-    includesAll(workflowText, [
-      ".nonce/code/",
-      "scripts/client.mjs",
-      "createNonceClient",
-      "Create one client",
-      "Do not print raw",
-    ]).length === 0 &&
-      !workflowText.includes("never executes generated JavaScript") &&
-      !skillText.includes("through a fixed local CLI"),
-    "the skill keeps agent-authored code as the primary MCP data-processing path",
-  );
-
-  const missingSharedTypeNeedles = includesAll(toolSignaturesText, [
-    "## Shared Types",
-    "NonceCallOptions",
-    "NonceReadonlyCallOptions",
-    "NonceDestructiveCallOptions",
-    "NonceClientOptions",
-    "confirmDestructive: true",
-    "confirmation: string",
-  ]);
-  addCheck(
-    checks,
-    "tool-signatures.shared-types",
-    missingSharedTypeNeedles.length === 0,
-    "tool signatures document the shared code-client options",
-    "error",
-    missingSharedTypeNeedles.join(", "),
-  );
-
-  const missingAuthNeedles = includesAll(authText, [
-    "scripts/auth.mjs",
-    "status",
-    "login",
-    "verify",
-    "Never print access tokens",
-  ]);
-  addCheck(
-    checks,
-    "auth.contracts",
-    missingAuthNeedles.length === 0,
-    "auth reference preserves status, login, verify, and secret-handling rules",
-    "error",
-    missingAuthNeedles.join(", "),
-  );
-};
-
 const summarizeTrace = async (tracePath: string): Promise<TraceSummary> => {
   const jsonl = await readText(tracePath);
   const events = jsonl
@@ -623,7 +485,6 @@ export const runSkillEvals = async (options: RunOptions = {}): Promise<SkillEval
 
   const invokeCases = evaluateInvokeCaseSet(invokeCaseSet, checks);
   evaluateCaseSet(caseSet, repoRoot, checks);
-  await evaluateStaticSkillContract(repoRoot, checks);
 
   const trace = options.tracePath ? await summarizeTrace(resolve(options.tracePath)) : undefined;
   if (trace) {

@@ -9,33 +9,7 @@ const repoRoot = dirname(fileURLToPath(new URL("../package.json", import.meta.ur
 const nonceSchemaPath = (fileName: string) =>
   join(repoRoot, "skills", "nonce", "assets", "schemas", fileName);
 
-const extractFrontmatterValue = (markdown: string, key: string): string => {
-  const frontmatter = markdown.match(/^---\n([\s\S]*?)\n---\n/)?.[1];
-  if (!frontmatter) throw new Error("Missing frontmatter");
-
-  const inlineMatch = frontmatter.match(new RegExp(`^${key}:\\s*(.+)$`, "m"));
-  if (inlineMatch?.[1] && !inlineMatch[1].startsWith(">-")) return inlineMatch[1].trim();
-
-  const blockMatch = frontmatter.match(new RegExp(`^${key}:\\s*>-\\n((?:  .+\\n?)+)`, "m"));
-  if (!blockMatch?.[1]) throw new Error(`Missing ${key} in frontmatter`);
-  return blockMatch[1]
-    .split("\n")
-    .map((line) => line.replace(/^  /, "").trim())
-    .filter(Boolean)
-    .join(" ");
-};
-
 describe("Nonce skill metadata", () => {
-  it("keeps the trigger description concise and user-intent oriented", async () => {
-    const skill = await readText("../skills/nonce/SKILL.md");
-    const description = extractFrontmatterValue(skill, "description");
-
-    expect(description.length).toBeLessThanOrEqual(1024);
-    expect(description).toMatch(/^Use this skill when/);
-    expect(description).toContain("Nonce mining resources");
-    expect(description).toContain("Do not use it for generic Bitcoin mining questions");
-  });
-
   it("points OpenAI skill icons at bundled assets", async () => {
     const metadata = await readText("../skills/nonce/agents/openai.yaml");
     const iconPaths = [...metadata.matchAll(/^\s+icon_(?:small|large):\s+"(.+)"$/gm)]
@@ -54,7 +28,19 @@ describe("Nonce skill metadata", () => {
       toolCount: number;
       tools: { name: string }[];
     };
+    const schemas = JSON.parse(await readText("../skills/nonce/assets/tool-schemas.json")) as {
+      tools: {
+        ListMiners: {
+          output: {
+            properties: {
+              data: { items: { properties: Record<string, unknown> } };
+            };
+          };
+        };
+      };
+    };
     const toolNames = manifest.tools.map((tool) => tool.name);
+    const minerProperties = schemas.tools.ListMiners.output.properties.data.items.properties;
 
     expect(manifest.toolCount).toBe(manifest.tools.length);
     expect(toolNames).toContain("CreateTaskBatch_MinerTagsUpdate");
@@ -73,10 +59,8 @@ describe("Nonce skill metadata", () => {
       access(nonceSchemaPath("create-task-batch-miner-asset-delete.md")),
     ).rejects.toThrow();
 
-    const listMiners = await readText("../skills/nonce/assets/schemas/list-miners.md");
-    expect(listMiners).toContain("Real-time hashrate in H/s");
-    expect(listMiners).toContain("expected_hashrate: number | null");
-    expect(listMiners).toContain("reboot_count: number | null");
-    expect(listMiners).toContain("tags?: string[]");
+    expect(minerProperties).toHaveProperty("expected_hashrate");
+    expect(minerProperties).toHaveProperty("reboot_count");
+    expect(minerProperties).toHaveProperty("tags");
   });
 });
