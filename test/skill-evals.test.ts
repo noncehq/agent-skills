@@ -23,8 +23,9 @@ describe("Nonce skill eval flow", () => {
 
     expect(result.ok).toBe(true);
     expect(result.summary.invokeCases).toBe(20);
-    expect(result.summary.behaviorCases).toBe(20);
-    expect(result.summary.positiveCases).toBe(result.summary.negativeCases);
+    expect(result.summary.behaviorCases).toBe(23);
+    expect(result.summary.positiveCases).toBe(13);
+    expect(result.summary.negativeCases).toBe(10);
     expect(result.summary.destructiveCases).toBeGreaterThan(0);
     expect(result.summary.errors).toBe(0);
   });

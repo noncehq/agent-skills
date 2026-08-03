@@ -79,4 +79,29 @@ describe("Nonce skill metadata", () => {
     expect(listMiners).toContain("reboot_count: number | null");
     expect(listMiners).toContain("tags?: string[]");
   });
+
+  it("routes reboot queries without conflating observed events and requested tasks", async () => {
+    const skill = await readText("../skills/nonce/SKILL.md");
+    const manifest = JSON.parse(await readText("../skills/nonce/assets/tool-manifest.json")) as {
+      tools: { name: string }[];
+    };
+    const toolNames = manifest.tools.map((tool) => tool.name);
+
+    expect(skill).toContain("For observed miner restarts");
+    expect(skill).toContain("For reboot requests issued through Nonce");
+    expect(skill).toContain("`task_name.eq` set to");
+    expect(skill).toContain("`miner.system.reboot`");
+    expect(skill).toMatch(/A Reboot\s+Event records an observed restart/);
+    expect(skill).toMatch(/a Task Batch records a Nonce request and\s+its execution state/);
+
+    for (const toolName of [
+      "ListMinerRebootEvents",
+      "SearchTaskBatches",
+      "GetTaskBatch",
+      "GetTaskBatchTasks",
+    ]) {
+      expect(skill).toContain(`\`${toolName}\``);
+      expect(toolNames).toContain(toolName);
+    }
+  });
 });

@@ -41,6 +41,22 @@ tool set.
 - Missing IDs: discover them in order with `listWorkspaces` -> `listFarms` -> `listMiners` as needed.
 - Reuse returned `workspace_id`, `farm_id`, `miner_id`, and task IDs. Never invent IDs.
 - Prefer the narrowest method and scope that satisfy the user's request.
+- Route reboot queries by the fact the user needs:
+  - For observed miner restarts, use `listMinerRebootEvents`
+    (`ListMinerRebootEvents`). Pass the requested `from_time` and `to_time`;
+    otherwise the method returns the last 7 days through now, up to 30 days.
+  - For reboot requests issued through Nonce, use `searchTaskBatches`
+    (`SearchTaskBatches`) with `task_name.eq` set to
+    `miner.system.reboot`. Apply `created_at` for the requested time range and
+    `actor_type.eq: automation` only when the user asks specifically about
+    automation-issued requests.
+  - For one request's execution state, use `getTaskBatch` (`GetTaskBatch`) for
+    aggregate counts and `getTaskBatchTasks` (`GetTaskBatchTasks`) for
+    per-miner status, result, and error details.
+- Keep reboot events and reboot task batches separate in the result. A Reboot
+  Event records an observed restart; a Task Batch records a Nonce request and
+  its execution state. Do not infer that a successful task produced an
+  observed reboot unless both datasets support that conclusion.
 - Most operations need `workspace_id`; farm and miner operations usually also need `farm_id` or `miner_id`.
 - For permission errors, report the role or scope limit. Do not broaden the operation to bypass the limit.
 - Store reusable code and data under the current project's `.nonce/` directory.

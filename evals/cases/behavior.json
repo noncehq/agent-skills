@@ -123,6 +123,46 @@
       }
     },
     {
+      "id": "trigger.zh.reboot.observed",
+      "split": "train",
+      "category": "trigger.read.reboots",
+      "language": "zh",
+      "query": "帮我查一下这个矿场最近一周实际发生过的所有矿机重启。",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": ["listWorkspaces", "listFarms", "listMinerRebootEvents"],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          "assets/schemas/list-miner-reboot-events.md"
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "trigger.zh.reboot.nonce-issued",
+      "split": "train",
+      "category": "trigger.read.reboots",
+      "language": "zh",
+      "query": "找出这个矿场最近一周由 Nonce 发起的矿机重启请求。",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": ["listWorkspaces", "listFarms", "searchTaskBatches"],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          "assets/schemas/search-task-batches.md"
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
       "id": "negative.zh.bitcoin收益",
       "split": "train",
       "category": "negative.generic-mining",
@@ -290,6 +330,34 @@
             "assets/schemas/list-task-batches.md",
             "assets/schemas/search-task-batches.md"
           ],
+          "assets/schemas/get-task-batch-tasks.md"
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
+      "id": "trigger.zh.reboot.execution-results",
+      "split": "validation",
+      "category": "trigger.read.reboots",
+      "language": "zh",
+      "query": "帮我查看 Nonce 最近发起的重启请求，并说明每台矿机最终执行成功还是失败。",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": [
+          "listWorkspaces",
+          "listFarms",
+          "searchTaskBatches",
+          "getTaskBatch",
+          "getTaskBatchTasks"
+        ],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          "assets/schemas/search-task-batches.md",
+          "assets/schemas/get-task-batch.md",
           "assets/schemas/get-task-batch-tasks.md"
         ],
         "destructive": false,
