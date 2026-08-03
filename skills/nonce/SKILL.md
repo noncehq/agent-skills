@@ -2,6 +2,8 @@
 name: nonce
 description: >-
   Use this skill when the user needs to query, analyze, automate, or operate Nonce mining resources: workspaces, farms, miners, agents, task batches, miner tasks, metrics, history, or operational actions. It provides code-first access to the complete Nonce MCP tool set so the agent can filter and aggregate data before returning a compact result. Do not use it for generic Bitcoin mining questions or unrelated Node/API work.
+metadata:
+  version: "2026-08-03"
 ---
 
 # Nonce
