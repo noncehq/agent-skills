@@ -1,19 +1,17 @@
 {
   "mcpEndpoint": "https://mcp.nonce.app/mcp",
-  "openapiOperationCount": 19,
+  "openapiOperationCount": 0,
   "openapiUrl": "https://docs.nonce.app/api-reference/openapi.json",
   "server": {
     "name": "nonce-mcp",
-    "title": "Nonce MCP",
-    "version": "0.2.0",
-    "description": "MCP server for the Nonce mining management API (API spec v1.0.0)"
+    "version": "2.0.0"
   },
   "sourcePriority": [
     "mcp-tools-list",
     "openapi-supplement",
     "observed-readonly-mcp-output"
   ],
-  "toolCount": 31,
+  "toolCount": 32,
   "tools": [
     {
       "annotations": {
@@ -21,18 +19,57 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "List Farms\n\nReturns all farms in the workspace. Use this to get farm IDs for subsequent farm-specific queries. Each farm includes ID, name, and hosting fee rate. Call ListWorkspaces first to get the workspace_id.",
+      "description": "List Workspaces\n\nList accessible workspaces.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "listWorkspaces",
+      "name": "ListWorkspaces",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "ListWorkspaces"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Get Bitcoin Metrics\n\nReturn a current snapshot of Bitcoin mining market metrics including price, hashprice, network hashrate, and difficulty.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "getBitcoinMetrics",
+      "name": "GetBitcoinMetrics",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "GetBitcoinMetrics"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Query Bitcoin Metrics\n\nQuery historical Bitcoin mining market metrics as a time series. Each snapshot contains bitcoin price, hashprice (USD and BTC), network hashrate, and difficulty.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "queryBitcoinMetrics",
+      "name": "QueryBitcoinMetrics",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "QueryBitcoinMetrics"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Farms\n\nList farms in the workspace.",
       "destructive": false,
       "inputSchemaSource": "mcp",
       "methodName": "listFarms",
       "name": "ListFarms",
-      "openapi": {
-        "match": "exact",
-        "method": "GET",
-        "operationId": "ListFarms",
-        "path": "/private-api/v1/{workspace_id}/farms"
-      },
-      "outputSchemaSource": "mcp+openapi",
+      "outputSchemaSource": "mcp",
       "readOnly": true,
       "typeBase": "ListFarms"
     },
@@ -42,62 +79,14 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "List Miners\n\nReturns real-time status for all miners in a farm. Includes hashrate, power consumption, temperature, run status, hardware model, tags, and anomaly flags. Pool configuration is not included. Supports filtering by status, MAC address, or serial number. Results are paginated.",
-      "destructive": false,
-      "inputSchemaSource": "mcp+openapi",
-      "methodName": "listMiners",
-      "name": "ListMiners",
-      "openapi": {
-        "match": "exact",
-        "method": "GET",
-        "operationId": "ListMiners",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/miners/latest"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": true,
-      "typeBase": "ListMiners"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true
-      },
-      "description": "Search Miners\n\nSearch miners in the farm with operator-object filters. Supports id, agent_id, serial number, MAC address, lifecycle status, and health status criteria. Omit body for an unfiltered first-page list.",
+      "description": "Get Farm\n\nGet a farm by ID.",
       "destructive": false,
       "inputSchemaSource": "mcp",
-      "methodName": "searchMiners",
-      "name": "SearchMiners",
-      "openapi": {
-        "match": "exact",
-        "method": "POST",
-        "operationId": "SearchMiners",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/miners/search"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": true,
-      "typeBase": "SearchMiners"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true
-      },
-      "description": "Get Miner Stats\n\nReturns aggregate miner classification counts for a farm: total, by_type (healthy / abnormal / sleep / stale), abnormal subtypes with co-occurrence (by_abnormal_type[type].count + also_has), and mining-mode / model distributions.\nby_type counts are independent and NOT additive: a sleeping miner that also has a fault is counted in both abnormal and sleep. Online (non-stale) = total - stale.\nUse this to answer \"how many miners are abnormal / of each anomaly type / sleeping\" without paging the full list.\nTo list the miners behind any count, call Search Miners (POST) with the predicate below. Each predicate reproduces the matching count exactly:\n- healthy: status: { nin: [\"stale\"] }, has_anomaly: false, mining_mode: { nin: [\"sleep\"] }\n- abnormal: status: { nin: [\"stale\"] }, has_anomaly: true\n- sleep: status: { nin: [\"stale\"] }, mining_mode: { in: [\"sleep\"] }\n- stale: status: { in: [\"stale\"] }\n- abnormal subtype <type> (each key of by_abnormal_type: fan, power, temperature, hashboard, network, firmware, unknown, control_board, pool, low_hashrate): status: { nin: [\"stale\"] }, anomaly_filters: [<type>]",
-      "destructive": false,
-      "inputSchemaSource": "mcp",
-      "methodName": "getMinerStats",
-      "name": "GetMinerStats",
-      "openapi": {
-        "match": "exact",
-        "method": "GET",
-        "operationId": "GetMinerStats",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/miners/stats"
-      },
+      "methodName": "getFarm",
+      "name": "GetFarm",
       "outputSchemaSource": "mcp",
       "readOnly": true,
-      "typeBase": "GetMinerStats"
+      "typeBase": "GetFarm"
     },
     {
       "annotations": {
@@ -105,153 +94,12 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "List Metrics History\n\nReturns historical metrics for a farm. Use from_date and to_date query parameters to specify the date range, and the `granularity` query parameter to select the time resolution. `day` (default) returns the full daily metric set: total hashrate, online miner count, BTC earnings and electricity. `hour` returns a hashrate-only subset (period, pool hashrate, online / offline miner counts) aggregated from raw 10-minute samples; agent, finance and electricity fields are omitted at sub-day granularity. `10min` granularity is not available on this API surface — use the web API instead.\n\nRange limits: `hour` up to 7 days, `day` up to 90 days.",
-      "destructive": false,
-      "inputSchemaSource": "mcp+openapi",
-      "methodName": "listFarmMetricsHistory",
-      "name": "ListFarmMetricsHistory",
-      "openapi": {
-        "match": "exact",
-        "method": "GET",
-        "operationId": "ListFarmMetricsHistory",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/metrics/history"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": true,
-      "typeBase": "ListFarmMetricsHistory"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true
-      },
-      "description": "List Farm Energy History\n\nReturns daily energy history for a farm — electricity costs, power consumption, and margin metrics from three perspectives (theoretical, agent-reported, pool-reported). Each record also includes BTC/USD earnings for the period.\n\nUse `start_time` and `end_time` query parameters to specify the date range (ISO 8601). Defaults to the last 7 days.\n\nRequires FARM_READ permission on the target farm.",
-      "destructive": false,
-      "inputSchemaSource": "mcp",
-      "methodName": "listFarmEnergyHistory",
-      "name": "ListFarmEnergyHistory",
-      "outputSchemaSource": "mcp",
-      "readOnly": true,
-      "typeBase": "ListFarmEnergyHistory"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true
-      },
-      "description": "List Miner History\n\nReturns performance history for a single miner as a time-series wrapper. Each snapshot contains hashrate, power, and temperature at a point in time.\n\nUse the `granularity` query parameter to select time resolution:\n- `10min`: max range 1 day (up to 144 data points). Single-miner only.\n- `hour` (default): max range 7 days (up to 168 data points)\n- `day`: max range 90 days (up to 90 data points)\n- `week`: max range 365 days (up to 52 data points)\n\nExceeding the range limit returns 400 with the allowed maximum.\n\n**Usage hint for AI agents:** `10min` granularity is expensive. Prefer `hour` or coarser for routine monitoring. Use `10min` only for targeted diagnostics on a specific miner and avoid repeated calls for the same miner within a short period.",
-      "destructive": false,
-      "inputSchemaSource": "mcp+openapi",
-      "methodName": "listMinerHistory",
-      "name": "ListMinerHistory",
-      "openapi": {
-        "match": "exact",
-        "method": "GET",
-        "operationId": "ListMinerHistory",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/miners/{miner_id}/history"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": true,
-      "typeBase": "ListMinerHistory"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true
-      },
-      "description": "List Miner Tasks\n\nReturns task execution history for a specific miner. Includes task name, status (pending/running/succeeded/failed), parameters, and timestamps. Filter by task_name or status.",
-      "destructive": false,
-      "inputSchemaSource": "mcp+openapi",
-      "methodName": "getMinerTasks",
-      "name": "GetMinerTasks",
-      "openapi": {
-        "match": "exact",
-        "method": "GET",
-        "operationId": "GetMinerTasks",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/miners/{miner_id}/tasks"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": true,
-      "typeBase": "GetMinerTasks"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true
-      },
-      "description": "List Miner Reboot Events\n\nReturns detected miner reboot events for a farm. Each event includes miner identity (ip, model, make, serial_number) and before/after snapshots (uptime, hashrate, wattage, temperature, anomaly_flags, mining_mode). Hashrate impact averages use T-30~T-5min before reboot and T+15~T+60min after reboot. Filter by miner_id and time range. Default range is last 7 days, max 30 days.",
-      "destructive": false,
-      "inputSchemaSource": "mcp+openapi",
-      "methodName": "listMinerRebootEvents",
-      "name": "ListMinerRebootEvents",
-      "openapi": {
-        "match": "exact",
-        "method": "GET",
-        "operationId": "ListMinerRebootEvents",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/reboot-events"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": true,
-      "typeBase": "ListMinerRebootEvents"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true
-      },
-      "description": "Get Miner Reboot Events with Impact\n\nReturns reboot events for a specific miner with time-window hashrate averages (before: T-30~T-5min, after: T+15~T+60min) to assess reboot impact. Each event includes miner identity and before/after snapshots (uptime, hashrate, wattage, temperature, anomaly_flags, mining_mode). Filter by time range. Default range is last 7 days, max 30 days.",
-      "destructive": false,
-      "inputSchemaSource": "mcp",
-      "methodName": "getMinerRebootEvents",
-      "name": "GetMinerRebootEvents",
-      "outputSchemaSource": "mcp",
-      "readOnly": true,
-      "typeBase": "GetMinerRebootEvents"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true
-      },
-      "description": "List Pool Diffs\n\n**Deprecated** — use ListMinerHistory and compute diffs client-side.\n\nReturns pool change events for all miners in a farm within the time range. This endpoint operates at farm-level scope; per-miner filtering is not supported. Use this to detect unauthorized pool changes or verify pool update tasks completed successfully. Each record shows the before/after pool URLs and worker names.",
-      "destructive": false,
-      "inputSchemaSource": "mcp+openapi",
-      "methodName": "listMinerPoolDiffs",
-      "name": "ListMinerPoolDiffs",
-      "openapi": {
-        "match": "exact",
-        "method": "GET",
-        "operationId": "ListMinerPoolDiffs",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/miner-pool-diff"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": true,
-      "typeBase": "ListMinerPoolDiffs"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true
-      },
-      "description": "List Agents\n\nReturns all agents (edge devices) in the workspace. Each agent is deployed in a farm and monitors/manages local miners. Includes agent status, version, uptime, timestamps, and the farm it belongs to.",
+      "description": "List Agents\n\nList agents in the farm.",
       "destructive": false,
       "inputSchemaSource": "mcp",
       "methodName": "listAgents",
       "name": "ListAgents",
-      "openapi": {
-        "match": "exact",
-        "method": "GET",
-        "operationId": "ListAgents",
-        "path": "/private-api/v1/{workspace_id}/agents"
-      },
-      "outputSchemaSource": "mcp+openapi",
+      "outputSchemaSource": "mcp",
       "readOnly": true,
       "typeBase": "ListAgents"
     },
@@ -261,20 +109,14 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "Search Agents\n\nSearch agents in the workspace with operator-object filters. Returns paginated agents filtered by optional farm_id / status criteria. Each agent is an edge device deployed in a farm that monitors/manages local miners. Omit body for an unfiltered first-page list.",
+      "description": "Get Agent\n\nGet an agent by ID.",
       "destructive": false,
-      "inputSchemaSource": "mcp+openapi",
-      "methodName": "searchAgents",
-      "name": "SearchAgents",
-      "openapi": {
-        "match": "exact",
-        "method": "POST",
-        "operationId": "SearchAgents",
-        "path": "/private-api/v1/{workspace_id}/agents/search"
-      },
-      "outputSchemaSource": "mcp+openapi",
+      "inputSchemaSource": "mcp",
+      "methodName": "getAgent",
+      "name": "GetAgent",
+      "outputSchemaSource": "mcp",
       "readOnly": true,
-      "typeBase": "SearchAgents"
+      "typeBase": "GetAgent"
     },
     {
       "annotations": {
@@ -282,291 +124,162 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "List Task Batches\n\nReturns task batches for a farm. Each batch represents a group of tasks dispatched to miners (e.g. reboot, pool update). Includes batch status, task counts (total/succeeded/failed), and creation info. Filter by task_name.",
+      "description": "List Miners\n\nList miners in the farm.",
       "destructive": false,
-      "inputSchemaSource": "mcp+openapi",
+      "inputSchemaSource": "mcp",
+      "methodName": "listMiners",
+      "name": "ListMiners",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "ListMiners"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Search Miners\n\nSearch miners in the farm with structured filters.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "searchMiners",
+      "name": "SearchMiners",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "SearchMiners"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Get Miner\n\nGet a miner by ID.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "getMiner",
+      "name": "GetMiner",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "GetMiner"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Miner Tasks\n\nReturn task execution history for a specific miner. Filter by task_name to retrieve specific operation types: miner.system.reboot, miner.log.get, miner.light.update, miner.power_mode.update, miner.pool.update, miner.pool.lock, miner.firmware.update. The default time range is the last 30 days. from_time must be within the last 30 days.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "listMinerTasks",
+      "name": "ListMinerTasks",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "ListMinerTasks"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Query Miner Metrics\n\nQuery time-bucketed performance metrics for one miner. Range limits are 1 day for 10min, 7 days for hour, 90 days for day, and 365 days for week.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "queryMinerMetrics",
+      "name": "QueryMinerMetrics",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "QueryMinerMetrics"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Query Farm Metrics\n\nQuery farm metrics using raw performance data for 10min and hour buckets and daily metrics for day and week buckets. Range limits match Query Miner Metrics.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "queryFarmMetrics",
+      "name": "QueryFarmMetrics",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "QueryFarmMetrics"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Query Farm Miner Metrics\n\nReturn a real-time aggregate miner classification snapshot and mining-mode and model distributions for a farm.\n\n`classification` counts are independent. A sleeping miner with a fault appears in both `abnormal` and `sleep`. Online miners equal `total - classification.stale`.\n\nUse SearchMiners to retrieve miners behind a count:\n- `healthy`: `status = { nin: [\"stale\"] }`, `anomaly_flags = { nin: [<all types>] }`, `mining_mode = { nin: [\"sleep\"] }`\n- `abnormal`: `status = { nin: [\"stale\"] }`, `anomaly_flags = { in: [\"fan\", \"power\", \"temperature\", \"hashboard\", \"network\", \"firmware\", \"unknown\", \"control_board\", \"pool\", \"low_hashrate\"] }`\n- `sleep`: `status = { nin: [\"stale\"] }`, `mining_mode = { in: [\"sleep\"] }`\n- `stale`: `status = { in: [\"stale\"] }`\n- anomaly subtype: `status = { nin: [\"stale\"] }`, `anomaly_flags = { in: [\"fan\"] }` (replace with the target type)",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "queryFarmMinerMetrics",
+      "name": "QueryFarmMinerMetrics",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "QueryFarmMinerMetrics"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Farm Reboot Events\n\nList detected Farm Reboot Events in the requested farm. Before averages use T-30 to T-5 minutes and after averages use T+15 to T+60 minutes. The default time range is the last 7 days and the maximum is 30 days.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "listFarmRebootEvents",
+      "name": "ListFarmRebootEvents",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "ListFarmRebootEvents"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Miner Reboot Events\n\nList detected Miner Reboot Events for one Miner. Before averages use T-30 to T-5 minutes and after averages use T+15 to T+60 minutes. The default time range is the last 7 days and the maximum is 30 days.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "listMinerRebootEvents",
+      "name": "ListMinerRebootEvents",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "ListMinerRebootEvents"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Task Batches",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
       "methodName": "listTaskBatches",
       "name": "ListTaskBatches",
-      "openapi": {
-        "match": "exact",
-        "method": "GET",
-        "operationId": "ListTaskBatches",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
+      "outputSchemaSource": "mcp",
       "readOnly": true,
       "typeBase": "ListTaskBatches"
     },
     {
       "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Reboot miner ASIC. Brief downtime. Use after firmware update or when miner is unresponsive.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchMinerSystemReboot",
-      "name": "CreateTaskBatch_MinerSystemReboot",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchMinerSystemReboot"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Collect diagnostic logs from miner ASIC. Dispatches a command to the device; a signed download URL is returned on task success.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchMinerLogGet",
-      "name": "CreateTaskBatch_MinerLogGet",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchMinerLogGet"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Toggle miner LED indicator. Use for physical identification on the rack.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchMinerLightUpdate",
-      "name": "CreateTaskBatch_MinerLightUpdate",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchMinerLightUpdate"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Switch miner mining power mode. Affects hashrate and power consumption.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchMinerPowerModeUpdate",
-      "name": "CreateTaskBatch_MinerPower_modeUpdate",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchMinerPowerModeUpdate"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Flash firmware to miner. Extended downtime; miner reboots after install.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchMinerFirmwareUpdate",
-      "name": "CreateTaskBatch_MinerFirmwareUpdate",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchMinerFirmwareUpdate"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Lock or unlock miner pool configuration via auth package. Prevents unauthorized pool changes while locked.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchMinerPoolLock",
-      "name": "CreateTaskBatch_MinerPoolLock",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchMinerPoolLock"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Trigger agent network scan to discover miners. Long-running; populates miner inventory on completion.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchAgentScanCreate",
-      "name": "CreateTaskBatch_AgentScanCreate",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchAgentScanCreate"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Trigger agent IP diagnosis and upload a CSV report. Uses local diagnostic context first unless refresh is requested.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchAgentIpDiagnosisCreate",
-      "name": "CreateTaskBatch_AgentIp_diagnosisCreate",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchAgentIpDiagnosisCreate"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Trigger agent to self-upgrade to a newer binary. Agent restarts after install; brief control-plane downtime, no miner impact.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchAgentSelfUpdate",
-      "name": "CreateTaskBatch_AgentSelfUpdate",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchAgentSelfUpdate"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Add or remove operator-managed tags on miners. Metadata-only; does not affect mining operation.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchMinerTagsUpdate",
-      "name": "CreateTaskBatch_MinerTagsUpdate",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchMinerTagsUpdate"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Mark miner as deleted in inventory. Reversible only via database operation. Use after physical decommission.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchMinerRecordDelete",
-      "name": "CreateTaskBatch_MinerRecordDelete",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchMinerRecordDelete"
-    },
-    {
-      "annotations": {
-        "readOnlyHint": false,
-        "destructiveHint": true,
-        "idempotentHint": false
-      },
-      "description": "Update miner rack and position metadata in inventory. Metadata-only; does not affect mining operation.",
-      "destructive": true,
-      "inputSchemaSource": "mcp",
-      "methodName": "createTaskBatchMinerRackLocationUpdate",
-      "name": "CreateTaskBatch_MinerRack_locationUpdate",
-      "openapi": {
-        "match": "create-task-batch-family",
-        "method": "POST",
-        "operationId": "CreateTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches"
-      },
-      "outputSchemaSource": "mcp+openapi",
-      "readOnly": false,
-      "typeBase": "CreateTaskBatchMinerRackLocationUpdate"
-    },
-    {
-      "annotations": {
         "readOnlyHint": true,
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "Search Task Batches\n\nSearch task batches in the farm with operator-object filters. Supports status, task_name, actor_type, and created_at criteria. Each batch represents a group of tasks dispatched to miners. Omit body for an unfiltered first-page list. Automation-created batches include metadata.filterSummary with per-stage filter counts (total, passed, skippedUptime, skippedAnomaly, skippedNonNormal, skippedRebootLimit, skippedTemperature, temperatureBypassedZeroHashrate) — useful for diagnosing why automation filtered out miners.",
+      "description": "Search Task Batches",
       "destructive": false,
-      "inputSchemaSource": "mcp+openapi",
+      "inputSchemaSource": "mcp",
       "methodName": "searchTaskBatches",
       "name": "SearchTaskBatches",
-      "openapi": {
-        "match": "exact",
-        "method": "POST",
-        "operationId": "SearchTaskBatches",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/search"
-      },
-      "outputSchemaSource": "mcp+openapi",
+      "outputSchemaSource": "mcp",
       "readOnly": true,
       "typeBase": "SearchTaskBatches"
     },
@@ -576,17 +289,11 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "Get Task Batch\n\nReturns batch summary and per-status task counts. Does not include individual task results — use the /tasks sub-resource for that.\n\nPoll this endpoint every 30 seconds until `status` reaches a terminal value. Terminal values: `succeed`, `failed`, `partial_succeed`. Once terminal, fetch task results via the /tasks sub-resource.\nRecommended max poll duration: 24 hours.",
+      "description": "Get Task Batch",
       "destructive": false,
       "inputSchemaSource": "mcp",
       "methodName": "getTaskBatch",
       "name": "GetTaskBatch",
-      "openapi": {
-        "match": "exact",
-        "method": "GET",
-        "operationId": "GetTaskBatch",
-        "path": "/private-api/v1/{workspace_id}/farms/{farm_id}/tasks/batches/{batch_id}"
-      },
       "outputSchemaSource": "mcp",
       "readOnly": true,
       "typeBase": "GetTaskBatch"
@@ -597,44 +304,194 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "List Task Batch Tasks\n\nReturns individual tasks within a batch, paginated. Use `status` query parameter to filter by task status (e.g. `failed` to inspect failures). Each task includes miner reference, execution timestamps, and result/error details.",
+      "description": "List Task Batch Tasks",
       "destructive": false,
       "inputSchemaSource": "mcp",
-      "methodName": "getTaskBatchTasks",
-      "name": "GetTaskBatchTasks",
+      "methodName": "listTaskBatchTasks",
+      "name": "ListTaskBatchTasks",
       "outputSchemaSource": "mcp",
       "readOnly": true,
-      "typeBase": "GetTaskBatchTasks"
+      "typeBase": "ListTaskBatchTasks"
     },
     {
       "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
       },
-      "description": "List Workspaces\n\nReturns all workspaces the authenticated user has access to, with their role (admin/member/viewer) in each. Call this first to get workspace_id values needed by all other tools.",
-      "destructive": false,
+      "description": "Create Reboot Task Batch",
+      "destructive": true,
       "inputSchemaSource": "mcp",
-      "methodName": "listWorkspaces",
-      "name": "ListWorkspaces",
-      "outputSchemaSource": "observed-mcp",
-      "readOnly": true,
-      "typeBase": "ListWorkspaces"
+      "methodName": "createRebootTaskBatch",
+      "name": "CreateRebootTaskBatch",
+      "outputSchemaSource": "mcp",
+      "readOnly": false,
+      "typeBase": "CreateRebootTaskBatch"
     },
     {
       "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
       },
-      "description": "List BTC Network History\n\nReturns historical BTC network reference data as a time-series wrapper. Each snapshot contains bitcoin price, hashprice (USD and BTC), network hashrate, and difficulty. Default range is the last 7 days.",
-      "destructive": false,
+      "description": "Create Firmware Update Task Batch",
+      "destructive": true,
       "inputSchemaSource": "mcp",
-      "methodName": "listBtcNetworkHistory",
-      "name": "ListBtcNetworkHistory",
+      "methodName": "createFirmwareUpdateTaskBatch",
+      "name": "CreateFirmwareUpdateTaskBatch",
       "outputSchemaSource": "mcp",
-      "readOnly": true,
-      "typeBase": "ListBtcNetworkHistory"
+      "readOnly": false,
+      "typeBase": "CreateFirmwareUpdateTaskBatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Create Pool Lock Task Batch",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createPoolLockTaskBatch",
+      "name": "CreatePoolLockTaskBatch",
+      "outputSchemaSource": "mcp",
+      "readOnly": false,
+      "typeBase": "CreatePoolLockTaskBatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Create Power Mode Update Task Batch",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createPowerModeUpdateTaskBatch",
+      "name": "CreatePowerModeUpdateTaskBatch",
+      "outputSchemaSource": "mcp",
+      "readOnly": false,
+      "typeBase": "CreatePowerModeUpdateTaskBatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Create Light Update Task Batch",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createLightUpdateTaskBatch",
+      "name": "CreateLightUpdateTaskBatch",
+      "outputSchemaSource": "mcp",
+      "readOnly": false,
+      "typeBase": "CreateLightUpdateTaskBatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Create Log Collection Task Batch",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createLogGetTaskBatch",
+      "name": "CreateLogGetTaskBatch",
+      "outputSchemaSource": "mcp",
+      "readOnly": false,
+      "typeBase": "CreateLogGetTaskBatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Create Tags Update Task Batch",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createTagsUpdateTaskBatch",
+      "name": "CreateTagsUpdateTaskBatch",
+      "outputSchemaSource": "mcp",
+      "readOnly": false,
+      "typeBase": "CreateTagsUpdateTaskBatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Create Rack Location Update Task Batch",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createRackLocationUpdateTaskBatch",
+      "name": "CreateRackLocationUpdateTaskBatch",
+      "outputSchemaSource": "mcp",
+      "readOnly": false,
+      "typeBase": "CreateRackLocationUpdateTaskBatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Create Record Delete Task Batch",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createRecordDeleteTaskBatch",
+      "name": "CreateRecordDeleteTaskBatch",
+      "outputSchemaSource": "mcp",
+      "readOnly": false,
+      "typeBase": "CreateRecordDeleteTaskBatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Create Agent Scan Task Batch",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createAgentScanTaskBatch",
+      "name": "CreateAgentScanTaskBatch",
+      "outputSchemaSource": "mcp",
+      "readOnly": false,
+      "typeBase": "CreateAgentScanTaskBatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Create Agent IP Diagnosis Task Batch",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createAgentIpDiagnosisTaskBatch",
+      "name": "CreateAgentIpDiagnosisTaskBatch",
+      "outputSchemaSource": "mcp",
+      "readOnly": false,
+      "typeBase": "CreateAgentIpDiagnosisTaskBatch"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "idempotentHint": false
+      },
+      "description": "Create Agent Self Update Task Batch",
+      "destructive": true,
+      "inputSchemaSource": "mcp",
+      "methodName": "createAgentSelfUpdateTaskBatch",
+      "name": "CreateAgentSelfUpdateTaskBatch",
+      "outputSchemaSource": "mcp",
+      "readOnly": false,
+      "typeBase": "CreateAgentSelfUpdateTaskBatch"
     }
   ]
 }

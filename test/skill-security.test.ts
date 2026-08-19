@@ -101,8 +101,8 @@ describe("packaged Nonce security boundary", () => {
       tools: Array<{ destructive: boolean; readOnly: boolean }>;
     };
 
-    expect(manifest.tools).toHaveLength(31);
-    expect(manifest.tools.filter((tool) => tool.readOnly)).toHaveLength(19);
+    expect(manifest.tools).toHaveLength(32);
+    expect(manifest.tools.filter((tool) => tool.readOnly)).toHaveLength(20);
     expect(manifest.tools.filter((tool) => tool.destructive)).toHaveLength(12);
     expect(manifest.tools.every((tool) => tool.readOnly !== tool.destructive)).toBe(true);
   });
@@ -117,13 +117,7 @@ describe("packaged Nonce security boundary", () => {
     });
 
     await expect(
-      execFileAsync(process.execPath, [
-        cli,
-        "call",
-        "createTaskBatchMinerSystemReboot",
-        "--input",
-        input,
-      ]),
+      execFileAsync(process.execPath, [cli, "call", "createRebootTaskBatch", "--input", input]),
     ).rejects.toMatchObject({
       stderr: expect.stringContaining("--allow-destructive"),
     });
@@ -132,7 +126,7 @@ describe("packaged Nonce security boundary", () => {
       execFileAsync(process.execPath, [
         cli,
         "call",
-        "createTaskBatchMinerSystemReboot",
+        "createRebootTaskBatch",
         "--input",
         input,
         "--allow-destructive",
@@ -145,7 +139,7 @@ describe("packaged Nonce security boundary", () => {
       execFileAsync(process.execPath, [
         cli,
         "call",
-        "createTaskBatchMinerSystemReboot",
+        "createRebootTaskBatch",
         "--input",
         input,
         "--allow-destructive",

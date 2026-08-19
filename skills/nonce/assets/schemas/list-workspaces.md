@@ -6,7 +6,7 @@ ListWorkspaces — read-only
 
 List Workspaces
 
-Returns all workspaces the authenticated user has access to, with their role (admin/member/viewer) in each. Call this first to get workspace_id values needed by all other tools.
+List accessible workspaces.
 
 ## Code
 
@@ -23,26 +23,45 @@ const result = await nonce.listWorkspaces(input)
 ## Input
 
 ```ts
-export interface ListWorkspacesInput {}
+export type ListWorkspacesInput = {} & object
 ```
 
 ## Output
 
 ```ts
-/**
- * Observed output from read-only MCP tool ListWorkspaces.
- */
 export interface ListWorkspacesOutput {
-  status: number
-  data: {
-    success: boolean
-    data: {
-      workspace_id: string
-      workspace_name: string
-      workspace_slug: string
-      role: string
-    }[]
-    error: null
-  }
+  success: true
+  data: Workspace[]
+  error: null
+}
+export interface Workspace {
+  /**
+   * Workspace ID
+   */
+  id: string
+  /**
+   * Workspace name
+   */
+  name: string
+  /**
+   * Workspace slug
+   */
+  slug: string
+  /**
+   * @minItems 1
+   */
+  relations: ["member" | "grantee", ...("member" | "grantee")[]]
+  /**
+   * Effective Public API permissions
+   */
+  permissions: (
+    | "workspace.read"
+    | "workspace.manage"
+    | "farm.read"
+    | "farm.manage"
+    | "miner.read"
+    | "miner.manage"
+    | "miner.high_risk_manage"
+  )[]
 }
 ```

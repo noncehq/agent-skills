@@ -1,37 +1,33 @@
-# listMinerRebootEvents
+# listFarmRebootEvents
 
-ListMinerRebootEvents — read-only
+ListFarmRebootEvents — read-only
 
-Required: `workspace_id`, `farm_id`, `miner_id`
+Required: `workspace_id`, `farm_id`
 
 ## Purpose
 
-List Miner Reboot Events
+List Farm Reboot Events
 
-List detected Miner Reboot Events for one Miner. Before averages use T-30 to T-5 minutes and after averages use T+15 to T+60 minutes. The default time range is the last 7 days and the maximum is 30 days.
+List detected Farm Reboot Events in the requested farm. Before averages use T-30 to T-5 minutes and after averages use T+15 to T+60 minutes. The default time range is the last 7 days and the maximum is 30 days.
 
 ## Code
 
 ```js
-const result = await nonce.listMinerRebootEvents(input)
+const result = await nonce.listFarmRebootEvents(input)
 ```
 
 ## CLI
 
 ```bash
-"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listMinerRebootEvents --input-file ".nonce/requests/list-miner-reboot-events.json"
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listFarmRebootEvents --input-file ".nonce/requests/list-farm-reboot-events.json"
 ```
 
 ## Input
 
 ```ts
-export interface ListMinerRebootEventsInput {
+export interface ListFarmRebootEventsInput {
   workspace_id: string
   farm_id: string
-  /**
-   * Miner ID
-   */
-  miner_id: string
   page?: number
   page_size?: number
   /**
@@ -42,13 +38,17 @@ export interface ListMinerRebootEventsInput {
    * Inclusive end time. Defaults to the request time.
    */
   to_time?: string
+  /**
+   * Miner ID filter
+   */
+  miner_id?: string
 }
 ```
 
 ## Output
 
 ```ts
-export interface ListMinerRebootEventsOutput {
+export interface ListFarmRebootEventsOutput {
   success: true
   data: RebootEvent[]
   pagination: {

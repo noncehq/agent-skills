@@ -53,7 +53,7 @@ tool set.
     `actor_type.eq: automation` only when the user asks specifically about
     automation-issued requests.
   - For one request's execution state, use `getTaskBatch` (`GetTaskBatch`) for
-    aggregate counts and `getTaskBatchTasks` (`GetTaskBatchTasks`) for
+    aggregate counts and `listTaskBatchTasks` (`ListTaskBatchTasks`) for
     per-miner status, result, and error details.
 - Keep reboot events and reboot task batches separate in the result. A Reboot
   Event records an observed restart; a Task Batch records a Nonce request and
@@ -77,8 +77,8 @@ tool set.
 
 ## Safety
 
-- Treat every `CreateTaskBatch_*` method as destructive because it can affect physical miners or operational/inventory state, even when the action appears read-like.
-- Before any `CreateTaskBatch_*` call, explain the target and expected effect and obtain explicit user confirmation.
+- Treat every `Create*TaskBatch` method as destructive because it can affect physical miners or operational/inventory state, even when the action appears read-like.
+- Before any `Create*TaskBatch` call, explain the target and expected effect and obtain explicit user confirmation.
 - In code, enable destructive methods only for the confirmed script and pass
   `confirmDestructive: true` plus a non-empty `confirmation` to that call.
 - For the one-off CLI, use both `--allow-destructive` and `--confirmation`.
