@@ -1,6 +1,6 @@
-# listFarms
+# ListFarms
 
-ListFarms — read-only
+listFarms — read-only
 
 Required: `workspace_id`
 

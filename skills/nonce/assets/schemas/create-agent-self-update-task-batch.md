@@ -1,6 +1,6 @@
-# createAgentSelfUpdateTaskBatch
+# CreateAgentSelfUpdateTaskBatch
 
-CreateAgentSelfUpdateTaskBatch — destructive
+createAgentSelfUpdateTaskBatch — destructive
 
 Required: `workspace_id`, `farm_id`
 

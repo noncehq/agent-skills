@@ -1,6 +1,6 @@
-# listAgents
+# ListAgents
 
-ListAgents — read-only
+listAgents — read-only
 
 Required: `workspace_id`, `farm_id`
 

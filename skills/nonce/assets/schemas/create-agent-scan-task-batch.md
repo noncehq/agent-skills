@@ -1,6 +1,6 @@
-# createAgentScanTaskBatch
+# CreateAgentScanTaskBatch
 
-CreateAgentScanTaskBatch — destructive
+createAgentScanTaskBatch — destructive
 
 Required: `workspace_id`, `farm_id`
 

@@ -1,6 +1,6 @@
-# getFarm
+# GetFarm
 
-GetFarm — read-only
+getFarm — read-only
 
 Required: `workspace_id`, `farm_id`
 

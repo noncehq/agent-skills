@@ -1,6 +1,6 @@
-# listMinerRebootEvents
+# ListMinerRebootEvents
 
-ListMinerRebootEvents — read-only
+listMinerRebootEvents — read-only
 
 Required: `workspace_id`, `farm_id`, `miner_id`
 

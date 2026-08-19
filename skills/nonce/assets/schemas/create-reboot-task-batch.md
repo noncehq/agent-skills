@@ -1,6 +1,6 @@
-# createRebootTaskBatch
+# CreateRebootTaskBatch
 
-CreateRebootTaskBatch — destructive
+createRebootTaskBatch — destructive
 
 Required: `workspace_id`, `farm_id`
 

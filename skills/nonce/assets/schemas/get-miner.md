@@ -1,6 +1,6 @@
-# getMiner
+# GetMiner
 
-GetMiner — read-only
+getMiner — read-only
 
 Required: `workspace_id`, `farm_id`, `miner_id`
 

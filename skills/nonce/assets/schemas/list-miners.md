@@ -1,6 +1,6 @@
-# listMiners
+# ListMiners
 
-ListMiners — read-only
+listMiners — read-only
 
 Required: `workspace_id`, `farm_id`
 

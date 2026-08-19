@@ -1,6 +1,6 @@
-# queryBitcoinMetrics
+# QueryBitcoinMetrics
 
-QueryBitcoinMetrics — read-only
+queryBitcoinMetrics — read-only
 
 ## Purpose
 

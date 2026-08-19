@@ -1,6 +1,6 @@
-# createRecordDeleteTaskBatch
+# CreateRecordDeleteTaskBatch
 
-CreateRecordDeleteTaskBatch — destructive
+createRecordDeleteTaskBatch — destructive
 
 Required: `workspace_id`, `farm_id`
 

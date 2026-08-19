@@ -1,6 +1,6 @@
-# listTaskBatchTasks
+# ListTaskBatchTasks
 
-ListTaskBatchTasks — read-only
+listTaskBatchTasks — read-only
 
 Required: `workspace_id`, `farm_id`, `task_batch_id`
 

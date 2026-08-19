@@ -1,6 +1,6 @@
-# createTagsUpdateTaskBatch
+# CreateTagsUpdateTaskBatch
 
-CreateTagsUpdateTaskBatch — destructive
+createTagsUpdateTaskBatch — destructive
 
 Required: `workspace_id`, `farm_id`
 

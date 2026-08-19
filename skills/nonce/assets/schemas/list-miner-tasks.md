@@ -1,6 +1,6 @@
-# listMinerTasks
+# ListMinerTasks
 
-ListMinerTasks — read-only
+listMinerTasks — read-only
 
 Required: `workspace_id`, `farm_id`, `miner_id`
 

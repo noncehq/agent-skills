@@ -1,6 +1,6 @@
-# getAgent
+# GetAgent
 
-GetAgent — read-only
+getAgent — read-only
 
 Required: `workspace_id`, `farm_id`, `agent_id`
 

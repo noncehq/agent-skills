@@ -1,6 +1,6 @@
-# createAgentIpDiagnosisTaskBatch
+# CreateAgentIpDiagnosisTaskBatch
 
-CreateAgentIpDiagnosisTaskBatch — destructive
+createAgentIpDiagnosisTaskBatch — destructive
 
 Required: `workspace_id`, `farm_id`
 

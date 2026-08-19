@@ -1,6 +1,6 @@
-# createLightUpdateTaskBatch
+# CreateLightUpdateTaskBatch
 
-CreateLightUpdateTaskBatch — destructive
+createLightUpdateTaskBatch — destructive
 
 Required: `workspace_id`, `farm_id`
 

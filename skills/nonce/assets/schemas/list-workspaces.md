@@ -1,6 +1,6 @@
-# listWorkspaces
+# ListWorkspaces
 
-ListWorkspaces — read-only
+listWorkspaces — read-only
 
 ## Purpose
 

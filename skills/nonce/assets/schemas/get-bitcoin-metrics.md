@@ -1,6 +1,6 @@
-# getBitcoinMetrics
+# GetBitcoinMetrics
 
-GetBitcoinMetrics — read-only
+getBitcoinMetrics — read-only
 
 ## Purpose
 

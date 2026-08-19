@@ -1,6 +1,6 @@
-# createRackLocationUpdateTaskBatch
+# CreateRackLocationUpdateTaskBatch
 
-CreateRackLocationUpdateTaskBatch — destructive
+createRackLocationUpdateTaskBatch — destructive
 
 Required: `workspace_id`, `farm_id`
 

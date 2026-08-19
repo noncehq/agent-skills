@@ -1,6 +1,6 @@
-# searchMiners
+# SearchMiners
 
-SearchMiners — read-only
+searchMiners — read-only
 
 Required: `workspace_id`, `farm_id`
 

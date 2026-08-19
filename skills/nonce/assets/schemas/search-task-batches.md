@@ -1,6 +1,6 @@
-# searchTaskBatches
+# SearchTaskBatches
 
-SearchTaskBatches — read-only
+searchTaskBatches — read-only
 
 Required: `workspace_id`, `farm_id`
 

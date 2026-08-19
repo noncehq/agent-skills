@@ -338,7 +338,7 @@ describe("SDK generator helpers", () => {
     expect(artifacts.methodSchemaFiles.size).toBe(1);
     const listFarmsFile = artifacts.methodSchemaFiles.get("list-farms.md");
     expect(listFarmsFile).toBeTruthy();
-    expect(listFarmsFile).toContain("# listFarms");
+    expect(listFarmsFile).toContain("# ListFarms");
     expect(listFarmsFile).toContain("## Purpose");
     expect(listFarmsFile).toContain("## Code");
     expect(listFarmsFile).toContain("## CLI");
@@ -395,7 +395,7 @@ describe("SDK generator helpers", () => {
     expect(artifacts.signatures).toContain("workspace_slug: string");
 
     const wsFile = artifacts.methodSchemaFiles.get("list-workspaces.md");
-    expect(wsFile).toContain("# listWorkspaces");
+    expect(wsFile).toContain("# ListWorkspaces");
     expect(wsFile).toContain("workspace_slug: string");
     expect(wsFile).toContain("export interface ListWorkspacesOutput");
   });

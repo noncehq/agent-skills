@@ -1,6 +1,6 @@
-# createFirmwareUpdateTaskBatch
+# CreateFirmwareUpdateTaskBatch
 
-CreateFirmwareUpdateTaskBatch — destructive
+createFirmwareUpdateTaskBatch — destructive
 
 Required: `workspace_id`, `farm_id`
 

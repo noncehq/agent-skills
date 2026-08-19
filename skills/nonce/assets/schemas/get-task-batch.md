@@ -1,6 +1,6 @@
-# getTaskBatch
+# GetTaskBatch
 
-GetTaskBatch — read-only
+getTaskBatch — read-only
 
 Required: `workspace_id`, `farm_id`, `task_batch_id`
 

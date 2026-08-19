@@ -1,6 +1,6 @@
-# queryFarmMinerMetrics
+# QueryFarmMinerMetrics
 
-QueryFarmMinerMetrics — read-only
+queryFarmMinerMetrics — read-only
 
 Required: `workspace_id`, `farm_id`
 

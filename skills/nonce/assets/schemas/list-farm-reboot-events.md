@@ -1,6 +1,6 @@
-# listFarmRebootEvents
+# ListFarmRebootEvents
 
-ListFarmRebootEvents — read-only
+listFarmRebootEvents — read-only
 
 Required: `workspace_id`, `farm_id`
 

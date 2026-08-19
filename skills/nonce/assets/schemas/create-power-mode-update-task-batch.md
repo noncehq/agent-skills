@@ -1,6 +1,6 @@
-# createPowerModeUpdateTaskBatch
+# CreatePowerModeUpdateTaskBatch
 
-CreatePowerModeUpdateTaskBatch — destructive
+createPowerModeUpdateTaskBatch — destructive
 
 Required: `workspace_id`, `farm_id`
 
