@@ -341,7 +341,7 @@ const renderMethodSignatureFile = async (tool: GeneratedTool): Promise<string> =
     tool.destructive ? "destructive" : undefined,
   ].filter(Boolean);
 
-  const lines = [`# ${tool.methodName}`, "", `${tool.name} — ${markers.join(", ")}`, ""];
+  const lines = [`# ${tool.name}`, "", `${tool.methodName} — ${markers.join(", ")}`, ""];
 
   if (required.length > 0) {
     lines.push(`Required: ${required.map((r) => `\`${r}\``).join(", ")}`, "");

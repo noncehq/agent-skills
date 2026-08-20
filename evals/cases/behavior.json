@@ -59,14 +59,14 @@
           "listWorkspaces",
           "listFarms",
           ["listMiners", "searchMiners"],
-          "listMinerHistory"
+          "queryMinerMetrics"
         ],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
           ["assets/schemas/list-miners.md", "assets/schemas/search-miners.md"],
-          "assets/schemas/list-miner-history.md"
+          "assets/schemas/query-miner-metrics.md"
         ],
         "destructive": false,
         "requiresConfirmation": false
@@ -85,7 +85,7 @@
           "listWorkspaces",
           "listFarms",
           ["listMiners", "searchMiners"],
-          "createTaskBatchMinerSystemReboot"
+          "createRebootTaskBatch"
         ],
         "mustRead": [
           "references/workflow.md",
@@ -96,7 +96,7 @@
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
           ["assets/schemas/list-miners.md", "assets/schemas/search-miners.md"],
-          "assets/schemas/create-task-batch-miner-system-reboot.md"
+          "assets/schemas/create-reboot-task-batch.md"
         ],
         "destructive": true,
         "requiresConfirmation": true
@@ -111,12 +111,12 @@
       "expected": {
         "trigger": true,
         "critical": true,
-        "methods": ["listWorkspaces", "listFarms", "listFarmMetricsHistory"],
+        "methods": ["listWorkspaces", "listFarms", "queryFarmMetrics"],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
-          "assets/schemas/list-farm-metrics-history.md"
+          "assets/schemas/query-farm-metrics.md"
         ],
         "destructive": false,
         "requiresConfirmation": false
@@ -255,14 +255,14 @@
           "listWorkspaces",
           "listFarms",
           ["searchMiners", "listMiners"],
-          "listMinerHistory"
+          "queryMinerMetrics"
         ],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
           ["assets/schemas/search-miners.md", "assets/schemas/list-miners.md"],
-          "assets/schemas/list-miner-history.md"
+          "assets/schemas/query-miner-metrics.md"
         ],
         "destructive": false,
         "requiresConfirmation": false
@@ -277,12 +277,12 @@
       "expected": {
         "trigger": true,
         "critical": true,
-        "methods": ["listWorkspaces", "listFarms", ["listAgents", "searchAgents"]],
+        "methods": ["listWorkspaces", "listFarms", ["listAgents", "getAgent"]],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
-          ["assets/schemas/list-agents.md", "assets/schemas/search-agents.md"]
+          ["assets/schemas/list-agents.md", "assets/schemas/get-agent.md"]
         ],
         "destructive": false,
         "requiresConfirmation": false
@@ -320,7 +320,7 @@
         "methods": [
           "listWorkspaces",
           ["getTaskBatch", "listTaskBatches", "searchTaskBatches"],
-          "getTaskBatchTasks"
+          "listTaskBatchTasks"
         ],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
@@ -330,7 +330,7 @@
             "assets/schemas/list-task-batches.md",
             "assets/schemas/search-task-batches.md"
           ],
-          "assets/schemas/get-task-batch-tasks.md"
+          "assets/schemas/list-task-batch-tasks.md"
         ],
         "destructive": false,
         "requiresConfirmation": false
@@ -350,7 +350,7 @@
           "listFarms",
           "searchTaskBatches",
           "getTaskBatch",
-          "getTaskBatchTasks"
+          "listTaskBatchTasks"
         ],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
@@ -358,7 +358,7 @@
           "assets/schemas/list-farms.md",
           "assets/schemas/search-task-batches.md",
           "assets/schemas/get-task-batch.md",
-          "assets/schemas/get-task-batch-tasks.md"
+          "assets/schemas/list-task-batch-tasks.md"
         ],
         "destructive": false,
         "requiresConfirmation": false
@@ -377,14 +377,14 @@
           "listWorkspaces",
           "listFarms",
           ["listMiners", "searchMiners"],
-          "listMinerPoolDiffs"
+          "queryFarmMinerMetrics"
         ],
         "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
         "schemaFiles": [
           "assets/schemas/list-workspaces.md",
           "assets/schemas/list-farms.md",
           ["assets/schemas/list-miners.md", "assets/schemas/search-miners.md"],
-          "assets/schemas/list-miner-pool-diffs.md"
+          "assets/schemas/query-farm-miner-metrics.md"
         ],
         "destructive": false,
         "requiresConfirmation": false

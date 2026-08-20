@@ -516,7 +516,7 @@ const evaluateStaticSkillContract = async (repoRoot: string, checks: CheckResult
     "Agent-authored code runs with the",
     "scripts/client.mjs",
     "Filter and aggregate MCP data inside the process",
-    "CreateTaskBatch_*",
+    "Create*TaskBatch",
     "explicit user confirmation",
     "allowDestructive: true",
     "confirmDestructive: true",

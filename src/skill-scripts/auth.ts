@@ -28,6 +28,7 @@ import { isMainModule } from "./main-module.js";
 export const authCommandName = "nonce auth";
 
 interface SharedAuthOptions {
+  endpoint?: string;
   profile?: string;
 }
 
@@ -36,7 +37,7 @@ const createProviderFromOptions = (
 ): LocalNonceOAuthProvider => {
   const port = Number(options.port ?? DEFAULT_CALLBACK_PORT);
   return createOAuthProvider({
-    endpoint: DEFAULT_MCP_ENDPOINT,
+    endpoint: options.endpoint ?? DEFAULT_MCP_ENDPOINT,
     profile: normalizeProfile(options.profile ?? DEFAULT_PROFILE),
     redirectUrl: `http://127.0.0.1:${port}${OAUTH_CALLBACK_PATH}`,
   });
@@ -376,6 +377,7 @@ const logout = async (options: SharedAuthOptions & { all?: boolean }): Promise<v
 };
 
 const sharedAuthOptions = {
+  endpoint: { type: "string" },
   profile: { default: DEFAULT_PROFILE, type: "string" },
 } as const satisfies ParseArgsOptionsConfig;
 
@@ -393,6 +395,7 @@ const parseAuthArgs = (
 const sharedAuthValues = (
   values: Record<string, boolean | string | (boolean | string)[] | undefined>,
 ) => ({
+  endpoint: values.endpoint as string | undefined,
   profile: values.profile as string,
 });
 
@@ -406,10 +409,10 @@ const printHelp = (): void => {
   console.log(`Nonce authentication
 
 Usage:
-  auth.mjs status [--profile <name>]
-  auth.mjs login [--port <port>] [--timeout-ms <ms>] [--profile <name>]
-  auth.mjs callback <callback-url> [--port <port>] [--profile <name>]
-  auth.mjs verify [--profile <name>]
+  auth.mjs status [--endpoint <url>] [--profile <name>]
+  auth.mjs login [--endpoint <url>] [--port <port>] [--timeout-ms <ms>] [--profile <name>]
+  auth.mjs callback <callback-url> [--endpoint <url>] [--port <port>] [--profile <name>]
+  auth.mjs verify [--endpoint <url>] [--profile <name>]
   auth.mjs logout [--all] [--profile <name>]`);
 };
 

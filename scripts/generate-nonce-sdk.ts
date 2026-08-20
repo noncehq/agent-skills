@@ -1,4 +1,4 @@
-import { mkdir, readdir, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import {
@@ -39,6 +39,7 @@ interface GenerateSdkOptions {
   referenceOutput?: string;
   schemasDir?: string;
   skipObservedOutputs?: boolean;
+  specFile?: string;
 }
 
 interface McpInspection {
@@ -290,6 +291,90 @@ export const removeStaleGeneratedSchemas = async (
   );
 };
 
+interface SpecOperation {
+  description?: string;
+  operationId?: string;
+  parameters?: Array<{
+    description?: string;
+    in?: string;
+    name?: string;
+    required?: boolean;
+    schema?: Record<string, unknown>;
+  }>;
+  requestBody?: {
+    content?: Record<string, { schema?: Record<string, unknown> }>;
+    required?: boolean;
+  };
+  responses?: Record<string, { content?: Record<string, { schema?: Record<string, unknown> }> }>;
+  summary?: string;
+  "x-mcp"?: { annotations?: Record<string, unknown> };
+}
+
+const specResponseSchema = (responses: SpecOperation["responses"]): JsonSchema | undefined => {
+  if (!responses) return undefined;
+  const success = responses["200"] ?? responses["201"];
+  const schema = success?.content?.["application/json"]?.schema;
+  return schema && Object.keys(schema).length > 0 ? schema : undefined;
+};
+
+export const parseToolsFromSpec = (spec: Record<string, unknown>): Tool[] => {
+  const paths = (spec.paths ?? {}) as Record<string, Record<string, SpecOperation>>;
+  const result: Tool[] = [];
+
+  for (const [, methods] of Object.entries(paths)) {
+    for (const [, operation] of Object.entries(methods)) {
+      if (typeof operation !== "object" || operation === null || !operation.operationId) continue;
+
+      const properties: Record<string, unknown> = {};
+      const required: string[] = [];
+
+      for (const param of operation.parameters ?? []) {
+        if (!param.name || !["path", "query"].includes(param.in ?? "")) continue;
+        const schema: Record<string, unknown> = { ...param.schema };
+        if (param.description && schema.description === undefined) {
+          schema.description = param.description;
+        }
+        properties[param.name] = schema;
+        if (param.required || param.in === "path") required.push(param.name);
+      }
+
+      const bodySchema = operation.requestBody?.content?.["application/json"]?.schema;
+      if (
+        bodySchema?.type === "object" &&
+        typeof bodySchema.properties === "object" &&
+        bodySchema.properties !== null
+      ) {
+        const bodyProps = bodySchema.properties as Record<string, unknown>;
+        Object.assign(properties, bodyProps);
+        if (Array.isArray(bodySchema.required)) {
+          required.push(
+            ...(bodySchema.required as unknown[]).filter((v): v is string => typeof v === "string"),
+          );
+        }
+      }
+
+      const description = [operation.summary, operation.description].filter(Boolean).join("\n\n");
+      const outputSchema = specResponseSchema(operation.responses);
+      const annotations = operation["x-mcp"]?.annotations;
+
+      result.push({
+        name: operation.operationId,
+        description: description || operation.operationId,
+        inputSchema: {
+          type: "object" as const,
+          properties:
+            Object.keys(properties).length > 0 ? (properties as Record<string, object>) : undefined,
+          required: required.length > 0 ? required : undefined,
+        },
+        ...(outputSchema ? { outputSchema } : {}),
+        ...(annotations ? { annotations } : {}),
+      } as Tool);
+    }
+  }
+
+  return result;
+};
+
 const generate = async (options: GenerateSdkOptions): Promise<void> => {
   const endpoint = options.endpoint ?? DEFAULT_MCP_ENDPOINT;
   const clientTypesOutput = options.clientTypesOutput ?? "skills/nonce/scripts/client.d.mts";
@@ -299,14 +384,35 @@ const generate = async (options: GenerateSdkOptions): Promise<void> => {
   const referenceOutput = options.referenceOutput ?? "skills/nonce/references/tool-signatures.md";
   const schemasDir = options.schemasDir ?? "skills/nonce/assets/schemas";
 
-  const openApiDocument = await fetchOpenApiDocument(openapiUrl);
-  const openApiIndex = buildOpenApiIndex(openApiDocument);
-  const { observedOutputSchemas, server, tools } = await inspectMcp({
-    endpoint,
-    openApiIndex,
-    profile,
-    skipObservedOutputs: options.skipObservedOutputs,
-  });
+  let openApiIndex: OpenApiIndex;
+  let observedOutputSchemas: Record<string, JsonSchema>;
+  let server: unknown;
+  let tools: Tool[];
+
+  if (options.specFile) {
+    const specDocument = JSON.parse(await readFile(options.specFile, "utf8")) as Record<
+      string,
+      unknown
+    >;
+    tools = parseToolsFromSpec(specDocument);
+    const specInfo = (specDocument.info ?? {}) as Record<string, unknown>;
+    server = { name: "nonce-mcp", version: (specInfo.version as string) ?? "spec-file" };
+    observedOutputSchemas = {};
+    openApiIndex = { operationCount: 0, operations: new Map() };
+  } else {
+    const openApiDocument = await fetchOpenApiDocument(openapiUrl);
+    openApiIndex = buildOpenApiIndex(openApiDocument);
+    const inspection = await inspectMcp({
+      endpoint,
+      openApiIndex,
+      profile,
+      skipObservedOutputs: options.skipObservedOutputs,
+    });
+    observedOutputSchemas = inspection.observedOutputSchemas;
+    server = inspection.server;
+    tools = inspection.tools;
+  }
+
   const artifacts = await generateArtifacts(
     {
       mcpEndpoint: endpoint,
@@ -382,6 +488,10 @@ const main = async (): Promise<void> => {
     .option(
       "--skip-observed-outputs",
       "skip read-only MCP calls used to infer missing output schemas",
+    )
+    .option(
+      "--spec-file <path>",
+      "local OpenAPI spec file to parse tools from instead of connecting to a live MCP server",
     )
     .action(generate);
 

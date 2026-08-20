@@ -12,7 +12,7 @@ Nonce task methods can affect physical mining devices.
   directory. Never put credentials in code, request files, results, or logs.
 - Filter and aggregate MCP data inside the process. Do not print complete
   responses when a count, selected fields, or a small sample is sufficient.
-- Treat all `CreateTaskBatch_*` methods as destructive even when the action appears read-like.
+- Treat all `Create*TaskBatch` methods as destructive even when the action appears read-like.
 - Before running a destructive call, resolve the exact target set with read-only
   calls, then explain the workspace, farm, miners, task type, parameters, and
   expected effect.

@@ -1,14 +1,12 @@
-# listTaskBatches
+# ListTaskBatches
 
-ListTaskBatches — read-only
+listTaskBatches — read-only
 
 Required: `workspace_id`, `farm_id`
 
 ## Purpose
 
 List Task Batches
-
-Returns task batches for a farm. Each batch represents a group of tasks dispatched to miners (e.g. reboot, pool update). Includes batch status, task counts (total/succeeded/failed), and creation info. Filter by task_name.
 
 ## Code
 
@@ -28,18 +26,12 @@ const result = await nonce.listTaskBatches(input)
 export interface ListTaskBatchesInput {
   workspace_id: string
   farm_id: string
-  /**
-   * Page number (default: 1)
-   */
   page?: number
+  page_size?: number
   /**
-   * Number of items per page (default: 10, max: 10000)
+   * Task name filter
    */
-  pageSize?: number
-  /**
-   * Filter by task name. Supports multiple values separated by comma. Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
-   */
-  task_name?: (
+  task_name?:
     | "agent.scan.create"
     | "agent.ip_diagnosis.create"
     | "agent.self.update"
@@ -53,7 +45,6 @@ export interface ListTaskBatchesInput {
     | "miner.tags.update"
     | "miner.record.delete"
     | "miner.rack_location.update"
-  )[]
 }
 ```
 
@@ -64,55 +55,48 @@ export interface ListTaskBatchesInput {
  * Represents an entity that performs actions in the system (user, API key, or system)
  */
 export type Actor = {
-  [k: string]: unknown
+  /**
+   * The type of actor
+   */
+  type: "user" | "apikey" | "system"
+  /**
+   * The unique identifier of the actor
+   */
+  id: string
+  /**
+   * The display name of the actor
+   */
+  name: string | null
+  /**
+   * The avatar URL of the actor
+   */
+  avatar: string | null
+  /**
+   * Additional metadata about the actor
+   */
+  metadata?: {
+    [k: string]: unknown
+  }
 } | null
 
 export interface ListTaskBatchesOutput {
-  /**
-   * Indicates if the request was successful
-   */
-  success: boolean
-  /**
-   * Array of items
-   */
+  success: true
   data: TaskBatchSummary[]
-  /**
-   * Pagination metadata
-   */
   pagination: {
-    /**
-     * Total number of items
-     */
     total: number
-    /**
-     * Maximum number of items per page
-     */
-    limit: number
-    /**
-     * Number of items to skip
-     */
-    offset: number
-    /**
-     * Whether there are more items after this page
-     */
-    hasNext: boolean
-    /**
-     * Whether there are items before this page
-     */
-    hasPrevious: boolean
+    page: number
+    page_size: number
+    total_pages: number
   }
-  /**
-   * Error object (null on success)
-   */
   error: null
 }
 export interface TaskBatchSummary {
   /**
-   * Miner task batch ID
+   * Task Batch ID
    */
-  batch_id: string
+  id: string
   /**
-   * Miner task name
+   * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
    */
   task_name:
     | "agent.scan.create"
@@ -133,32 +117,32 @@ export interface TaskBatchSummary {
    */
   status: "pending" | "succeed" | "failed" | "partial_succeed"
   /**
-   * Number of tasks in the batch
+   * Total tasks in the batch
    */
   task_count: number
   /**
-   * Number of succeeded tasks
+   * Tasks that succeeded
    */
   succeed_count: number
   /**
-   * Number of failed tasks
+   * Tasks that failed, timed out, or were cancelled
    */
-  failed_count: number
+  unsuccessful_count: number
   /**
-   * Task parameters (JSON). Structure varies by task_name.
+   * Batch parameters
    */
   task_params: {
     [k: string]: unknown
   } | null
   /**
-   * Automation trigger context. Keys: trigger ({predicateField, predicateValue}), automation ({id, name}), filterSummary ({total, passed, skippedUptime?, skippedAnomaly?, skippedNonNormal?, skippedRebootLimit?, skippedTemperature?, temperatureBypassedZeroHashrate?}). filterSummary shows how many miners were evaluated vs filtered at each stage — use it to identify automation filtering bottlenecks. Null for manually created batches.
+   * Batch metadata
    */
-  metadata?: {
+  metadata: {
     [k: string]: unknown
   } | null
   created_by: Actor
   /**
-   * This is a timestamp in ISO 8601 format: YYYY-MM-DDTHH:MM:SSZ.
+   * Batch creation time
    */
   created_at: string
 }

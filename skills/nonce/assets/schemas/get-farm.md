@@ -1,49 +1,42 @@
-# ListFarms
+# GetFarm
 
-listFarms — read-only
+getFarm — read-only
 
-Required: `workspace_id`
+Required: `workspace_id`, `farm_id`
 
 ## Purpose
 
-List Farms
+Get Farm
 
-List farms in the workspace.
+Get a farm by ID.
 
 ## Code
 
 ```js
-const result = await nonce.listFarms(input)
+const result = await nonce.getFarm(input)
 ```
 
 ## CLI
 
 ```bash
-"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listFarms --input-file ".nonce/requests/list-farms.json"
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call getFarm --input-file ".nonce/requests/get-farm.json"
 ```
 
 ## Input
 
 ```ts
-export interface ListFarmsInput {
+export interface GetFarmInput {
   workspace_id: string
-  page?: number
-  page_size?: number
+  farm_id: string
 }
 ```
 
 ## Output
 
 ```ts
-export interface ListFarmsOutput {
+export interface GetFarmOutput {
   success: true
-  data: Farm[]
-  pagination: {
-    total: number
-    page: number
-    page_size: number
-    total_pages: number
-  }
+  data: Farm
   error: null
 }
 export interface Farm {

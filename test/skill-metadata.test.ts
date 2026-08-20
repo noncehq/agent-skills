@@ -57,27 +57,22 @@ describe("Nonce skill metadata", () => {
     const toolNames = manifest.tools.map((tool) => tool.name);
 
     expect(manifest.toolCount).toBe(manifest.tools.length);
-    expect(toolNames).toContain("CreateTaskBatch_MinerTagsUpdate");
-    expect(toolNames).toContain("CreateTaskBatch_MinerRecordDelete");
-    expect(toolNames).not.toContain("CreateTaskBatch_MinerAssetUpdate");
-    expect(toolNames).not.toContain("CreateTaskBatch_MinerAssetDelete");
+    expect(toolNames).toContain("CreateTagsUpdateTaskBatch");
+    expect(toolNames).toContain("CreateRecordDeleteTaskBatch");
+    expect(toolNames).not.toContain("CreateAssetUpdateTaskBatch");
+    expect(toolNames).not.toContain("CreateAssetDeleteTaskBatch");
 
     await Promise.all([
-      access(nonceSchemaPath("create-task-batch-miner-tags-update.md")),
-      access(nonceSchemaPath("create-task-batch-miner-record-delete.md")),
+      access(nonceSchemaPath("create-tags-update-task-batch.md")),
+      access(nonceSchemaPath("create-record-delete-task-batch.md")),
     ]);
-    await expect(
-      access(nonceSchemaPath("create-task-batch-miner-asset-update.md")),
-    ).rejects.toThrow();
-    await expect(
-      access(nonceSchemaPath("create-task-batch-miner-asset-delete.md")),
-    ).rejects.toThrow();
+    await expect(access(nonceSchemaPath("create-asset-update-task-batch.md"))).rejects.toThrow();
+    await expect(access(nonceSchemaPath("create-asset-delete-task-batch.md"))).rejects.toThrow();
 
     const listMiners = await readText("../skills/nonce/assets/schemas/list-miners.md");
-    expect(listMiners).toContain("Real-time hashrate in H/s");
+    expect(listMiners).toContain("Current hashrate in H/s");
     expect(listMiners).toContain("expected_hashrate: number | null");
-    expect(listMiners).toContain("reboot_count: number | null");
-    expect(listMiners).toContain("tags?: string[]");
+    expect(listMiners).toContain("tags: string[]");
   });
 
   it("routes reboot queries without conflating observed events and requested tasks", async () => {
@@ -98,7 +93,7 @@ describe("Nonce skill metadata", () => {
       "ListMinerRebootEvents",
       "SearchTaskBatches",
       "GetTaskBatch",
-      "GetTaskBatchTasks",
+      "ListTaskBatchTasks",
     ]) {
       expect(skill).toContain(`\`${toolName}\``);
       expect(toolNames).toContain(toolName);
