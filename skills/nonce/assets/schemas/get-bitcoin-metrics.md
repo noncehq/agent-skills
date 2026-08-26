@@ -23,7 +23,7 @@ const result = await nonce.getBitcoinMetrics(input)
 ## Input
 
 ```ts
-export type GetBitcoinMetricsInput = {} & object
+export interface GetBitcoinMetricsInput {}
 ```
 
 ## Output
@@ -31,33 +31,32 @@ export type GetBitcoinMetricsInput = {} & object
 ```ts
 export interface GetBitcoinMetricsOutput {
   success: true
-  data: BitcoinMetrics
+  data: {
+    /**
+     * Current Bitcoin price in USD
+     */
+    bitcoin_price: number
+    /**
+     * Current hashprice in USD per PH/s per day
+     */
+    hashprice_usd: number
+    /**
+     * Current hashprice in BTC per PH/s per day
+     */
+    hashprice_btc: number
+    /**
+     * Current network hashrate in H/s
+     */
+    network_hashrate: number
+    /**
+     * Current network difficulty
+     */
+    network_difficulty: number
+    /**
+     * Snapshot timestamp
+     */
+    timestamp: string
+  }
   error: null
-}
-export interface BitcoinMetrics {
-  /**
-   * Current Bitcoin price in USD
-   */
-  bitcoin_price: number
-  /**
-   * Current hashprice in USD per PH/s per day
-   */
-  hashprice_usd: number
-  /**
-   * Current hashprice in BTC per PH/s per day
-   */
-  hashprice_btc: number
-  /**
-   * Current network hashrate in EH/s
-   */
-  network_hashrate: number
-  /**
-   * Current network difficulty
-   */
-  network_difficulty: number
-  /**
-   * Snapshot timestamp
-   */
-  timestamp: string
 }
 ```

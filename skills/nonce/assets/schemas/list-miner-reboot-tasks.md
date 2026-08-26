@@ -1,53 +1,36 @@
-# ListMinerTasks
+# ListMinerRebootTasks
 
-listMinerTasks — read-only
+listMinerRebootTasks — read-only
 
 Required: `workspace_id`, `farm_id`, `miner_id`
 
 ## Purpose
 
-List Miner Tasks
+List Miner Reboot Tasks
 
-Return task execution history for a specific miner.
+List reboot task history for a miner. Equivalent to ListMinerTasks with task_name=miner.system.reboot.
 
 ## Code
 
 ```js
-const result = await nonce.listMinerTasks(input)
+const result = await nonce.listMinerRebootTasks(input)
 ```
 
 ## CLI
 
 ```bash
-"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listMinerTasks --input-file ".nonce/requests/list-miner-tasks.json"
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call listMinerRebootTasks --input-file ".nonce/requests/list-miner-reboot-tasks.json"
 ```
 
 ## Input
 
 ```ts
-export interface ListMinerTasksInput {
+export interface ListMinerRebootTasksInput {
   workspace_id: string
   farm_id: string
   miner_id: string
   page?: number
   page_size?: number
-  /**
-   * Filter by task name
-   */
-  task_name?:
-    | "agent.scan.create"
-    | "agent.ip_diagnosis.create"
-    | "agent.self.update"
-    | "miner.system.reboot"
-    | "miner.log.get"
-    | "miner.light.update"
-    | "miner.power_mode.update"
-    | "miner.pool.update"
-    | "miner.pool.lock"
-    | "miner.firmware.update"
-    | "miner.tags.update"
-    | "miner.record.delete"
-    | "miner.rack_location.update"
   /**
    * Filter by task status
    */
@@ -66,7 +49,7 @@ export interface ListMinerTasksInput {
 ## Output
 
 ```ts
-export interface ListMinerTasksOutput {
+export interface ListMinerRebootTasksOutput {
   success: true
   data: {
     /**

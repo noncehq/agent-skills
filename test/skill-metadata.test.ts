@@ -83,7 +83,8 @@ describe("Nonce skill metadata", () => {
     const toolNames = manifest.tools.map((tool) => tool.name);
 
     expect(skill).toContain("For observed miner restarts");
-    expect(skill).toContain("For reboot requests issued through Nonce");
+    expect(skill).toContain("For reboot requests issued through Nonce for one miner");
+    expect(skill).toContain("For farm-wide reboot request batches");
     expect(skill).toContain("`task_name.eq` set to");
     expect(skill).toContain("`miner.system.reboot`");
     expect(skill).toMatch(/A Reboot\s+Event records an observed restart/);
@@ -91,6 +92,7 @@ describe("Nonce skill metadata", () => {
 
     for (const toolName of [
       "ListMinerRebootEvents",
+      "ListMinerRebootTasks",
       "SearchTaskBatches",
       "GetTaskBatch",
       "ListTaskBatchTasks",
