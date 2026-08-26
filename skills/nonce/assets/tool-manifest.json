@@ -4,14 +4,16 @@
   "openapiUrl": "https://docs.nonce.app/api-reference/openapi.json",
   "server": {
     "name": "nonce-mcp",
-    "version": "2.0.0"
+    "title": "Nonce MCP",
+    "version": "0.2.0",
+    "description": "MCP server for the Nonce mining management API (API spec v2.0.0)"
   },
   "sourcePriority": [
     "mcp-tools-list",
     "openapi-supplement",
     "observed-readonly-mcp-output"
   ],
-  "toolCount": 32,
+  "toolCount": 33,
   "tools": [
     {
       "annotations": {
@@ -49,7 +51,7 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "Query Bitcoin Metrics\n\nQuery historical Bitcoin mining market metrics as a time series. Each snapshot contains bitcoin price, hashprice (USD and BTC), network hashrate, and difficulty.",
+      "description": "Query Bitcoin Metrics\n\nQuery historical Bitcoin mining market metrics as a time series.",
       "destructive": false,
       "inputSchemaSource": "mcp",
       "methodName": "queryBitcoinMetrics",
@@ -169,7 +171,22 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "List Miner Tasks\n\nReturn task execution history for a specific miner. Filter by task_name to retrieve specific operation types: miner.system.reboot, miner.log.get, miner.light.update, miner.power_mode.update, miner.pool.update, miner.pool.lock, miner.firmware.update. The default time range is the last 30 days. from_time must be within the last 30 days.",
+      "description": "List Miner Reboot Tasks\n\nList reboot task history for a miner. Equivalent to ListMinerTasks with task_name=miner.system.reboot.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "listMinerRebootTasks",
+      "name": "ListMinerRebootTasks",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "ListMinerRebootTasks"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "List Miner Tasks\n\nReturn task execution history for a specific miner.",
       "destructive": false,
       "inputSchemaSource": "mcp",
       "methodName": "listMinerTasks",
@@ -184,7 +201,7 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "Query Miner Metrics\n\nQuery time-bucketed performance metrics for one miner. Range limits are 1 day for 10min, 7 days for hour, 90 days for day, and 365 days for week.",
+      "description": "Query Miner Metrics\n\nQuery time-bucketed performance metrics for a single miner.",
       "destructive": false,
       "inputSchemaSource": "mcp",
       "methodName": "queryMinerMetrics",
@@ -199,7 +216,7 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "Query Farm Metrics\n\nQuery farm metrics using raw performance data for 10min and hour buckets and daily metrics for day and week buckets. Range limits match Query Miner Metrics.",
+      "description": "Query Farm Metrics\n\nQuery time-bucketed aggregate metrics for a farm.",
       "destructive": false,
       "inputSchemaSource": "mcp",
       "methodName": "queryFarmMetrics",
@@ -214,7 +231,7 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
-      "description": "Query Farm Miner Metrics\n\nReturn a real-time aggregate miner classification snapshot and mining-mode and model distributions for a farm.\n\n`classification` counts are independent. A sleeping miner with a fault appears in both `abnormal` and `sleep`. Online miners equal `total - classification.stale`.\n\nUse SearchMiners to retrieve miners behind a count:\n- `healthy`: `status = { nin: [\"stale\"] }`, `anomaly_flags = { nin: [<all types>] }`, `mining_mode = { nin: [\"sleep\"] }`\n- `abnormal`: `status = { nin: [\"stale\"] }`, `anomaly_flags = { in: [\"fan\", \"power\", \"temperature\", \"hashboard\", \"network\", \"firmware\", \"unknown\", \"control_board\", \"pool\", \"low_hashrate\"] }`\n- `sleep`: `status = { nin: [\"stale\"] }`, `mining_mode = { in: [\"sleep\"] }`\n- `stale`: `status = { in: [\"stale\"] }`\n- anomaly subtype: `status = { nin: [\"stale\"] }`, `anomaly_flags = { in: [\"fan\"] }` (replace with the target type)",
+      "description": "Query Farm Miner Metrics\n\nReturn real-time aggregate miner classification counts and mining-mode and model distributions for a farm. Classification counts are independent — a sleeping miner with a fault appears in both abnormal and sleep. Online miners equal total minus stale.",
       "destructive": false,
       "inputSchemaSource": "mcp",
       "methodName": "queryFarmMinerMetrics",
@@ -319,7 +336,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Reboot Task Batch",
+      "description": "Create Reboot Task Batch\n\nDispatch a reboot task to the specified miners in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createRebootTaskBatch",
@@ -334,7 +351,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Firmware Update Task Batch",
+      "description": "Create Firmware Update Task Batch\n\nDispatch a firmware update task to the specified miners in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createFirmwareUpdateTaskBatch",
@@ -349,7 +366,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Pool Lock Task Batch",
+      "description": "Create Pool Lock Task Batch\n\nLock or unlock pool configuration for the specified miners in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createPoolLockTaskBatch",
@@ -364,7 +381,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Power Mode Update Task Batch",
+      "description": "Create Power Mode Update Task Batch\n\nUpdate the mining power mode for the specified miners in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createPowerModeUpdateTaskBatch",
@@ -379,7 +396,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Light Update Task Batch",
+      "description": "Create Light Update Task Batch\n\nToggle the indicator light for the specified miners in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createLightUpdateTaskBatch",
@@ -394,7 +411,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Log Collection Task Batch",
+      "description": "Create Log Collection Task Batch\n\nCollect diagnostic logs from the specified miners in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createLogGetTaskBatch",
@@ -409,7 +426,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Tags Update Task Batch",
+      "description": "Create Tags Update Task Batch\n\nAdd or remove tags on the specified miners in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createTagsUpdateTaskBatch",
@@ -424,7 +441,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Rack Location Update Task Batch",
+      "description": "Create Rack Location Update Task Batch\n\nUpdate rack location metadata for the specified miners in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createRackLocationUpdateTaskBatch",
@@ -439,7 +456,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Record Delete Task Batch",
+      "description": "Create Record Delete Task Batch\n\nDelete miner records from the farm. This action is irreversible.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createRecordDeleteTaskBatch",
@@ -454,7 +471,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Agent Scan Task Batch",
+      "description": "Create Agent Scan Task Batch\n\nTrigger a miner discovery scan on the agents in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createAgentScanTaskBatch",
@@ -469,7 +486,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Agent IP Diagnosis Task Batch",
+      "description": "Create Agent IP Diagnosis Task Batch\n\nRun IP connectivity diagnostics on the agents in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createAgentIpDiagnosisTaskBatch",
@@ -484,7 +501,7 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Agent Self Update Task Batch",
+      "description": "Create Agent Self Update Task Batch\n\nTrigger a self-update on the agents in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
       "methodName": "createAgentSelfUpdateTaskBatch",

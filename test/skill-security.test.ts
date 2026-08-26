@@ -98,12 +98,19 @@ describe("packaged Nonce security boundary", () => {
     const manifest = JSON.parse(
       await readFile(join(skillRoot, "assets", "tool-manifest.json"), "utf8"),
     ) as {
-      tools: Array<{ destructive: boolean; readOnly: boolean }>;
+      tools: Array<{ destructive: boolean; methodName: string; readOnly: boolean }>;
     };
 
-    expect(manifest.tools).toHaveLength(32);
-    expect(manifest.tools.filter((tool) => tool.readOnly)).toHaveLength(20);
+    expect(manifest.tools).toHaveLength(33);
+    expect(manifest.tools.filter((tool) => tool.readOnly)).toHaveLength(21);
     expect(manifest.tools.filter((tool) => tool.destructive)).toHaveLength(12);
+    expect(manifest.tools).toContainEqual(
+      expect.objectContaining({
+        destructive: false,
+        methodName: "listMinerRebootTasks",
+        readOnly: true,
+      }),
+    );
     expect(manifest.tools.every((tool) => tool.readOnly !== tool.destructive)).toBe(true);
   });
 

@@ -3,7 +3,7 @@ name: nonce
 description: >-
   Use this skill when the user needs to query, analyze, automate, or operate Nonce mining resources: workspaces, farms, miners, agents, task batches, miner tasks, metrics, history, or operational actions. It provides code-first access to the complete Nonce MCP tool set so the agent can filter and aggregate data before returning a compact result. Do not use it for generic Bitcoin mining questions or unrelated Node/API work.
 metadata:
-  version: "2026-08-03"
+  version: "2026-08-26"
 ---
 
 # Nonce
@@ -47,7 +47,11 @@ tool set.
   - For observed miner restarts, use `listMinerRebootEvents`
     (`ListMinerRebootEvents`). Pass the requested `from_time` and `to_time`;
     otherwise the method returns the last 7 days through now, up to 30 days.
-  - For reboot requests issued through Nonce, use `searchTaskBatches`
+  - For reboot requests issued through Nonce for one miner, use
+    `listMinerRebootTasks` (`ListMinerRebootTasks`). Pass the requested
+    `from_time` and `to_time` within the supported 30-day window, and use
+    `status` only when the user asks for a specific execution state.
+  - For farm-wide reboot request batches, use `searchTaskBatches`
     (`SearchTaskBatches`) with `task_name.eq` set to
     `miner.system.reboot`. Apply `created_at` for the requested time range and
     `actor_type.eq: automation` only when the user asks specifically about
