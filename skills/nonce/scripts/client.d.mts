@@ -339,7 +339,22 @@ export interface GetAgentOutput {
      * Public Agent host identity
      */
     host: {
-      [k: string]: unknown
+      /**
+       * Host name reported by the Agent
+       */
+      hostname: string | null
+      /**
+       * Operating system family
+       */
+      platform: string | null
+      /**
+       * Operating system release description
+       */
+      os: string | null
+      /**
+       * Agent host IP address
+       */
+      ip: string | null
     } | null
   }
   error: null
@@ -406,7 +421,7 @@ export interface ListMinersOutput {
      */
     status: "online" | "stale"
     /**
-     * Operator-managed labels
+     * Miner labels
      */
     tags: string[]
     /**
@@ -769,7 +784,7 @@ export interface SearchMinersOutput {
      */
     status: "online" | "stale"
     /**
-     * Operator-managed labels
+     * Miner labels
      */
     tags: string[]
     /**
@@ -882,7 +897,7 @@ export interface GetMinerOutput {
      */
     status: "online" | "stale"
     /**
-     * Operator-managed labels
+     * Miner labels
      */
     tags: string[]
     /**
@@ -945,7 +960,26 @@ export interface GetMinerOutput {
      * Reported network configuration
      */
     network: {
-      [k: string]: unknown
+      /**
+       * How the address is assigned
+       */
+      mode: "dhcp" | "static"
+      /**
+       * Address currently in use
+       */
+      ip: string | null
+      /**
+       * Subnet mask currently in use
+       */
+      netmask: string | null
+      /**
+       * Gateway in use. Null when the firmware does not report one, which is the case for Antminer derivatives on DHCP
+       */
+      gateway: string | null
+      /**
+       * DNS servers in use, semicolon separated when there are several
+       */
+      dns: string | null
     } | null
     /**
      * Matched hardware submodel
@@ -1079,7 +1113,28 @@ export interface ListMinerRebootTasksOutput {
      * Represents an entity that performs actions in the system (user, API key, or system)
      */
     created_by: {
-      [k: string]: unknown
+      /**
+       * The type of actor
+       */
+      type: "user" | "apikey" | "system"
+      /**
+       * The unique identifier of the actor
+       */
+      id: string
+      /**
+       * The display name of the actor
+       */
+      name: string | null
+      /**
+       * The avatar URL of the actor
+       */
+      avatar: string | null
+      /**
+       * Additional metadata about the actor
+       */
+      metadata?: {
+        [k: string]: unknown
+      }
     } | null
     /**
      * Task creation time
@@ -1188,7 +1243,28 @@ export interface ListMinerTasksOutput {
      * Represents an entity that performs actions in the system (user, API key, or system)
      */
     created_by: {
-      [k: string]: unknown
+      /**
+       * The type of actor
+       */
+      type: "user" | "apikey" | "system"
+      /**
+       * The unique identifier of the actor
+       */
+      id: string
+      /**
+       * The display name of the actor
+       */
+      name: string | null
+      /**
+       * The avatar URL of the actor
+       */
+      avatar: string | null
+      /**
+       * Additional metadata about the actor
+       */
+      metadata?: {
+        [k: string]: unknown
+      }
     } | null
     /**
      * Task creation time
@@ -1471,7 +1547,7 @@ export interface QueryFarmMinerMetricsOutput {
       }
     }
     /**
-     * Online miner distribution by mining mode and preset
+     * Online miner distribution by mining mode and preset, each with its firmware breakdown
      */
     mining_mode: {
       /**
@@ -1486,6 +1562,19 @@ export interface QueryFarmMinerMetricsOutput {
        * Number of online miners in this mode
        */
       count: number
+      /**
+       * Firmware breakdown of this mode, most common first. Counts sum to `count`.
+       */
+      firmwares: {
+        /**
+         * Firmware name, or null when the miners report none
+         */
+        firmware: string | null
+        /**
+         * Number of online miners in this mode running this firmware
+         */
+        count: number
+      }[]
     }[]
     /**
      * Online miner distribution by model and resolved specification
@@ -1506,6 +1595,564 @@ export interface QueryFarmMinerMetricsOutput {
        */
       average_expected_hashrate: number | null
     }[]
+  }
+  error: null
+}
+export interface QueryFarmMonitorEventMetricsInput {
+  workspace_id: string
+  farm_id: string
+  /**
+   * Inclusive window start. Selects events that started or ended within the window. Defaults to 24 hours before to_time; at most 7 days. With status=active and both bounds omitted, the selection covers all matching active events. event_ids replaces the window.
+   */
+  from_time?: string
+  /**
+   * Exclusive window end. Defaults to the request time when a window applies.
+   */
+  to_time?: string
+  /**
+   * Monitor types to include; defaults to all supported types
+   */
+  monitor_type?: ("agent_offline" | "agent_miner_data_stale" | "miner_offline" | "hashrate_drop" | "low_hashrate")[]
+  /**
+   * Object types to include, intersected with monitor_type. Use ["farm","agent"] to reconstruct the incident timeline.
+   */
+  object_type?: ("farm" | "agent" | "miner")[]
+  /**
+   * Events of one miner, agent or farm object
+   */
+  object_id?: string
+  /**
+   * Selects miner events whose miner is currently managed by this agent. Applies to miner monitor types only.
+   */
+  agent_id?: string
+  /**
+   * Exact event IDs (1..100) within the farm. Replaces the time window; other filters still apply.
+   */
+  event_ids?: string[]
+  /**
+   * true selects events with a recorded alert entry; false selects event-only records.
+   */
+  alert_entered?: boolean
+  /**
+   * active = ended_at is null; ended = ended_at is set.
+   */
+  status?: "active" | "ended"
+}
+export interface QueryFarmMonitorEventMetricsOutput {
+  success: true
+  data: {
+    /**
+     * Request time used as the reference for window defaults and histogram buckets.
+     */
+    data_at: string
+    /**
+     * Effective inclusive window start after defaults; null when the selection has no time condition.
+     */
+    from_time: string | null
+    /**
+     * Effective exclusive window end after defaults; null when the selection has no time condition.
+     */
+    to_time: string | null
+    /**
+     * Number of events matching the selection across all monitor types.
+     */
+    total: number
+    /**
+     * One entry per monitor type with at least one matching event, ordered by count descending then monitor_type ascending. An object can appear under several monitor types.
+     */
+    by_monitor_type: {
+      /**
+       * Monitor type; also the grouping key of event metrics
+       */
+      monitor_type: "agent_offline" | "agent_miner_data_stale" | "miner_offline" | "hashrate_drop" | "low_hashrate"
+      /**
+       * Kind of object a monitor event describes
+       */
+      object_type: "farm" | "agent" | "miner"
+      /**
+       * Number of events matching the selection.
+       */
+      count: number
+      /**
+       * Number of distinct objects within this monitor type.
+       */
+      distinct_object_count: number
+      /**
+       * Number of active events matching all selection filters.
+       */
+      active_count: number
+      earliest_started_at: string
+      latest_started_at: string
+      /**
+       * Matching events by age of started_at relative to data_at: [0,1h), [1h,24h), [24h,7d), [7d,infinity). Future timestamps have age zero. The buckets sum to count and are independent of the query window.
+       */
+      started_at_histogram: {
+        lt_1h: number
+        lt_24h: number
+        lt_7d: number
+        ge_7d: number
+      }
+    }[]
+  }
+  error: null
+}
+export interface SearchFarmMonitorEventsInput {
+  workspace_id: string
+  farm_id: string
+  /**
+   * Inclusive window start. Selects events that started or ended within the window. Defaults to 24 hours before to_time; at most 7 days. With status=active and both bounds omitted, the selection covers all matching active events. event_ids replaces the window.
+   */
+  from_time?: string
+  /**
+   * Exclusive window end. Defaults to the request time when a window applies.
+   */
+  to_time?: string
+  /**
+   * Monitor types to include; defaults to all supported types
+   */
+  monitor_type?: ("agent_offline" | "agent_miner_data_stale" | "miner_offline" | "hashrate_drop" | "low_hashrate")[]
+  /**
+   * Object types to include, intersected with monitor_type. Use ["farm","agent"] to reconstruct the incident timeline.
+   */
+  object_type?: ("farm" | "agent" | "miner")[]
+  /**
+   * Events of one miner, agent or farm object
+   */
+  object_id?: string
+  /**
+   * Selects miner events whose miner is currently managed by this agent. Applies to miner monitor types only.
+   */
+  agent_id?: string
+  /**
+   * Exact event IDs (1..100) within the farm. Replaces the time window; other filters still apply.
+   */
+  event_ids?: string[]
+  /**
+   * true selects events with a recorded alert entry; false selects event-only records.
+   */
+  alert_entered?: boolean
+  /**
+   * active = ended_at is null; ended = ended_at is set.
+   */
+  status?: "active" | "ended"
+  /**
+   * summary returns snapshot=null. snapshot adds the frozen rule, evaluation context, object snapshot and alert entry context of each event and limits page_size to 100.
+   */
+  detail?: "summary" | "snapshot"
+  /**
+   * Sort direction of started_at, id
+   */
+  order?: "asc" | "desc"
+  page?: number
+  /**
+   * Page size, 1..500 (1..100 when detail=snapshot)
+   */
+  page_size?: number
+}
+export interface SearchFarmMonitorEventsOutput {
+  success: true
+  data: {
+    event_id: string
+    /**
+     * Monitor type; also the grouping key of event metrics
+     */
+    monitor_type: "agent_offline" | "agent_miner_data_stale" | "miner_offline" | "hashrate_drop" | "low_hashrate"
+    /**
+     * Kind of object a monitor event describes
+     */
+    object_type: "farm" | "agent" | "miner"
+    /**
+     * Farm ID, agent ID or miner ID depending on object_type
+     */
+    object_id: string
+    /**
+     * Severity as stored, e.g. WARNING
+     */
+    severity: string
+    /**
+     * state_change = condition became true while monitored; monitor_activation = already true when the monitor was enabled
+     */
+    detection_reason: string
+    started_at: string
+    detected_at: string
+    /**
+     * Time the event ended; null while active.
+     */
+    ended_at: string | null
+    /**
+     * Reason the event ended: recovered, miner_deleted, agent_deleted or farm_archived. Current farm health is read from current metrics.
+     */
+    end_reason: string | null
+    /**
+     * Time of recorded alert entry; event-only records use null
+     */
+    entered_at: string | null
+    /**
+     * Current live row of the object; null for farm events and for deleted or moved objects
+     */
+    current:
+      | (
+          | {
+              object_type: "miner"
+              agent_id: string
+              /**
+               * System-managed reporting status: online or stale
+               */
+              status: string
+              model: string | null
+              rack: string | null
+              position: number | null
+              ip: string
+              /**
+               * Current hashrate in H/s
+               */
+              hashrate: number | null
+              /**
+               * Expected hashrate in H/s
+               */
+              expected_hashrate: number | null
+              last_updated_at: string | null
+            }
+          | {
+              object_type: "agent"
+              status: string | null
+              version: string | null
+              last_online_at: string | null
+              last_updated_at: string | null
+            }
+        )
+      | null
+    /**
+     * Populated only when detail=snapshot
+     */
+    snapshot:
+      | (
+          | {
+              monitor_type: "agent_offline"
+              /**
+               * Monitor rule parameters frozen when the event was created
+               */
+              effective_parameters: {
+                [k: string]: unknown
+              } | null
+              /**
+               * Event evaluation context
+               */
+              evaluation_snapshot: {
+                last_online_at?: string | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Agent row frozen when the event was created
+               */
+              object_snapshot: {
+                agent_id?: string | null
+                host?: {
+                  [k: string]: unknown
+                } | null
+                version?: string | null
+                uptime?: number | null
+                last_online_at?: string | null
+                last_updated_at?: string | null
+                farm_name?: string | null
+                /**
+                 * Farm description shown as alias
+                 */
+                farm_alias?: string | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Evaluation context recorded at alert entry; event-only records use null
+               */
+              alert_entry_snapshot: {
+                event_started_at?: string | null
+                last_online_at?: string | null
+                offline_after_seconds?: number | null
+                agent_last_updated_at?: string | null
+                managed_miner_count?: number | null
+                /**
+                 * H/s
+                 */
+                expected_hashrate_total?: number | null
+                expected_hashrate_miner_count?: number | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Validation problems of this record, e.g. object_snapshot_invalid. The affected field is null.
+               */
+              warnings: string[]
+            }
+          | {
+              monitor_type: "agent_miner_data_stale"
+              /**
+               * Monitor rule parameters frozen when the event was created
+               */
+              effective_parameters: {
+                [k: string]: unknown
+              } | null
+              /**
+               * Event evaluation context
+               */
+              evaluation_snapshot: {
+                last_updated_at?: string | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Agent row frozen when the event was created
+               */
+              object_snapshot: {
+                agent_id?: string | null
+                host?: {
+                  [k: string]: unknown
+                } | null
+                version?: string | null
+                uptime?: number | null
+                last_online_at?: string | null
+                last_updated_at?: string | null
+                farm_name?: string | null
+                /**
+                 * Farm description shown as alias
+                 */
+                farm_alias?: string | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Evaluation context recorded at alert entry; event-only records use null
+               */
+              alert_entry_snapshot: {
+                event_started_at?: string | null
+                agent_host?: {
+                  [k: string]: unknown
+                } | null
+                agent_version?: string | null
+                agent_uptime?: number | null
+                agent_last_online_at?: string | null
+                agent_last_updated_at?: string | null
+                managed_miner_count?: number | null
+                /**
+                 * H/s
+                 */
+                expected_hashrate_total?: number | null
+                expected_hashrate_miner_count?: number | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Validation problems of this record, e.g. object_snapshot_invalid. The affected field is null.
+               */
+              warnings: string[]
+            }
+          | {
+              monitor_type: "miner_offline"
+              /**
+               * Monitor rule parameters frozen when the event was created
+               */
+              effective_parameters: {
+                [k: string]: unknown
+              } | null
+              /**
+               * Event evaluation context
+               */
+              evaluation_snapshot: {
+                last_updated_at?: string | null
+                stale_at?: string | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Miner row frozen when the event was created
+               */
+              object_snapshot: {
+                agent_id?: string | null
+                ip?: string | null
+                mac?: string | null
+                make?: string | null
+                model?: string | null
+                serial_number?: string | null
+                /**
+                 * H/s
+                 */
+                expected_hashrate?: number | null
+                rack?: string | null
+                position?: number | null
+                network?: {
+                  [k: string]: unknown
+                } | null
+                farm_name?: string | null
+                /**
+                 * Farm description shown as alias
+                 */
+                farm_alias?: string | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Evaluation context recorded at alert entry; event-only records use null
+               */
+              alert_entry_snapshot: {
+                event_started_at?: string | null
+                agent_last_online_at?: string | null
+                agent_last_updated_at?: string | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Validation problems of this record, e.g. object_snapshot_invalid. The affected field is null.
+               */
+              warnings: string[]
+            }
+          | {
+              monitor_type: "hashrate_drop"
+              /**
+               * Monitor rule parameters frozen when the event was created
+               */
+              effective_parameters: {
+                [k: string]: unknown
+              } | null
+              /**
+               * Event evaluation context
+               */
+              evaluation_snapshot: {
+                /**
+                 * Baseline online hashrate ratio at event start: rolling pool hashrate divided by the farm's configured hashrate, averaged over the baseline samples. Ratio scale; may exceed 1 during pool overlap.
+                 */
+                baseline_online_hashrate?: number | null
+                /**
+                 * Entry threshold as a ratio difference; 0.1 equals 10 percentage points.
+                 */
+                entry_drop_percentage_points?: number | null
+                /**
+                 * Online hashrate ratio at the first breach, in the same ratio scale as baseline_online_hashrate.
+                 */
+                first_breach_online_hashrate?: number | null
+                first_breach_period?: string | null
+                entry_confirmation_samples?: number | null
+                recovery_confirmation_samples?: number | null
+                expected_pool_count?: number | null
+                observed_pool_count?: number | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Farm row frozen when the event was created
+               */
+              object_snapshot: {
+                farm_name?: string | null
+                /**
+                 * Farm description shown as alias
+                 */
+                farm_alias?: string | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Evaluation context recorded at alert entry; event-only records use null
+               */
+              alert_entry_snapshot: {
+                event_started_at?: string | null
+                /**
+                 * Drop in percentage points: abs(confirmation baseline ratio - confirmed online ratio) x 100. Example: 1.04624 and 0.77314 give 27.31.
+                 */
+                drop_percentage?: number | null
+                /**
+                 * Drop in H/s: the ratio drop multiplied by the farm's configured hashrate.
+                 */
+                drop_hashrate?: number | null
+                /**
+                 * Baseline online hashrate ratio at event start: rolling pool hashrate divided by the farm's configured hashrate, averaged over the baseline samples. Ratio scale; may exceed 1 during pool overlap.
+                 */
+                baseline_online_hashrate?: number | null
+                /**
+                 * Entry threshold as a ratio difference; 0.1 equals 10 percentage points.
+                 */
+                entry_drop_percentage_points?: number | null
+                confirmed_at?: string | null
+                confirmation_periods?: string[] | null
+                /**
+                 * Online hashrate ratios at the two confirmation samples, in the same ratio scale as baseline_online_hashrate.
+                 */
+                confirmation_online_hashrates?: number[] | null
+                /**
+                 * Baseline ratios at the two confirmation samples; the second one is the confirmation baseline used for drop_percentage.
+                 */
+                confirmation_baseline_online_hashrates?: number[] | null
+                expected_pool_count?: number | null
+                observed_pool_count?: number | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Validation problems of this record, e.g. object_snapshot_invalid. The affected field is null.
+               */
+              warnings: string[]
+            }
+          | {
+              monitor_type: "low_hashrate"
+              /**
+               * Monitor rule parameters frozen when the event was created
+               */
+              effective_parameters: {
+                [k: string]: unknown
+              } | null
+              /**
+               * Event evaluation context
+               */
+              evaluation_snapshot: {
+                /**
+                 * Threshold as a ratio of configured hashrate; 0.1 equals 10%.
+                 */
+                low_hashrate_threshold?: number | null
+                /**
+                 * Online hashrate ratio at the first breach, in the same ratio scale as baseline_online_hashrate.
+                 */
+                first_breach_online_hashrate?: number | null
+                first_breach_period?: string | null
+                entry_confirmation_samples?: number | null
+                recovery_confirmation_samples?: number | null
+                expected_pool_count?: number | null
+                observed_pool_count?: number | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Farm row frozen when the event was created
+               */
+              object_snapshot: {
+                farm_name?: string | null
+                /**
+                 * Farm description shown as alias
+                 */
+                farm_alias?: string | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Evaluation context recorded at alert entry; event-only records use null
+               */
+              alert_entry_snapshot: {
+                event_started_at?: string | null
+                /**
+                 * Confirmed online hashrate ratio x 100, in percent of configured hashrate; may exceed 100.
+                 */
+                online_percentage?: number | null
+                /**
+                 * Threshold as a ratio of configured hashrate; 0.1 equals 10%.
+                 */
+                low_hashrate_threshold?: number | null
+                confirmed_at?: string | null
+                confirmation_periods?: string[] | null
+                /**
+                 * Online hashrate ratios at the two confirmation samples, in the same ratio scale as baseline_online_hashrate.
+                 */
+                confirmation_online_hashrates?: number[] | null
+                expected_pool_count?: number | null
+                observed_pool_count?: number | null
+                [k: string]: unknown
+              } | null
+              /**
+               * Validation problems of this record, e.g. object_snapshot_invalid. The affected field is null.
+               */
+              warnings: string[]
+            }
+        )
+      | null
+  }[]
+  pagination: {
+    total: number
+    page: number
+    page_size: number
+    total_pages: number
   }
   error: null
 }
@@ -1844,7 +2491,28 @@ export interface ListTaskBatchesOutput {
      * Represents an entity that performs actions in the system (user, API key, or system)
      */
     created_by: {
-      [k: string]: unknown
+      /**
+       * The type of actor
+       */
+      type: "user" | "apikey" | "system"
+      /**
+       * The unique identifier of the actor
+       */
+      id: string
+      /**
+       * The display name of the actor
+       */
+      name: string | null
+      /**
+       * The avatar URL of the actor
+       */
+      avatar: string | null
+      /**
+       * Additional metadata about the actor
+       */
+      metadata?: {
+        [k: string]: unknown
+      }
     } | null
     /**
      * Batch creation time
@@ -1914,7 +2582,7 @@ export interface SearchTaskBatchesInput {
    */
   actor_type?: {
     /**
-     * Actor type used to filter task batches by creator. `user` = batches created by human users through the Nonce app; `automation` = batches created by the Automation workflow system; `api` = batches created via private-api or connect-api tokens.
+     * Actor type used to filter task batches by creator. `user` = batches created by human users through the Nonce app; `automation` = batches created by the Automation workflow system; `api` = batches created via private-api tokens.
      */
     eq: "user" | "automation" | "api"
   }
@@ -1984,7 +2652,28 @@ export interface SearchTaskBatchesOutput {
      * Represents an entity that performs actions in the system (user, API key, or system)
      */
     created_by: {
-      [k: string]: unknown
+      /**
+       * The type of actor
+       */
+      type: "user" | "apikey" | "system"
+      /**
+       * The unique identifier of the actor
+       */
+      id: string
+      /**
+       * The display name of the actor
+       */
+      name: string | null
+      /**
+       * The avatar URL of the actor
+       */
+      avatar: string | null
+      /**
+       * Additional metadata about the actor
+       */
+      metadata?: {
+        [k: string]: unknown
+      }
     } | null
     /**
      * Batch creation time
@@ -2063,7 +2752,28 @@ export interface GetTaskBatchOutput {
      * Represents an entity that performs actions in the system (user, API key, or system)
      */
     created_by: {
-      [k: string]: unknown
+      /**
+       * The type of actor
+       */
+      type: "user" | "apikey" | "system"
+      /**
+       * The unique identifier of the actor
+       */
+      id: string
+      /**
+       * The display name of the actor
+       */
+      name: string | null
+      /**
+       * The avatar URL of the actor
+       */
+      avatar: string | null
+      /**
+       * Additional metadata about the actor
+       */
+      metadata?: {
+        [k: string]: unknown
+      }
     } | null
     /**
      * Batch creation time
@@ -2169,7 +2879,7 @@ export interface ListTaskBatchTasksOutput {
      * Task error
      */
     error: {
-      [k: string]: unknown
+      message: string
     } | null
     /**
      * Signed task log download URL
@@ -2256,7 +2966,28 @@ export interface CreateRebootTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -2373,7 +3104,28 @@ export interface CreateFirmwareUpdateTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -2486,7 +3238,28 @@ export interface CreatePoolLockTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -2527,7 +3300,7 @@ export interface CreatePoolLockTaskBatchOutput {
   }
   error: null
 }
-export interface CreatePowerModeUpdateTaskBatchInput {
+export interface CreateMiningModeUpdateTaskBatchInput {
   workspace_id: string
   farm_id: string
   /**
@@ -2535,7 +3308,7 @@ export interface CreatePowerModeUpdateTaskBatchInput {
    */
   miner_ids: string[]
   /**
-   * Power mode parameters.
+   * Mining mode parameters.
    */
   params: {
     /**
@@ -2564,7 +3337,7 @@ export interface CreatePowerModeUpdateTaskBatchInput {
       | string
   }
 }
-export interface CreatePowerModeUpdateTaskBatchOutput {
+export interface CreateMiningModeUpdateTaskBatchOutput {
   success: true
   /**
    * Result of a task batch creation.
@@ -2615,7 +3388,28 @@ export interface CreatePowerModeUpdateTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -2724,7 +3518,28 @@ export interface CreateLightUpdateTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -2824,7 +3639,28 @@ export interface CreateLogGetTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -2937,7 +3773,28 @@ export interface CreateTagsUpdateTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -2978,11 +3835,11 @@ export interface CreateTagsUpdateTaskBatchOutput {
   }
   error: null
 }
-export interface CreateRackLocationUpdateTaskBatchInput {
+export interface CreateRackUpdateTaskBatchInput {
   workspace_id: string
   farm_id: string
   /**
-   * Per-miner rack location updates.
+   * Per-miner rack updates.
    */
   updates: {
     /**
@@ -2999,7 +3856,7 @@ export interface CreateRackLocationUpdateTaskBatchInput {
     position: number | null
   }[]
 }
-export interface CreateRackLocationUpdateTaskBatchOutput {
+export interface CreateRackUpdateTaskBatchOutput {
   success: true
   /**
    * Result of a task batch creation.
@@ -3050,7 +3907,28 @@ export interface CreateRackLocationUpdateTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -3159,7 +4037,28 @@ export interface CreateRecordDeleteTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -3277,7 +4176,28 @@ export interface CreateAgentScanTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -3403,7 +4323,28 @@ export interface CreateAgentIpDiagnosisTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -3520,7 +4461,28 @@ export interface CreateAgentSelfUpdateTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time
@@ -3595,6 +4557,8 @@ export interface NonceClient {
   queryMinerMetrics(input: QueryMinerMetricsInput, options?: NonceReadonlyCallOptions): Promise<QueryMinerMetricsOutput>
   queryFarmMetrics(input: QueryFarmMetricsInput, options?: NonceReadonlyCallOptions): Promise<QueryFarmMetricsOutput>
   queryFarmMinerMetrics(input: QueryFarmMinerMetricsInput, options?: NonceReadonlyCallOptions): Promise<QueryFarmMinerMetricsOutput>
+  queryFarmMonitorEventMetrics(input: QueryFarmMonitorEventMetricsInput, options?: NonceReadonlyCallOptions): Promise<QueryFarmMonitorEventMetricsOutput>
+  searchFarmMonitorEvents(input: SearchFarmMonitorEventsInput, options?: NonceReadonlyCallOptions): Promise<SearchFarmMonitorEventsOutput>
   listFarmRebootEvents(input: ListFarmRebootEventsInput, options?: NonceReadonlyCallOptions): Promise<ListFarmRebootEventsOutput>
   listMinerRebootEvents(input: ListMinerRebootEventsInput, options?: NonceReadonlyCallOptions): Promise<ListMinerRebootEventsOutput>
   listTaskBatches(input: ListTaskBatchesInput, options?: NonceReadonlyCallOptions): Promise<ListTaskBatchesOutput>
@@ -3604,11 +4568,11 @@ export interface NonceClient {
   createRebootTaskBatch(input: CreateRebootTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreateRebootTaskBatchOutput>
   createFirmwareUpdateTaskBatch(input: CreateFirmwareUpdateTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreateFirmwareUpdateTaskBatchOutput>
   createPoolLockTaskBatch(input: CreatePoolLockTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreatePoolLockTaskBatchOutput>
-  createPowerModeUpdateTaskBatch(input: CreatePowerModeUpdateTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreatePowerModeUpdateTaskBatchOutput>
+  createMiningModeUpdateTaskBatch(input: CreateMiningModeUpdateTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreateMiningModeUpdateTaskBatchOutput>
   createLightUpdateTaskBatch(input: CreateLightUpdateTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreateLightUpdateTaskBatchOutput>
   createLogGetTaskBatch(input: CreateLogGetTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreateLogGetTaskBatchOutput>
   createTagsUpdateTaskBatch(input: CreateTagsUpdateTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreateTagsUpdateTaskBatchOutput>
-  createRackLocationUpdateTaskBatch(input: CreateRackLocationUpdateTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreateRackLocationUpdateTaskBatchOutput>
+  createRackUpdateTaskBatch(input: CreateRackUpdateTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreateRackUpdateTaskBatchOutput>
   createRecordDeleteTaskBatch(input: CreateRecordDeleteTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreateRecordDeleteTaskBatchOutput>
   createAgentScanTaskBatch(input: CreateAgentScanTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreateAgentScanTaskBatchOutput>
   createAgentIpDiagnosisTaskBatch(input: CreateAgentIpDiagnosisTaskBatchInput, options: NonceDestructiveCallOptions): Promise<CreateAgentIpDiagnosisTaskBatchOutput>
@@ -3693,6 +4657,16 @@ export interface NonceMethodSignatures {
     input: QueryFarmMinerMetricsInput
     output: QueryFarmMinerMetricsOutput
   }
+  queryFarmMonitorEventMetrics: {
+    destructive: false
+    input: QueryFarmMonitorEventMetricsInput
+    output: QueryFarmMonitorEventMetricsOutput
+  }
+  searchFarmMonitorEvents: {
+    destructive: false
+    input: SearchFarmMonitorEventsInput
+    output: SearchFarmMonitorEventsOutput
+  }
   listFarmRebootEvents: {
     destructive: false
     input: ListFarmRebootEventsInput
@@ -3738,10 +4712,10 @@ export interface NonceMethodSignatures {
     input: CreatePoolLockTaskBatchInput
     output: CreatePoolLockTaskBatchOutput
   }
-  createPowerModeUpdateTaskBatch: {
+  createMiningModeUpdateTaskBatch: {
     destructive: true
-    input: CreatePowerModeUpdateTaskBatchInput
-    output: CreatePowerModeUpdateTaskBatchOutput
+    input: CreateMiningModeUpdateTaskBatchInput
+    output: CreateMiningModeUpdateTaskBatchOutput
   }
   createLightUpdateTaskBatch: {
     destructive: true
@@ -3758,10 +4732,10 @@ export interface NonceMethodSignatures {
     input: CreateTagsUpdateTaskBatchInput
     output: CreateTagsUpdateTaskBatchOutput
   }
-  createRackLocationUpdateTaskBatch: {
+  createRackUpdateTaskBatch: {
     destructive: true
-    input: CreateRackLocationUpdateTaskBatchInput
-    output: CreateRackLocationUpdateTaskBatchOutput
+    input: CreateRackUpdateTaskBatchInput
+    output: CreateRackUpdateTaskBatchOutput
   }
   createRecordDeleteTaskBatch: {
     destructive: true

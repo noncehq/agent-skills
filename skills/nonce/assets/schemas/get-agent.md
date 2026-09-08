@@ -74,7 +74,22 @@ export interface GetAgentOutput {
      * Public Agent host identity
      */
     host: {
-      [k: string]: unknown
+      /**
+       * Host name reported by the Agent
+       */
+      hostname: string | null
+      /**
+       * Operating system family
+       */
+      platform: string | null
+      /**
+       * Operating system release description
+       */
+      os: string | null
+      /**
+       * Agent host IP address
+       */
+      ip: string | null
     } | null
   }
   error: null

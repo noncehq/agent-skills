@@ -78,7 +78,7 @@ export interface SearchTaskBatchesInput {
    */
   actor_type?: {
     /**
-     * Actor type used to filter task batches by creator. `user` = batches created by human users through the Nonce app; `automation` = batches created by the Automation workflow system; `api` = batches created via private-api or connect-api tokens.
+     * Actor type used to filter task batches by creator. `user` = batches created by human users through the Nonce app; `automation` = batches created by the Automation workflow system; `api` = batches created via private-api tokens.
      */
     eq: "user" | "automation" | "api"
   }
@@ -153,7 +153,28 @@ export interface SearchTaskBatchesOutput {
      * Represents an entity that performs actions in the system (user, API key, or system)
      */
     created_by: {
-      [k: string]: unknown
+      /**
+       * The type of actor
+       */
+      type: "user" | "apikey" | "system"
+      /**
+       * The unique identifier of the actor
+       */
+      id: string
+      /**
+       * The display name of the actor
+       */
+      name: string | null
+      /**
+       * The avatar URL of the actor
+       */
+      avatar: string | null
+      /**
+       * Additional metadata about the actor
+       */
+      metadata?: {
+        [k: string]: unknown
+      }
     } | null
     /**
      * Batch creation time

@@ -1,6 +1,6 @@
 {
   "mcpEndpoint": "https://mcp.nonce.app/mcp",
-  "openapiOperationCount": 0,
+  "openapiOperationCount": 19,
   "openapiUrl": "https://docs.nonce.app/api-reference/openapi.json",
   "server": {
     "name": "nonce-mcp",
@@ -13,7 +13,7 @@
     "openapi-supplement",
     "observed-readonly-mcp-output"
   ],
-  "toolCount": 33,
+  "toolCount": 35,
   "tools": [
     {
       "annotations": {
@@ -246,6 +246,36 @@
         "destructiveHint": false,
         "idempotentHint": true
       },
+      "description": "Query Farm Monitor Event Metrics\n\nAggregate farm monitor events using the same selection filters as SearchFarmMonitorEvents. Use status=active with alert_entered=true for the current alert overview, then SearchFarmMonitorEvents with the same filters for members. Counts describe events and distinct objects within each monitor type. Use current farm metrics to assess present health.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "queryFarmMonitorEventMetrics",
+      "name": "QueryFarmMonitorEventMetrics",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "QueryFarmMonitorEventMetrics"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
+      "description": "Search Farm Monitor Events\n\nSearch farm monitor events by shared selection filters, ordered by started_at and id. The default window is 24 hours, with a maximum of 7 days. Use status=active with both bounds omitted for all matching active events; add alert_entered=true for confirmed alert members. Use agent_id for miners currently managed by an agent, object_type=[\"farm\",\"agent\"] for the incident timeline, event_ids for exact event lookup, and detail=snapshot (max 100 per page) for frozen snapshots.",
+      "destructive": false,
+      "inputSchemaSource": "mcp",
+      "methodName": "searchFarmMonitorEvents",
+      "name": "SearchFarmMonitorEvents",
+      "outputSchemaSource": "mcp",
+      "readOnly": true,
+      "typeBase": "SearchFarmMonitorEvents"
+    },
+    {
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true
+      },
       "description": "List Farm Reboot Events\n\nList detected Farm Reboot Events in the requested farm. Before averages use T-30 to T-5 minutes and after averages use T+15 to T+60 minutes. The default time range is the last 7 days and the maximum is 30 days.",
       "destructive": false,
       "inputSchemaSource": "mcp",
@@ -381,14 +411,14 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Power Mode Update Task Batch\n\nUpdate the mining power mode for the specified miners in the farm.",
+      "description": "Create Mining Mode Update Task Batch\n\nUpdate the mining mode for the specified miners in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
-      "methodName": "createPowerModeUpdateTaskBatch",
-      "name": "CreatePowerModeUpdateTaskBatch",
+      "methodName": "createMiningModeUpdateTaskBatch",
+      "name": "CreateMiningModeUpdateTaskBatch",
       "outputSchemaSource": "mcp",
       "readOnly": false,
-      "typeBase": "CreatePowerModeUpdateTaskBatch"
+      "typeBase": "CreateMiningModeUpdateTaskBatch"
     },
     {
       "annotations": {
@@ -441,14 +471,14 @@
         "destructiveHint": true,
         "idempotentHint": false
       },
-      "description": "Create Rack Location Update Task Batch\n\nUpdate rack location metadata for the specified miners in the farm.",
+      "description": "Create Rack Update Task Batch\n\nUpdate rack and position metadata for the specified miners in the farm.",
       "destructive": true,
       "inputSchemaSource": "mcp",
-      "methodName": "createRackLocationUpdateTaskBatch",
-      "name": "CreateRackLocationUpdateTaskBatch",
+      "methodName": "createRackUpdateTaskBatch",
+      "name": "CreateRackUpdateTaskBatch",
       "outputSchemaSource": "mcp",
       "readOnly": false,
-      "typeBase": "CreateRackLocationUpdateTaskBatch"
+      "typeBase": "CreateRackUpdateTaskBatch"
     },
     {
       "annotations": {

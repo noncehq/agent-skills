@@ -123,7 +123,7 @@ export interface QueryFarmMinerMetricsOutput {
       }
     }
     /**
-     * Online miner distribution by mining mode and preset
+     * Online miner distribution by mining mode and preset, each with its firmware breakdown
      */
     mining_mode: {
       /**
@@ -138,6 +138,19 @@ export interface QueryFarmMinerMetricsOutput {
        * Number of online miners in this mode
        */
       count: number
+      /**
+       * Firmware breakdown of this mode, most common first. Counts sum to `count`.
+       */
+      firmwares: {
+        /**
+         * Firmware name, or null when the miners report none
+         */
+        firmware: string | null
+        /**
+         * Number of online miners in this mode running this firmware
+         */
+        count: number
+      }[]
     }[]
     /**
      * Online miner distribution by model and resolved specification

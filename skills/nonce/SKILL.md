@@ -3,7 +3,7 @@ name: nonce
 description: >-
   Use this skill when the user needs to query, analyze, automate, or operate Nonce mining resources: workspaces, farms, miners, agents, task batches, miner tasks, metrics, history, or operational actions. It provides code-first access to the complete Nonce MCP tool set so the agent can filter and aggregate data before returning a compact result. Do not use it for generic Bitcoin mining questions or unrelated Node/API work.
 metadata:
-  version: "2026-08-26"
+  version: "2026-09-08"
 ---
 
 # Nonce
@@ -43,6 +43,12 @@ tool set.
 - Missing IDs: discover them in order with `listWorkspaces` -> `listFarms` -> `listMiners` as needed.
 - Reuse returned `workspace_id`, `farm_id`, `miner_id`, and task IDs. Never invent IDs.
 - Prefer the narrowest method and scope that satisfy the user's request.
+- For farm monitor-event questions, use `queryFarmMonitorEventMetrics`
+  (`QueryFarmMonitorEventMetrics`) for counts and grouped overviews, then
+  `searchFarmMonitorEvents` (`SearchFarmMonitorEvents`) with the same filters
+  for the matching events or objects. Request `detail: snapshot` only when the
+  user needs the frozen rule and event context; use current farm/miner metrics
+  when assessing present health.
 - Route reboot queries by the fact the user needs:
   - For observed miner restarts, use `listMinerRebootEvents`
     (`ListMinerRebootEvents`). Pass the requested `from_time` and `to_time`;

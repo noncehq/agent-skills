@@ -101,7 +101,7 @@ export interface ListTaskBatchTasksOutput {
      * Task error
      */
     error: {
-      [k: string]: unknown
+      message: string
     } | null
     /**
      * Signed task log download URL

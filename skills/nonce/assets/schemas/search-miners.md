@@ -341,7 +341,7 @@ export interface SearchMinersOutput {
      */
     status: "online" | "stale"
     /**
-     * Operator-managed labels
+     * Miner labels
      */
     tags: string[]
     /**

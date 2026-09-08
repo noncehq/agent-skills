@@ -3,7 +3,7 @@
 Generated from checked Nonce method definitions; supplemental schemas only fill missing metadata.
 
 - Default endpoint: `https://mcp.nonce.app/mcp`
-- Method count: 33
+- Method count: 35
 
 This file is a compact index. Before calling a method, read its schema file under `assets/schemas/` for the full `<MethodType>Input` / `<MethodType>Output` interfaces.
 
@@ -86,6 +86,8 @@ interface NonceClientOptions {
 - `queryMinerMetrics` — QueryMinerMetrics (read-only, required: workspace_id, farm_id, miner_id, from, to) → [schemas/query-miner-metrics.md](../assets/schemas/query-miner-metrics.md)
 - `queryFarmMetrics` — QueryFarmMetrics (read-only, required: workspace_id, farm_id, from, to) → [schemas/query-farm-metrics.md](../assets/schemas/query-farm-metrics.md)
 - `queryFarmMinerMetrics` — QueryFarmMinerMetrics (read-only, required: workspace_id, farm_id) → [schemas/query-farm-miner-metrics.md](../assets/schemas/query-farm-miner-metrics.md)
+- `queryFarmMonitorEventMetrics` — QueryFarmMonitorEventMetrics (read-only, required: workspace_id, farm_id) → [schemas/query-farm-monitor-event-metrics.md](../assets/schemas/query-farm-monitor-event-metrics.md)
+- `searchFarmMonitorEvents` — SearchFarmMonitorEvents (read-only, required: workspace_id, farm_id) → [schemas/search-farm-monitor-events.md](../assets/schemas/search-farm-monitor-events.md)
 - `listFarmRebootEvents` — ListFarmRebootEvents (read-only, required: workspace_id, farm_id) → [schemas/list-farm-reboot-events.md](../assets/schemas/list-farm-reboot-events.md)
 - `listMinerRebootEvents` — ListMinerRebootEvents (read-only, required: workspace_id, farm_id, miner_id) → [schemas/list-miner-reboot-events.md](../assets/schemas/list-miner-reboot-events.md)
 - `listTaskBatches` — ListTaskBatches (read-only, required: workspace_id, farm_id) → [schemas/list-task-batches.md](../assets/schemas/list-task-batches.md)
@@ -95,11 +97,11 @@ interface NonceClientOptions {
 - `createRebootTaskBatch` — CreateRebootTaskBatch (destructive, required: workspace_id, farm_id, miner_ids) → [schemas/create-reboot-task-batch.md](../assets/schemas/create-reboot-task-batch.md)
 - `createFirmwareUpdateTaskBatch` — CreateFirmwareUpdateTaskBatch (destructive, required: workspace_id, farm_id, miner_ids, params) → [schemas/create-firmware-update-task-batch.md](../assets/schemas/create-firmware-update-task-batch.md)
 - `createPoolLockTaskBatch` — CreatePoolLockTaskBatch (destructive, required: workspace_id, farm_id, miner_ids, params) → [schemas/create-pool-lock-task-batch.md](../assets/schemas/create-pool-lock-task-batch.md)
-- `createPowerModeUpdateTaskBatch` — CreatePowerModeUpdateTaskBatch (destructive, required: workspace_id, farm_id, miner_ids, params) → [schemas/create-power-mode-update-task-batch.md](../assets/schemas/create-power-mode-update-task-batch.md)
+- `createMiningModeUpdateTaskBatch` — CreateMiningModeUpdateTaskBatch (destructive, required: workspace_id, farm_id, miner_ids, params) → [schemas/create-mining-mode-update-task-batch.md](../assets/schemas/create-mining-mode-update-task-batch.md)
 - `createLightUpdateTaskBatch` — CreateLightUpdateTaskBatch (destructive, required: workspace_id, farm_id, miner_ids, params) → [schemas/create-light-update-task-batch.md](../assets/schemas/create-light-update-task-batch.md)
 - `createLogGetTaskBatch` — CreateLogGetTaskBatch (destructive, required: workspace_id, farm_id, miner_ids) → [schemas/create-log-get-task-batch.md](../assets/schemas/create-log-get-task-batch.md)
 - `createTagsUpdateTaskBatch` — CreateTagsUpdateTaskBatch (destructive, required: workspace_id, farm_id, miner_ids, params) → [schemas/create-tags-update-task-batch.md](../assets/schemas/create-tags-update-task-batch.md)
-- `createRackLocationUpdateTaskBatch` — CreateRackLocationUpdateTaskBatch (destructive, required: workspace_id, farm_id, updates) → [schemas/create-rack-location-update-task-batch.md](../assets/schemas/create-rack-location-update-task-batch.md)
+- `createRackUpdateTaskBatch` — CreateRackUpdateTaskBatch (destructive, required: workspace_id, farm_id, updates) → [schemas/create-rack-update-task-batch.md](../assets/schemas/create-rack-update-task-batch.md)
 - `createRecordDeleteTaskBatch` — CreateRecordDeleteTaskBatch (destructive, required: workspace_id, farm_id, miner_ids) → [schemas/create-record-delete-task-batch.md](../assets/schemas/create-record-delete-task-batch.md)
 - `createAgentScanTaskBatch` — CreateAgentScanTaskBatch (destructive, required: workspace_id, farm_id, params) → [schemas/create-agent-scan-task-batch.md](../assets/schemas/create-agent-scan-task-batch.md)
 - `createAgentIpDiagnosisTaskBatch` — CreateAgentIpDiagnosisTaskBatch (destructive, required: workspace_id, farm_id, params) → [schemas/create-agent-ip-diagnosis-task-batch.md](../assets/schemas/create-agent-ip-diagnosis-task-batch.md)

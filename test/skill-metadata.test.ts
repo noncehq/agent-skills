@@ -101,4 +101,25 @@ describe("Nonce skill metadata", () => {
       expect(toolNames).toContain(toolName);
     }
   });
+
+  it("routes farm monitor-event summaries and members through the matching read methods", async () => {
+    const skill = await readText("../skills/nonce/SKILL.md");
+    const manifest = JSON.parse(await readText("../skills/nonce/assets/tool-manifest.json")) as {
+      tools: { name: string }[];
+    };
+    const toolNames = manifest.tools.map((tool) => tool.name);
+
+    expect(skill).toContain("For farm monitor-event questions");
+    expect(skill).toContain("`queryFarmMonitorEventMetrics`");
+    expect(skill).toContain("`searchFarmMonitorEvents`");
+    expect(skill).toContain("`detail: snapshot`");
+    expect(toolNames).toEqual(
+      expect.arrayContaining(["QueryFarmMonitorEventMetrics", "SearchFarmMonitorEvents"]),
+    );
+
+    await Promise.all([
+      access(nonceSchemaPath("query-farm-monitor-event-metrics.md")),
+      access(nonceSchemaPath("search-farm-monitor-events.md")),
+    ]);
+  });
 });

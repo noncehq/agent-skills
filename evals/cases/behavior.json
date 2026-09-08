@@ -143,6 +143,32 @@
       }
     },
     {
+      "id": "trigger.zh.monitor-events.active",
+      "split": "validation",
+      "category": "trigger.read.monitor-events",
+      "language": "zh",
+      "query": "帮我看这个矿场当前有哪些已经进入告警的 active 监控事件，先按类型统计，再列出对应对象。",
+      "expected": {
+        "trigger": true,
+        "critical": true,
+        "methods": [
+          "listWorkspaces",
+          "listFarms",
+          "queryFarmMonitorEventMetrics",
+          "searchFarmMonitorEvents"
+        ],
+        "mustRead": ["references/workflow.md", "references/tool-signatures.md"],
+        "schemaFiles": [
+          "assets/schemas/list-workspaces.md",
+          "assets/schemas/list-farms.md",
+          "assets/schemas/query-farm-monitor-event-metrics.md",
+          "assets/schemas/search-farm-monitor-events.md"
+        ],
+        "destructive": false,
+        "requiresConfirmation": false
+      }
+    },
+    {
       "id": "trigger.zh.reboot.nonce-issued",
       "split": "train",
       "category": "trigger.read.reboots",

@@ -92,7 +92,7 @@ export interface ListMinersOutput {
      */
     status: "online" | "stale"
     /**
-     * Operator-managed labels
+     * Miner labels
      */
     tags: string[]
     /**
