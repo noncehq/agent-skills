@@ -1,12 +1,10 @@
 {
   "mcpEndpoint": "https://mcp.nonce.app/mcp",
-  "openapiOperationCount": 19,
+  "openapiOperationCount": 0,
   "openapiUrl": "https://docs.nonce.app/api-reference/openapi.json",
   "server": {
     "name": "nonce-mcp",
-    "title": "Nonce MCP",
-    "version": "0.2.0",
-    "description": "MCP server for the Nonce mining management API (API spec v2.0.0)"
+    "version": "2.0.0"
   },
   "sourcePriority": [
     "mcp-tools-list",

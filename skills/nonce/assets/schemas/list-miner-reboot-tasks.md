@@ -49,92 +49,37 @@ export interface ListMinerRebootTasksInput {
 ## Output
 
 ```ts
+/**
+ * Represents an entity that performs actions in the system (user, API key, or system)
+ */
+export type Actor = {
+  /**
+   * The type of actor
+   */
+  type: "user" | "apikey" | "system"
+  /**
+   * The unique identifier of the actor
+   */
+  id: string
+  /**
+   * The display name of the actor
+   */
+  name: string | null
+  /**
+   * The avatar URL of the actor
+   */
+  avatar: string | null
+  /**
+   * Additional metadata about the actor
+   */
+  metadata?: {
+    [k: string]: unknown
+  }
+} | null
+
 export interface ListMinerRebootTasksOutput {
   success: true
-  data: {
-    /**
-     * Task ID
-     */
-    task_id: string
-    /**
-     * Task Batch ID, or null for tasks created before batch tracking
-     */
-    batch_id: string | null
-    /**
-     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
-     */
-    task_name:
-      | "agent.scan.create"
-      | "agent.ip_diagnosis.create"
-      | "agent.self.update"
-      | "miner.system.reboot"
-      | "miner.log.get"
-      | "miner.light.update"
-      | "miner.power_mode.update"
-      | "miner.pool.update"
-      | "miner.pool.lock"
-      | "miner.firmware.update"
-      | "miner.tags.update"
-      | "miner.record.delete"
-      | "miner.rack_location.update"
-    /**
-     * Task execution status. `created` = enqueued but not yet picked up by an agent; `queuing` = accepted by the agent and waiting in its local queue; `pending` = actively executing on the miner; `succeed` = finished successfully; `failed` = finished with an error; `timed_out` = exceeded its execution deadline; `cancelled` = aborted before completion.
-     */
-    status: "created" | "queuing" | "pending" | "succeed" | "failed" | "timed_out" | "cancelled"
-    /**
-     * Task parameters
-     */
-    params: {
-      [k: string]: unknown
-    } | null
-    /**
-     * Error details if task failed
-     */
-    error: {
-      [k: string]: unknown
-    } | null
-    /**
-     * Task execution result
-     */
-    result: {
-      [k: string]: unknown
-    } | null
-    /**
-     * Represents an entity that performs actions in the system (user, API key, or system)
-     */
-    created_by: {
-      /**
-       * The type of actor
-       */
-      type: "user" | "apikey" | "system"
-      /**
-       * The unique identifier of the actor
-       */
-      id: string
-      /**
-       * The display name of the actor
-       */
-      name: string | null
-      /**
-       * The avatar URL of the actor
-       */
-      avatar: string | null
-      /**
-       * Additional metadata about the actor
-       */
-      metadata?: {
-        [k: string]: unknown
-      }
-    } | null
-    /**
-     * Task creation time
-     */
-    created_at: string
-    /**
-     * Last update time
-     */
-    updated_at: string
-  }[]
+  data: MinerTask[]
   pagination: {
     total: number
     page: number
@@ -142,5 +87,66 @@ export interface ListMinerRebootTasksOutput {
     total_pages: number
   }
   error: null
+}
+/**
+ * A task execution record for a single miner. Use task_name to filter by operation type. Available task names: miner.system.reboot (reboot the miner), miner.log.get (download miner logs), miner.light.update (toggle miner indicator light), miner.power_mode.update (change mining power mode), miner.pool.update (update mining pool configuration), miner.pool.lock (lock or unlock pool settings), miner.firmware.update (update miner firmware).
+ */
+export interface MinerTask {
+  /**
+   * Task ID
+   */
+  task_id: string
+  /**
+   * Task Batch ID, or null for tasks created before batch tracking
+   */
+  batch_id: string | null
+  /**
+   * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
+   */
+  task_name:
+    | "agent.scan.create"
+    | "agent.ip_diagnosis.create"
+    | "agent.self.update"
+    | "miner.system.reboot"
+    | "miner.log.get"
+    | "miner.light.update"
+    | "miner.power_mode.update"
+    | "miner.pool.update"
+    | "miner.pool.lock"
+    | "miner.firmware.update"
+    | "miner.tags.update"
+    | "miner.record.delete"
+    | "miner.rack_location.update"
+  /**
+   * Task execution status. `created` = enqueued but not yet picked up by an agent; `queuing` = accepted by the agent and waiting in its local queue; `pending` = actively executing on the miner; `succeed` = finished successfully; `failed` = finished with an error; `timed_out` = exceeded its execution deadline; `cancelled` = aborted before completion.
+   */
+  status: "created" | "queuing" | "pending" | "succeed" | "failed" | "timed_out" | "cancelled"
+  /**
+   * Task parameters
+   */
+  params: {
+    [k: string]: unknown
+  } | null
+  /**
+   * Error details if task failed
+   */
+  error: {
+    [k: string]: unknown
+  } | null
+  /**
+   * Task execution result
+   */
+  result: {
+    [k: string]: unknown
+  } | null
+  created_by: Actor
+  /**
+   * Task creation time
+   */
+  created_at: string
+  /**
+   * Last update time
+   */
+  updated_at: string
 }
 ```

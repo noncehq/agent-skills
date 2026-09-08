@@ -38,40 +38,7 @@ export interface ListAgentsInput {
 ```ts
 export interface ListAgentsOutput {
   success: true
-  data: {
-    /**
-     * Agent ID
-     */
-    id: string
-    /**
-     * Owning workspace ID
-     */
-    workspace_id: string
-    /**
-     * Owning farm ID
-     */
-    farm_id: string
-    /**
-     * Current Agent status
-     */
-    status: string | null
-    /**
-     * Installed Agent version
-     */
-    version: string | null
-    /**
-     * Agent uptime in seconds
-     */
-    uptime: number | null
-    /**
-     * Last online time
-     */
-    last_online_at: string | null
-    /**
-     * Last heartbeat time
-     */
-    last_updated_at: string | null
-  }[]
+  data: AgentSummary[]
   pagination: {
     total: number
     page: number
@@ -79,5 +46,39 @@ export interface ListAgentsOutput {
     total_pages: number
   }
   error: null
+}
+export interface AgentSummary {
+  /**
+   * Agent ID
+   */
+  id: string
+  /**
+   * Owning workspace ID
+   */
+  workspace_id: string
+  /**
+   * Owning farm ID
+   */
+  farm_id: string
+  /**
+   * Current Agent status
+   */
+  status: string | null
+  /**
+   * Installed Agent version
+   */
+  version: string | null
+  /**
+   * Agent uptime in seconds
+   */
+  uptime: number | null
+  /**
+   * Last online time
+   */
+  last_online_at: string | null
+  /**
+   * Last heartbeat time
+   */
+  last_updated_at: string | null
 }
 ```
