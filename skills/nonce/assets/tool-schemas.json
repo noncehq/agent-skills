@@ -873,10 +873,59 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "propertyNames": {
-                      "type": "string"
+                    "properties": {
+                      "hostname": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Host name reported by the Agent"
+                      },
+                      "platform": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Operating system family"
+                      },
+                      "os": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Operating system release description"
+                      },
+                      "ip": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Agent host IP address"
+                      }
                     },
-                    "additionalProperties": {}
+                    "required": [
+                      "hostname",
+                      "platform",
+                      "os",
+                      "ip"
+                    ],
+                    "additionalProperties": false
                   },
                   {
                     "type": "null"
@@ -1056,7 +1105,7 @@
                   "items": {
                     "type": "string"
                   },
-                  "description": "Operator-managed labels"
+                  "description": "Miner labels"
                 },
                 "mining_mode": {
                   "type": "string",
@@ -1782,7 +1831,7 @@
                   "items": {
                     "type": "string"
                   },
-                  "description": "Operator-managed labels"
+                  "description": "Miner labels"
                 },
                 "mining_mode": {
                   "type": "string",
@@ -2088,7 +2137,7 @@
                 "items": {
                   "type": "string"
                 },
-                "description": "Operator-managed labels"
+                "description": "Miner labels"
               },
               "mining_mode": {
                 "type": "string",
@@ -2208,10 +2257,68 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "propertyNames": {
-                      "type": "string"
+                    "properties": {
+                      "mode": {
+                        "type": "string",
+                        "enum": [
+                          "dhcp",
+                          "static"
+                        ],
+                        "description": "How the address is assigned"
+                      },
+                      "ip": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Address currently in use"
+                      },
+                      "netmask": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Subnet mask currently in use"
+                      },
+                      "gateway": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Gateway in use. Null when the firmware does not report one, which is the case for Antminer derivatives on DHCP"
+                      },
+                      "dns": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "DNS servers in use, semicolon separated when there are several"
+                      }
                     },
-                    "additionalProperties": {}
+                    "required": [
+                      "mode",
+                      "ip",
+                      "netmask",
+                      "gateway",
+                      "dns"
+                    ],
+                    "additionalProperties": false
                   },
                   {
                     "type": "null"
@@ -2588,10 +2695,58 @@
                   "anyOf": [
                     {
                       "type": "object",
-                      "propertyNames": {
-                        "type": "string"
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "apikey",
+                            "system"
+                          ],
+                          "description": "The type of actor"
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "The unique identifier of the actor"
+                        },
+                        "name": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The display name of the actor"
+                        },
+                        "avatar": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The avatar URL of the actor"
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {},
+                          "description": "Additional metadata about the actor"
+                        }
                       },
-                      "additionalProperties": {}
+                      "required": [
+                        "type",
+                        "id",
+                        "name",
+                        "avatar"
+                      ],
+                      "additionalProperties": false
                     },
                     {
                       "type": "null"
@@ -2847,10 +3002,58 @@
                   "anyOf": [
                     {
                       "type": "object",
-                      "propertyNames": {
-                        "type": "string"
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "apikey",
+                            "system"
+                          ],
+                          "description": "The type of actor"
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "The unique identifier of the actor"
+                        },
+                        "name": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The display name of the actor"
+                        },
+                        "avatar": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The avatar URL of the actor"
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {},
+                          "description": "Additional metadata about the actor"
+                        }
                       },
-                      "additionalProperties": {}
+                      "required": [
+                        "type",
+                        "id",
+                        "name",
+                        "avatar"
+                      ],
+                      "additionalProperties": false
                     },
                     {
                       "type": "null"
@@ -3748,16 +3951,46 @@
                     "count": {
                       "type": "number",
                       "description": "Number of online miners in this mode"
+                    },
+                    "firmwares": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "firmware": {
+                            "anyOf": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Firmware name, or null when the miners report none"
+                          },
+                          "count": {
+                            "type": "number",
+                            "description": "Number of online miners in this mode running this firmware"
+                          }
+                        },
+                        "required": [
+                          "firmware",
+                          "count"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "description": "Firmware breakdown of this mode, most common first. Counts sum to `count`."
                     }
                   },
                   "required": [
                     "mode",
                     "mining_mode_preset",
-                    "count"
+                    "count",
+                    "firmwares"
                   ],
                   "additionalProperties": false
                 },
-                "description": "Online miner distribution by mining mode and preset"
+                "description": "Online miner distribution by mining mode and preset, each with its firmware breakdown"
               },
               "miner_model": {
                 "type": "array",
@@ -3841,6 +4074,2082 @@
         "required": [
           "success",
           "data",
+          "error"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchemaSource": "mcp"
+    },
+    "QueryFarmMonitorEventMetrics": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "workspace_id": {
+            "type": "string"
+          },
+          "farm_id": {
+            "type": "string"
+          },
+          "from_time": {
+            "type": "string",
+            "description": "Inclusive window start. Selects events that started or ended within the window. Defaults to 24 hours before to_time; at most 7 days. With status=active and both bounds omitted, the selection covers all matching active events. event_ids replaces the window."
+          },
+          "to_time": {
+            "type": "string",
+            "description": "Exclusive window end. Defaults to the request time when a window applies."
+          },
+          "monitor_type": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "agent_offline",
+                "agent_miner_data_stale",
+                "miner_offline",
+                "hashrate_drop",
+                "low_hashrate"
+              ]
+            },
+            "description": "Monitor types to include; defaults to all supported types"
+          },
+          "object_type": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "farm",
+                "agent",
+                "miner"
+              ]
+            },
+            "description": "Object types to include, intersected with monitor_type. Use [\"farm\",\"agent\"] to reconstruct the incident timeline."
+          },
+          "object_id": {
+            "type": "string",
+            "description": "Events of one miner, agent or farm object"
+          },
+          "agent_id": {
+            "type": "string",
+            "description": "Selects miner events whose miner is currently managed by this agent. Applies to miner monitor types only."
+          },
+          "event_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Exact event IDs (1..100) within the farm. Replaces the time window; other filters still apply."
+          },
+          "alert_entered": {
+            "type": "boolean",
+            "description": "true selects events with a recorded alert entry; false selects event-only records."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "ended"
+            ],
+            "description": "active = ended_at is null; ended = ended_at is set."
+          }
+        },
+        "required": [
+          "workspace_id",
+          "farm_id"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "inputSchemaSource": "mcp",
+      "output": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "data_at": {
+                "type": "string",
+                "description": "Request time used as the reference for window defaults and histogram buckets."
+              },
+              "from_time": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Effective inclusive window start after defaults; null when the selection has no time condition."
+              },
+              "to_time": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Effective exclusive window end after defaults; null when the selection has no time condition."
+              },
+              "total": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 9007199254740991,
+                "description": "Number of events matching the selection across all monitor types."
+              },
+              "by_monitor_type": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "monitor_type": {
+                      "type": "string",
+                      "enum": [
+                        "agent_offline",
+                        "agent_miner_data_stale",
+                        "miner_offline",
+                        "hashrate_drop",
+                        "low_hashrate"
+                      ],
+                      "description": "Monitor type; also the grouping key of event metrics"
+                    },
+                    "object_type": {
+                      "type": "string",
+                      "enum": [
+                        "farm",
+                        "agent",
+                        "miner"
+                      ],
+                      "description": "Kind of object a monitor event describes"
+                    },
+                    "count": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of events matching the selection."
+                    },
+                    "distinct_object_count": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of distinct objects within this monitor type."
+                    },
+                    "active_count": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "Number of active events matching all selection filters."
+                    },
+                    "earliest_started_at": {
+                      "type": "string"
+                    },
+                    "latest_started_at": {
+                      "type": "string"
+                    },
+                    "started_at_histogram": {
+                      "type": "object",
+                      "properties": {
+                        "lt_1h": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "lt_24h": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "lt_7d": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "ge_7d": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "lt_1h",
+                        "lt_24h",
+                        "lt_7d",
+                        "ge_7d"
+                      ],
+                      "additionalProperties": false,
+                      "description": "Matching events by age of started_at relative to data_at: [0,1h), [1h,24h), [24h,7d), [7d,infinity). Future timestamps have age zero. The buckets sum to count and are independent of the query window."
+                    }
+                  },
+                  "required": [
+                    "monitor_type",
+                    "object_type",
+                    "count",
+                    "distinct_object_count",
+                    "active_count",
+                    "earliest_started_at",
+                    "latest_started_at",
+                    "started_at_histogram"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "One entry per monitor type with at least one matching event, ordered by count descending then monitor_type ascending. An object can appear under several monitor types."
+              }
+            },
+            "required": [
+              "data_at",
+              "from_time",
+              "to_time",
+              "total",
+              "by_monitor_type"
+            ],
+            "additionalProperties": false
+          },
+          "error": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "error"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "additionalProperties": false
+      },
+      "outputSchemaSource": "mcp"
+    },
+    "SearchFarmMonitorEvents": {
+      "input": {
+        "type": "object",
+        "properties": {
+          "workspace_id": {
+            "type": "string"
+          },
+          "farm_id": {
+            "type": "string"
+          },
+          "from_time": {
+            "type": "string",
+            "description": "Inclusive window start. Selects events that started or ended within the window. Defaults to 24 hours before to_time; at most 7 days. With status=active and both bounds omitted, the selection covers all matching active events. event_ids replaces the window."
+          },
+          "to_time": {
+            "type": "string",
+            "description": "Exclusive window end. Defaults to the request time when a window applies."
+          },
+          "monitor_type": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "agent_offline",
+                "agent_miner_data_stale",
+                "miner_offline",
+                "hashrate_drop",
+                "low_hashrate"
+              ]
+            },
+            "description": "Monitor types to include; defaults to all supported types"
+          },
+          "object_type": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "farm",
+                "agent",
+                "miner"
+              ]
+            },
+            "description": "Object types to include, intersected with monitor_type. Use [\"farm\",\"agent\"] to reconstruct the incident timeline."
+          },
+          "object_id": {
+            "type": "string",
+            "description": "Events of one miner, agent or farm object"
+          },
+          "agent_id": {
+            "type": "string",
+            "description": "Selects miner events whose miner is currently managed by this agent. Applies to miner monitor types only."
+          },
+          "event_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Exact event IDs (1..100) within the farm. Replaces the time window; other filters still apply."
+          },
+          "alert_entered": {
+            "type": "boolean",
+            "description": "true selects events with a recorded alert entry; false selects event-only records."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "ended"
+            ],
+            "description": "active = ended_at is null; ended = ended_at is set."
+          },
+          "detail": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "snapshot"
+            ],
+            "description": "summary returns snapshot=null. snapshot adds the frozen rule, evaluation context, object snapshot and alert entry context of each event and limits page_size to 100."
+          },
+          "order": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "description": "Sort direction of started_at, id"
+          },
+          "page": {
+            "type": "number",
+            "maximum": 9007199254740991
+          },
+          "page_size": {
+            "type": "number",
+            "maximum": 500,
+            "description": "Page size, 1..500 (1..100 when detail=snapshot)"
+          }
+        },
+        "required": [
+          "workspace_id",
+          "farm_id"
+        ],
+        "$schema": "http://json-schema.org/draft-07/schema#"
+      },
+      "inputSchemaSource": "mcp",
+      "output": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "event_id": {
+                  "type": "string"
+                },
+                "monitor_type": {
+                  "type": "string",
+                  "enum": [
+                    "agent_offline",
+                    "agent_miner_data_stale",
+                    "miner_offline",
+                    "hashrate_drop",
+                    "low_hashrate"
+                  ],
+                  "description": "Monitor type; also the grouping key of event metrics"
+                },
+                "object_type": {
+                  "type": "string",
+                  "enum": [
+                    "farm",
+                    "agent",
+                    "miner"
+                  ],
+                  "description": "Kind of object a monitor event describes"
+                },
+                "object_id": {
+                  "type": "string",
+                  "description": "Farm ID, agent ID or miner ID depending on object_type"
+                },
+                "severity": {
+                  "type": "string",
+                  "description": "Severity as stored, e.g. WARNING"
+                },
+                "detection_reason": {
+                  "type": "string",
+                  "description": "state_change = condition became true while monitored; monitor_activation = already true when the monitor was enabled"
+                },
+                "started_at": {
+                  "type": "string"
+                },
+                "detected_at": {
+                  "type": "string"
+                },
+                "ended_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time the event ended; null while active."
+                },
+                "end_reason": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Reason the event ended: recovered, miner_deleted, agent_deleted or farm_archived. Current farm health is read from current metrics."
+                },
+                "entered_at": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Time of recorded alert entry; event-only records use null"
+                },
+                "current": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "object_type": {
+                              "type": "string",
+                              "enum": [
+                                "miner"
+                              ]
+                            },
+                            "agent_id": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string",
+                              "description": "System-managed reporting status: online or stale"
+                            },
+                            "model": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "rack": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "position": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "ip": {
+                              "type": "string"
+                            },
+                            "hashrate": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Current hashrate in H/s"
+                            },
+                            "expected_hashrate": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Expected hashrate in H/s"
+                            },
+                            "last_updated_at": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "object_type",
+                            "agent_id",
+                            "status",
+                            "model",
+                            "rack",
+                            "position",
+                            "ip",
+                            "hashrate",
+                            "expected_hashrate",
+                            "last_updated_at"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "object_type": {
+                              "type": "string",
+                              "enum": [
+                                "agent"
+                              ]
+                            },
+                            "status": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "version": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "last_online_at": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "last_updated_at": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            }
+                          },
+                          "required": [
+                            "object_type",
+                            "status",
+                            "version",
+                            "last_online_at",
+                            "last_updated_at"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Current live row of the object; null for farm events and for deleted or moved objects"
+                },
+                "snapshot": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "monitor_type": {
+                              "type": "string",
+                              "enum": [
+                                "agent_offline"
+                              ]
+                            },
+                            "effective_parameters": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Monitor rule parameters frozen when the event was created"
+                            },
+                            "evaluation_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "last_online_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Event evaluation context"
+                            },
+                            "object_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "agent_id": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "host": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "propertyNames": {
+                                            "type": "string"
+                                          },
+                                          "additionalProperties": {}
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "version": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "uptime": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "last_online_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "last_updated_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "farm_name": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "farm_alias": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Farm description shown as alias"
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Agent row frozen when the event was created"
+                            },
+                            "alert_entry_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "event_started_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "last_online_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "offline_after_seconds": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "agent_last_updated_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "managed_miner_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "expected_hashrate_total": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "H/s"
+                                    },
+                                    "expected_hashrate_miner_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Evaluation context recorded at alert entry; event-only records use null"
+                            },
+                            "warnings": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "Validation problems of this record, e.g. object_snapshot_invalid. The affected field is null."
+                            }
+                          },
+                          "required": [
+                            "monitor_type",
+                            "effective_parameters",
+                            "evaluation_snapshot",
+                            "object_snapshot",
+                            "alert_entry_snapshot",
+                            "warnings"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "monitor_type": {
+                              "type": "string",
+                              "enum": [
+                                "agent_miner_data_stale"
+                              ]
+                            },
+                            "effective_parameters": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Monitor rule parameters frozen when the event was created"
+                            },
+                            "evaluation_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "last_updated_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Event evaluation context"
+                            },
+                            "object_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "agent_id": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "host": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "propertyNames": {
+                                            "type": "string"
+                                          },
+                                          "additionalProperties": {}
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "version": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "uptime": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "last_online_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "last_updated_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "farm_name": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "farm_alias": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Farm description shown as alias"
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Agent row frozen when the event was created"
+                            },
+                            "alert_entry_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "event_started_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "agent_host": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "propertyNames": {
+                                            "type": "string"
+                                          },
+                                          "additionalProperties": {}
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "agent_version": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "agent_uptime": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "agent_last_online_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "agent_last_updated_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "managed_miner_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "expected_hashrate_total": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "H/s"
+                                    },
+                                    "expected_hashrate_miner_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Evaluation context recorded at alert entry; event-only records use null"
+                            },
+                            "warnings": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "Validation problems of this record, e.g. object_snapshot_invalid. The affected field is null."
+                            }
+                          },
+                          "required": [
+                            "monitor_type",
+                            "effective_parameters",
+                            "evaluation_snapshot",
+                            "object_snapshot",
+                            "alert_entry_snapshot",
+                            "warnings"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "monitor_type": {
+                              "type": "string",
+                              "enum": [
+                                "miner_offline"
+                              ]
+                            },
+                            "effective_parameters": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Monitor rule parameters frozen when the event was created"
+                            },
+                            "evaluation_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "last_updated_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "stale_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Event evaluation context"
+                            },
+                            "object_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "agent_id": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "ip": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "mac": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "make": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "model": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "serial_number": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "expected_hashrate": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "H/s"
+                                    },
+                                    "rack": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "position": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": -9007199254740991,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "network": {
+                                      "anyOf": [
+                                        {
+                                          "type": "object",
+                                          "propertyNames": {
+                                            "type": "string"
+                                          },
+                                          "additionalProperties": {}
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "farm_name": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "farm_alias": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Farm description shown as alias"
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Miner row frozen when the event was created"
+                            },
+                            "alert_entry_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "event_started_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "agent_last_online_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "agent_last_updated_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Evaluation context recorded at alert entry; event-only records use null"
+                            },
+                            "warnings": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "Validation problems of this record, e.g. object_snapshot_invalid. The affected field is null."
+                            }
+                          },
+                          "required": [
+                            "monitor_type",
+                            "effective_parameters",
+                            "evaluation_snapshot",
+                            "object_snapshot",
+                            "alert_entry_snapshot",
+                            "warnings"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "monitor_type": {
+                              "type": "string",
+                              "enum": [
+                                "hashrate_drop"
+                              ]
+                            },
+                            "effective_parameters": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Monitor rule parameters frozen when the event was created"
+                            },
+                            "evaluation_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "baseline_online_hashrate": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Baseline online hashrate ratio at event start: rolling pool hashrate divided by the farm's configured hashrate, averaged over the baseline samples. Ratio scale; may exceed 1 during pool overlap."
+                                    },
+                                    "entry_drop_percentage_points": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Entry threshold as a ratio difference; 0.1 equals 10 percentage points."
+                                    },
+                                    "first_breach_online_hashrate": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Online hashrate ratio at the first breach, in the same ratio scale as baseline_online_hashrate."
+                                    },
+                                    "first_breach_period": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "entry_confirmation_samples": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "recovery_confirmation_samples": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "expected_pool_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "observed_pool_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Event evaluation context"
+                            },
+                            "object_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "farm_name": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "farm_alias": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Farm description shown as alias"
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Farm row frozen when the event was created"
+                            },
+                            "alert_entry_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "event_started_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "drop_percentage": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Drop in percentage points: abs(confirmation baseline ratio - confirmed online ratio) x 100. Example: 1.04624 and 0.77314 give 27.31."
+                                    },
+                                    "drop_hashrate": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Drop in H/s: the ratio drop multiplied by the farm's configured hashrate."
+                                    },
+                                    "baseline_online_hashrate": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Baseline online hashrate ratio at event start: rolling pool hashrate divided by the farm's configured hashrate, averaged over the baseline samples. Ratio scale; may exceed 1 during pool overlap."
+                                    },
+                                    "entry_drop_percentage_points": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Entry threshold as a ratio difference; 0.1 equals 10 percentage points."
+                                    },
+                                    "confirmed_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "confirmation_periods": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "confirmation_online_hashrates": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "number"
+                                          }
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Online hashrate ratios at the two confirmation samples, in the same ratio scale as baseline_online_hashrate."
+                                    },
+                                    "confirmation_baseline_online_hashrates": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "number"
+                                          }
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Baseline ratios at the two confirmation samples; the second one is the confirmation baseline used for drop_percentage."
+                                    },
+                                    "expected_pool_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "observed_pool_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Evaluation context recorded at alert entry; event-only records use null"
+                            },
+                            "warnings": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "Validation problems of this record, e.g. object_snapshot_invalid. The affected field is null."
+                            }
+                          },
+                          "required": [
+                            "monitor_type",
+                            "effective_parameters",
+                            "evaluation_snapshot",
+                            "object_snapshot",
+                            "alert_entry_snapshot",
+                            "warnings"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "monitor_type": {
+                              "type": "string",
+                              "enum": [
+                                "low_hashrate"
+                              ]
+                            },
+                            "effective_parameters": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "propertyNames": {
+                                    "type": "string"
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Monitor rule parameters frozen when the event was created"
+                            },
+                            "evaluation_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "low_hashrate_threshold": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Threshold as a ratio of configured hashrate; 0.1 equals 10%."
+                                    },
+                                    "first_breach_online_hashrate": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Online hashrate ratio at the first breach, in the same ratio scale as baseline_online_hashrate."
+                                    },
+                                    "first_breach_period": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "entry_confirmation_samples": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "recovery_confirmation_samples": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "expected_pool_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "observed_pool_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Event evaluation context"
+                            },
+                            "object_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "farm_name": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "farm_alias": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Farm description shown as alias"
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Farm row frozen when the event was created"
+                            },
+                            "alert_entry_snapshot": {
+                              "anyOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "event_started_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "online_percentage": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Confirmed online hashrate ratio x 100, in percent of configured hashrate; may exceed 100."
+                                    },
+                                    "low_hashrate_threshold": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Threshold as a ratio of configured hashrate; 0.1 equals 10%."
+                                    },
+                                    "confirmed_at": {
+                                      "anyOf": [
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "confirmation_periods": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "string"
+                                          }
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "confirmation_online_hashrates": {
+                                      "anyOf": [
+                                        {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "number"
+                                          }
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ],
+                                      "description": "Online hashrate ratios at the two confirmation samples, in the same ratio scale as baseline_online_hashrate."
+                                    },
+                                    "expected_pool_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    },
+                                    "observed_pool_count": {
+                                      "anyOf": [
+                                        {
+                                          "type": "number",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        {
+                                          "type": "null"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "additionalProperties": {}
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "Evaluation context recorded at alert entry; event-only records use null"
+                            },
+                            "warnings": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "Validation problems of this record, e.g. object_snapshot_invalid. The affected field is null."
+                            }
+                          },
+                          "required": [
+                            "monitor_type",
+                            "effective_parameters",
+                            "evaluation_snapshot",
+                            "object_snapshot",
+                            "alert_entry_snapshot",
+                            "warnings"
+                          ],
+                          "additionalProperties": false
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "description": "Populated only when detail=snapshot"
+                }
+              },
+              "required": [
+                "event_id",
+                "monitor_type",
+                "object_type",
+                "object_id",
+                "severity",
+                "detection_reason",
+                "started_at",
+                "detected_at",
+                "ended_at",
+                "end_reason",
+                "entered_at",
+                "current",
+                "snapshot"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "page": {
+                "type": "number",
+                "maximum": 9007199254740991
+              },
+              "page_size": {
+                "type": "number",
+                "maximum": 9007199254740991
+              },
+              "total_pages": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "total",
+              "page",
+              "page_size",
+              "total_pages"
+            ],
+            "additionalProperties": false
+          },
+          "error": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "pagination",
           "error"
         ],
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -4688,10 +6997,58 @@
                   "anyOf": [
                     {
                       "type": "object",
-                      "propertyNames": {
-                        "type": "string"
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "apikey",
+                            "system"
+                          ],
+                          "description": "The type of actor"
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "The unique identifier of the actor"
+                        },
+                        "name": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The display name of the actor"
+                        },
+                        "avatar": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The avatar URL of the actor"
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {},
+                          "description": "Additional metadata about the actor"
+                        }
                       },
-                      "additionalProperties": {}
+                      "required": [
+                        "type",
+                        "id",
+                        "name",
+                        "avatar"
+                      ],
+                      "additionalProperties": false
                     },
                     {
                       "type": "null"
@@ -4858,7 +7215,7 @@
                   "automation",
                   "api"
                 ],
-                "description": "Actor type used to filter task batches by creator. `user` = batches created by human users through the Nonce app; `automation` = batches created by the Automation workflow system; `api` = batches created via private-api or connect-api tokens."
+                "description": "Actor type used to filter task batches by creator. `user` = batches created by human users through the Nonce app; `automation` = batches created by the Automation workflow system; `api` = batches created via private-api tokens."
               }
             },
             "required": [
@@ -4992,10 +7349,58 @@
                   "anyOf": [
                     {
                       "type": "object",
-                      "propertyNames": {
-                        "type": "string"
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "enum": [
+                            "user",
+                            "apikey",
+                            "system"
+                          ],
+                          "description": "The type of actor"
+                        },
+                        "id": {
+                          "type": "string",
+                          "description": "The unique identifier of the actor"
+                        },
+                        "name": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The display name of the actor"
+                        },
+                        "avatar": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ],
+                          "description": "The avatar URL of the actor"
+                        },
+                        "metadata": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {},
+                          "description": "Additional metadata about the actor"
+                        }
                       },
-                      "additionalProperties": {}
+                      "required": [
+                        "type",
+                        "id",
+                        "name",
+                        "avatar"
+                      ],
+                      "additionalProperties": false
                     },
                     {
                       "type": "null"
@@ -5187,10 +7592,58 @@
                 "anyOf": [
                   {
                     "type": "object",
-                    "propertyNames": {
-                      "type": "string"
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "user",
+                          "apikey",
+                          "system"
+                        ],
+                        "description": "The type of actor"
+                      },
+                      "id": {
+                        "type": "string",
+                        "description": "The unique identifier of the actor"
+                      },
+                      "name": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The display name of the actor"
+                      },
+                      "avatar": {
+                        "anyOf": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "The avatar URL of the actor"
+                      },
+                      "metadata": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {},
+                        "description": "Additional metadata about the actor"
+                      }
                     },
-                    "additionalProperties": {}
+                    "required": [
+                      "type",
+                      "id",
+                      "name",
+                      "avatar"
+                    ],
+                    "additionalProperties": false
                   },
                   {
                     "type": "null"
@@ -5462,10 +7915,15 @@
                   "anyOf": [
                     {
                       "type": "object",
-                      "propertyNames": {
-                        "type": "string"
+                      "properties": {
+                        "message": {
+                          "type": "string"
+                        }
                       },
-                      "additionalProperties": {}
+                      "required": [
+                        "message"
+                      ],
+                      "additionalProperties": false
                     },
                     {
                       "type": "null"
@@ -5678,10 +8136,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -5921,10 +8427,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -6165,10 +8719,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -6281,7 +8883,7 @@
       },
       "outputSchemaSource": "mcp"
     },
-    "CreatePowerModeUpdateTaskBatch": {
+    "CreateMiningModeUpdateTaskBatch": {
       "input": {
         "type": "object",
         "properties": {
@@ -6335,7 +8937,7 @@
             "required": [
               "mining_mode"
             ],
-            "description": "Power mode parameters."
+            "description": "Mining mode parameters."
           }
         },
         "required": [
@@ -6426,10 +9028,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -6665,10 +9315,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -6886,10 +9584,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -7128,10 +9874,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -7244,7 +10038,7 @@
       },
       "outputSchemaSource": "mcp"
     },
-    "CreateRackLocationUpdateTaskBatch": {
+    "CreateRackUpdateTaskBatch": {
       "input": {
         "type": "object",
         "properties": {
@@ -7294,7 +10088,7 @@
                 "position"
               ]
             },
-            "description": "Per-miner rack location updates."
+            "description": "Per-miner rack updates."
           }
         },
         "required": [
@@ -7384,10 +10178,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -7615,10 +10457,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -7860,10 +10750,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -8117,10 +11055,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"
@@ -8353,10 +11339,58 @@
                       "anyOf": [
                         {
                           "type": "object",
-                          "propertyNames": {
-                            "type": "string"
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "user",
+                                "apikey",
+                                "system"
+                              ],
+                              "description": "The type of actor"
+                            },
+                            "id": {
+                              "type": "string",
+                              "description": "The unique identifier of the actor"
+                            },
+                            "name": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The display name of the actor"
+                            },
+                            "avatar": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ],
+                              "description": "The avatar URL of the actor"
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {},
+                              "description": "Additional metadata about the actor"
+                            }
                           },
-                          "additionalProperties": {}
+                          "required": [
+                            "type",
+                            "id",
+                            "name",
+                            "avatar"
+                          ],
+                          "additionalProperties": false
                         },
                         {
                           "type": "null"

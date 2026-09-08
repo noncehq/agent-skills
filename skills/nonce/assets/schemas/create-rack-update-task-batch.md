@@ -1,19 +1,19 @@
-# CreatePowerModeUpdateTaskBatch
+# CreateRackUpdateTaskBatch
 
-createPowerModeUpdateTaskBatch — destructive
+createRackUpdateTaskBatch — destructive
 
-Required: `workspace_id`, `farm_id`, `miner_ids`, `params`
+Required: `workspace_id`, `farm_id`, `updates`
 
 ## Purpose
 
-Create Power Mode Update Task Batch
+Create Rack Update Task Batch
 
-Update the mining power mode for the specified miners in the farm.
+Update rack and position metadata for the specified miners in the farm.
 
 ## Code
 
 ```js
-const result = await nonce.createPowerModeUpdateTaskBatch(input, {
+const result = await nonce.createRackUpdateTaskBatch(input, {
   confirmDestructive: true,
   confirmation: "<confirmed target and effect>",
 })
@@ -22,55 +22,39 @@ const result = await nonce.createPowerModeUpdateTaskBatch(input, {
 ## CLI
 
 ```bash
-"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createPowerModeUpdateTaskBatch --input-file ".nonce/requests/create-power-mode-update-task-batch.json" --allow-destructive --confirmation "<confirmed target and effect>"
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createRackUpdateTaskBatch --input-file ".nonce/requests/create-rack-update-task-batch.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input
 
 ```ts
-export interface CreatePowerModeUpdateTaskBatchInput {
+export interface CreateRackUpdateTaskBatchInput {
   workspace_id: string
   farm_id: string
   /**
-   * Miner IDs to target
+   * Per-miner rack updates.
    */
-  miner_ids: string[]
-  /**
-   * Power mode parameters.
-   */
-  params: {
+  updates: {
     /**
-     * Target mining performance mode
+     * Miner ID
      */
-    mining_mode:
-      | (
-          | "low"
-          | "normal"
-          | "high"
-          | "sleep"
-          | "J/T 19.0, Hashrate ~125TH/s"
-          | "J/T 20.0, Hashrate ~135TH/s"
-          | "J/T 21.0, Hashrate ~145TH/s"
-          | "J/T 21.5, Hashrate ~155TH/s"
-          | "J/T 22.0, Hashrate ~165TH/s"
-          | "J/T 22.5, Hashrate ~170TH/s"
-          | "J/T 23.0, Hashrate ~175TH/s"
-          | "5600W"
-          | "5800W"
-          | "6000W"
-          | "6200W"
-          | "6400W"
-          | "6600W"
-        )
-      | string
-  }
+    miner_id: string
+    /**
+     * Rack identifier. Null to clear.
+     */
+    rack: string | null
+    /**
+     * Slot position. Null to clear.
+     */
+    position: number | null
+  }[]
 }
 ```
 
 ## Output
 
 ```ts
-export interface CreatePowerModeUpdateTaskBatchOutput {
+export interface CreateRackUpdateTaskBatchOutput {
   success: true
   /**
    * Result of a task batch creation.
@@ -121,7 +105,28 @@ export interface CreatePowerModeUpdateTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time

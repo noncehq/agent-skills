@@ -91,7 +91,7 @@ export interface GetMinerOutput {
      */
     status: "online" | "stale"
     /**
-     * Operator-managed labels
+     * Miner labels
      */
     tags: string[]
     /**
@@ -154,7 +154,26 @@ export interface GetMinerOutput {
      * Reported network configuration
      */
     network: {
-      [k: string]: unknown
+      /**
+       * How the address is assigned
+       */
+      mode: "dhcp" | "static"
+      /**
+       * Address currently in use
+       */
+      ip: string | null
+      /**
+       * Subnet mask currently in use
+       */
+      netmask: string | null
+      /**
+       * Gateway in use. Null when the firmware does not report one, which is the case for Antminer derivatives on DHCP
+       */
+      gateway: string | null
+      /**
+       * DNS servers in use, semicolon separated when there are several
+       */
+      dns: string | null
     } | null
     /**
      * Matched hardware submodel

@@ -118,7 +118,28 @@ export interface CreateAgentIpDiagnosisTaskBatchOutput {
        * Represents an entity that performs actions in the system (user, API key, or system)
        */
       created_by: {
-        [k: string]: unknown
+        /**
+         * The type of actor
+         */
+        type: "user" | "apikey" | "system"
+        /**
+         * The unique identifier of the actor
+         */
+        id: string
+        /**
+         * The display name of the actor
+         */
+        name: string | null
+        /**
+         * The avatar URL of the actor
+         */
+        avatar: string | null
+        /**
+         * Additional metadata about the actor
+         */
+        metadata?: {
+          [k: string]: unknown
+        }
       } | null
       /**
        * Batch creation time

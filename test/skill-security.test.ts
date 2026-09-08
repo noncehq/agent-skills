@@ -98,19 +98,43 @@ describe("packaged Nonce security boundary", () => {
     const manifest = JSON.parse(
       await readFile(join(skillRoot, "assets", "tool-manifest.json"), "utf8"),
     ) as {
-      tools: Array<{ destructive: boolean; methodName: string; readOnly: boolean }>;
+      tools: Array<{ destructive: boolean; methodName: string; name: string; readOnly: boolean }>;
     };
 
-    expect(manifest.tools).toHaveLength(33);
-    expect(manifest.tools.filter((tool) => tool.readOnly)).toHaveLength(21);
+    expect(manifest.tools).toHaveLength(35);
+    expect(manifest.tools.filter((tool) => tool.readOnly)).toHaveLength(23);
     expect(manifest.tools.filter((tool) => tool.destructive)).toHaveLength(12);
-    expect(manifest.tools).toContainEqual(
-      expect.objectContaining({
-        destructive: false,
-        methodName: "listMinerRebootTasks",
-        readOnly: true,
-      }),
+    expect(manifest.tools).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          destructive: false,
+          methodName: "queryFarmMonitorEventMetrics",
+          name: "QueryFarmMonitorEventMetrics",
+          readOnly: true,
+        }),
+        expect.objectContaining({
+          destructive: false,
+          methodName: "searchFarmMonitorEvents",
+          name: "SearchFarmMonitorEvents",
+          readOnly: true,
+        }),
+        expect.objectContaining({
+          destructive: true,
+          methodName: "createMiningModeUpdateTaskBatch",
+          name: "CreateMiningModeUpdateTaskBatch",
+          readOnly: false,
+        }),
+        expect.objectContaining({
+          destructive: true,
+          methodName: "createRackUpdateTaskBatch",
+          name: "CreateRackUpdateTaskBatch",
+          readOnly: false,
+        }),
+      ]),
     );
+    const methodNames = manifest.tools.map((tool) => tool.methodName);
+    expect(methodNames).not.toContain("createPowerModeUpdateTaskBatch");
+    expect(methodNames).not.toContain("createRackLocationUpdateTaskBatch");
     expect(manifest.tools.every((tool) => tool.readOnly !== tool.destructive)).toBe(true);
   });
 
