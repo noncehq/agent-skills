@@ -2,8 +2,6 @@
 
 queryBitcoinMetrics — read-only
 
-Required: `from`, `to`
-
 ## Purpose
 
 Query Bitcoin Metrics
@@ -25,20 +23,7 @@ const result = await nonce.queryBitcoinMetrics(input)
 ## Input
 
 ```ts
-export interface QueryBitcoinMetricsInput {
-  /**
-   * Inclusive start of the query range in ISO 8601 format
-   */
-  from: string
-  /**
-   * Exclusive end of the query range in ISO 8601 format
-   */
-  to: string
-  /**
-   * Time resolution of the returned snapshots. Only day is supported.
-   */
-  granularity?: "day"
-}
+export type QueryBitcoinMetricsInput = {} & object
 ```
 
 ## Output
@@ -46,43 +31,45 @@ export interface QueryBitcoinMetricsInput {
 ```ts
 export interface QueryBitcoinMetricsOutput {
   success: true
-  data: {
-    /**
-     * Inclusive start of the query range
-     */
-    from: string
-    /**
-     * Exclusive end of the query range
-     */
-    to: string
-    granularity: "day"
-    snapshots: {
-      /**
-       * Start of the time bucket for this data point
-       */
-      period: string
-      /**
-       * Bitcoin price in USD
-       */
-      bitcoin_price: number
-      /**
-       * Hashprice in USD per PH/s per day
-       */
-      hashprice_usd: number
-      /**
-       * Hashprice in BTC per PH/s per day
-       */
-      hashprice_btc: number
-      /**
-       * Network hashrate in H/s
-       */
-      network_hashrate: number
-      /**
-       * Network difficulty
-       */
-      network_difficulty: number
-    }[]
-  }
+  data: BitcoinMetricsTimeSeries
   error: null
+}
+export interface BitcoinMetricsTimeSeries {
+  /**
+   * Inclusive start of the query range
+   */
+  from_time: string
+  /**
+   * Exclusive end of the query range
+   */
+  to_time: string
+  granularity: "day"
+  snapshots: BitcoinMetricSnapshot[]
+}
+export interface BitcoinMetricSnapshot {
+  /**
+   * Start of the time bucket for this data point
+   */
+  period: string
+  /**
+   * Bitcoin price in USD
+   */
+  bitcoin_price: number
+  /**
+   * Hashprice in USD per PH/s per day
+   */
+  hashprice_usd: number
+  /**
+   * Hashprice in BTC per PH/s per day
+   */
+  hashprice_btc: number
+  /**
+   * Network hashrate in H/s
+   */
+  network_hashrate: number
+  /**
+   * Network difficulty
+   */
+  network_difficulty: number
 }
 ```

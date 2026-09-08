@@ -28,104 +28,79 @@ const result = await nonce.queryFarmMonitorEventMetrics(input)
 export interface QueryFarmMonitorEventMetricsInput {
   workspace_id: string
   farm_id: string
-  /**
-   * Inclusive window start. Selects events that started or ended within the window. Defaults to 24 hours before to_time; at most 7 days. With status=active and both bounds omitted, the selection covers all matching active events. event_ids replaces the window.
-   */
-  from_time?: string
-  /**
-   * Exclusive window end. Defaults to the request time when a window applies.
-   */
-  to_time?: string
-  /**
-   * Monitor types to include; defaults to all supported types
-   */
-  monitor_type?: ("agent_offline" | "agent_miner_data_stale" | "miner_offline" | "hashrate_drop" | "low_hashrate")[]
-  /**
-   * Object types to include, intersected with monitor_type. Use ["farm","agent"] to reconstruct the incident timeline.
-   */
-  object_type?: ("farm" | "agent" | "miner")[]
-  /**
-   * Events of one miner, agent or farm object
-   */
-  object_id?: string
-  /**
-   * Selects miner events whose miner is currently managed by this agent. Applies to miner monitor types only.
-   */
-  agent_id?: string
-  /**
-   * Exact event IDs (1..100) within the farm. Replaces the time window; other filters still apply.
-   */
-  event_ids?: string[]
-  /**
-   * true selects events with a recorded alert entry; false selects event-only records.
-   */
-  alert_entered?: boolean
-  /**
-   * active = ended_at is null; ended = ended_at is set.
-   */
-  status?: "active" | "ended"
 }
 ```
 
 ## Output
 
 ```ts
+/**
+ * Monitor type; also the grouping key of event metrics
+ */
+export type MonitorType =
+  | "agent_offline"
+  | "agent_miner_data_stale"
+  | "miner_offline"
+  | "hashrate_drop"
+  | "low_hashrate"
+/**
+ * Kind of object a monitor event describes
+ */
+export type MonitorObjectType = "farm" | "agent" | "miner"
+
 export interface QueryFarmMonitorEventMetricsOutput {
   success: true
-  data: {
-    /**
-     * Request time used as the reference for window defaults and histogram buckets.
-     */
-    data_at: string
-    /**
-     * Effective inclusive window start after defaults; null when the selection has no time condition.
-     */
-    from_time: string | null
-    /**
-     * Effective exclusive window end after defaults; null when the selection has no time condition.
-     */
-    to_time: string | null
-    /**
-     * Number of events matching the selection across all monitor types.
-     */
-    total: number
-    /**
-     * One entry per monitor type with at least one matching event, ordered by count descending then monitor_type ascending. An object can appear under several monitor types.
-     */
-    by_monitor_type: {
-      /**
-       * Monitor type; also the grouping key of event metrics
-       */
-      monitor_type: "agent_offline" | "agent_miner_data_stale" | "miner_offline" | "hashrate_drop" | "low_hashrate"
-      /**
-       * Kind of object a monitor event describes
-       */
-      object_type: "farm" | "agent" | "miner"
-      /**
-       * Number of events matching the selection.
-       */
-      count: number
-      /**
-       * Number of distinct objects within this monitor type.
-       */
-      distinct_object_count: number
-      /**
-       * Number of active events matching all selection filters.
-       */
-      active_count: number
-      earliest_started_at: string
-      latest_started_at: string
-      /**
-       * Matching events by age of started_at relative to data_at: [0,1h), [1h,24h), [24h,7d), [7d,infinity). Future timestamps have age zero. The buckets sum to count and are independent of the query window.
-       */
-      started_at_histogram: {
-        lt_1h: number
-        lt_24h: number
-        lt_7d: number
-        ge_7d: number
-      }
-    }[]
-  }
+  data: FarmMonitorEventMetrics
   error: null
+}
+export interface FarmMonitorEventMetrics {
+  /**
+   * Data observation time used as the reference for window defaults and histogram buckets.
+   */
+  period: string
+  /**
+   * Effective inclusive window start after defaults; null when the selection has no time condition.
+   */
+  from_time: string | null
+  /**
+   * Effective exclusive window end after defaults; null when the selection has no time condition.
+   */
+  to_time: string | null
+  /**
+   * Number of events matching the selection across all monitor types.
+   */
+  total: number
+  /**
+   * One entry per monitor type with at least one matching event, ordered by count descending then monitor_type ascending. An object can appear under several monitor types.
+   */
+  monitor_types: MonitorEventTypeMetrics[]
+}
+export interface MonitorEventTypeMetrics {
+  monitor_type: MonitorType
+  object_type: MonitorObjectType
+  /**
+   * Number of events matching the selection.
+   */
+  count: number
+  /**
+   * Number of distinct objects within this monitor type.
+   */
+  distinct_object_count: number
+  /**
+   * Number of active events matching all selection filters.
+   */
+  active_count: number
+  earliest_started_at: string
+  latest_started_at: string
+  started_at_histogram: MonitorEventStartedAtHistogram
+}
+/**
+ * Matching events by age of started_at relative to period: [0,1h), [1h,24h), [24h,7d), [7d,infinity). Future timestamps have age zero. The buckets sum to count and are independent of the query window.
+ */
+export interface MonitorEventStartedAtHistogram {
+  lt_1h: number
+  lt_24h: number
+  lt_7d: number
+  ge_7d: number
 }
 ```
