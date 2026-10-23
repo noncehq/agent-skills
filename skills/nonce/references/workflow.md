@@ -108,29 +108,34 @@ const rows = (result) => {
   return Array.isArray(value) ? value : [];
 };
 
+const PAGE_SIZE = 1000;
+
+const listAll = async (list, input) => {
+  const items = [];
+  for (let page = 1; ; page += 1) {
+    const result = await list({ ...input, page, page_size: PAGE_SIZE });
+    const batch = rows(result);
+    items.push(...batch);
+    const totalPages = result?.pagination?.total_pages ?? result?.data?.pagination?.total_pages;
+    if (totalPages === undefined ? batch.length < PAGE_SIZE : page >= totalPages) return items;
+  }
+};
+
 try {
   const workspaces = rows(await nonce.listWorkspaces({}));
   const workspace = workspaces[0];
   if (!workspace) throw new Error("No accessible Nonce workspace");
 
-  const farms = rows(
-    await nonce.listFarms({
-      page: 1,
-      pageSize: 10000,
-      workspace_id: workspace.workspace_id,
-    }),
-  );
+  const farms = await listAll((input) => nonce.listFarms(input), {
+    workspace_id: workspace.workspace_id,
+  });
 
   const summaries = [];
   for (const farm of farms) {
-    const miners = rows(
-      await nonce.listMiners({
-        farm_id: farm.id,
-        page: 1,
-        pageSize: 10000,
-        workspace_id: workspace.workspace_id,
-      }),
-    );
+    const miners = await listAll((input) => nonce.listMiners(input), {
+      farm_id: farm.id,
+      workspace_id: workspace.workspace_id,
+    });
     summaries.push({
       farm: farm.name ?? farm.id,
       minerCount: miners.length,
@@ -157,7 +162,13 @@ PowerShell:
 ```
 
 Use normal JavaScript control flow for pagination, conditionals, calculations,
-and joins. Avoid loading or logging fields unrelated to the user's question.
+and joins. Fetch list methods page by page with `page_size` at or below 1000,
+and stop at `pagination.total_pages` or when a page returns fewer rows than
+requested. Do not request a whole farm in one call: Nonce MCP rejects any single
+tool call whose upstream response exceeds 4 MB (roughly 2,500 to 3,500 miners)
+and returns an `isError` result asking for a smaller `page_size`. The client
+throws that message as an error; lower `page_size` and fetch the remaining pages
+with `page` instead of retrying the same request. Avoid loading or logging fields unrelated to the user's question.
 For large result sets, keep only aggregates and a small representative sample
 in the final JSON.
 
