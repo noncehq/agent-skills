@@ -244,7 +244,7 @@ describe("SDK generator helpers", () => {
   it("keeps MCP schemas primary and supplements missing output from OpenAPI", async () => {
     const openApi: OpenApiDocument = {
       paths: {
-        "/private-api/v1/{workspace_id}/farms": {
+        "/public-api/v2/workspaces/{workspace_id}/farms": {
           get: {
             operationId: "ListFarms",
             parameters: [
