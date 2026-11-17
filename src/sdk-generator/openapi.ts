@@ -1,6 +1,6 @@
 import type { JsonSchema } from "./schema.js";
 
-export const DEFAULT_OPENAPI_URL = "https://docs.nonce.app/api-reference/openapi-v2.json";
+export const DEFAULT_OPENAPI_URL = "https://docs.nonce.app/api-reference/openapi.json";
 
 interface OpenApiParameter {
   description?: string;
