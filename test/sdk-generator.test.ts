@@ -288,6 +288,7 @@ describe("SDK generator helpers", () => {
               required: ["workspace_id"],
               type: "object",
             },
+            annotations: { readOnlyHint: true },
             name: "ListFarms",
           },
         ],

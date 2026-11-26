@@ -8,7 +8,7 @@ Required: `workspace_id`, `farm_id`
 
 Query Farm Miner Metrics
 
-Return real-time aggregate miner classification counts and mining-mode and model distributions for a farm. Classification counts are independent — a sleeping miner with a fault appears in both abnormal and sleep. Online miners equal total minus stale.
+Return real-time aggregate miner classification counts and mining-mode and model distributions for a farm. Each model and submodel includes its firmware distribution; unreported firmware is null. Classification counts are independent — a sleeping miner with a fault appears in both abnormal and sleep. Online miners equal total minus stale.
 
 ## Code
 
@@ -71,61 +71,73 @@ export interface FarmMinerMetrics {
     hashboard: {
       count: number
       also_has: {
-        [k: string]: number
+        [k: string]: unknown
       }
     }
     temperature: {
       count: number
       also_has: {
-        [k: string]: number
+        [k: string]: unknown
       }
     }
     fan: {
       count: number
       also_has: {
-        [k: string]: number
+        [k: string]: unknown
       }
     }
     network: {
       count: number
       also_has: {
-        [k: string]: number
+        [k: string]: unknown
       }
     }
     pool: {
       count: number
       also_has: {
-        [k: string]: number
+        [k: string]: unknown
       }
     }
     power: {
       count: number
       also_has: {
-        [k: string]: number
+        [k: string]: unknown
       }
     }
     control_board: {
       count: number
       also_has: {
-        [k: string]: number
+        [k: string]: unknown
       }
     }
     firmware: {
       count: number
       also_has: {
-        [k: string]: number
+        [k: string]: unknown
       }
     }
     low_hashrate: {
       count: number
       also_has: {
-        [k: string]: number
+        [k: string]: unknown
+      }
+    }
+    zero_hashrate: {
+      count: number
+      also_has: {
+        [k: string]: unknown
+      }
+    }
+    ineffective_reboot: {
+      count: number
+      also_has: {
+        [k: string]: unknown
       }
     }
     unknown: {
       count: number
       also_has: {
-        [k: string]: number
+        [k: string]: unknown
       }
     }
   }
@@ -134,9 +146,9 @@ export interface FarmMinerMetrics {
    */
   mining_modes: FarmMiningModeCount[]
   /**
-   * Online miner distribution by model and resolved specification
+   * Online miner distribution by model and resolved specification, with its firmware distribution
    */
-  miner_models: FarmMinerModelCount[]
+  miner_models: FarmMinerModelMetrics[]
 }
 export interface FarmMiningModeCount {
   /**
@@ -166,11 +178,14 @@ export interface FarmMiningModeFirmwareCount {
    */
   count: number
 }
-export interface FarmMinerModelCount {
+export interface FarmMinerModelMetrics {
   /**
    * Miner model name
    */
   model: string | null
+  /**
+   * Factory specification hashrate in H/s from the linked miner specification (miner_spec.theo_hashrate), including a linked model fallback specification. The sole product baseline; null when no specification hashrate is available. Never falls back to expected_hashrate.
+   */
   theoretical_hashrate: number | null
   submodel: string | null
   /**
@@ -181,5 +196,19 @@ export interface FarmMinerModelCount {
    * Average expected hashrate in H/s
    */
   average_expected_hashrate: number | null
+  /**
+   * Firmware distribution within this model and submodel, most common first. Counts sum to count.
+   */
+  firmwares: FarmMinerModelFirmwareCount[]
+}
+export interface FarmMinerModelFirmwareCount {
+  /**
+   * Reported firmware name, or null when unknown
+   */
+  firmware: string | null
+  /**
+   * Number of online miners using this firmware
+   */
+  count: number
 }
 ```

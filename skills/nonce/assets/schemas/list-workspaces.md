@@ -23,7 +23,7 @@ const result = await nonce.listWorkspaces(input)
 ## Input
 
 ```ts
-export type ListWorkspacesInput = {} & object
+export interface ListWorkspacesInput {}
 ```
 
 ## Output
@@ -47,10 +47,7 @@ export interface Workspace {
    * Workspace slug
    */
   slug: string
-  /**
-   * @minItems 1
-   */
-  relations: ["member" | "grantee", ...("member" | "grantee")[]]
+  relations: "member"[]
   /**
    * Effective Public API permissions
    */

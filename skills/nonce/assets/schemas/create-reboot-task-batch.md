@@ -2,13 +2,13 @@
 
 createRebootTaskBatch — destructive
 
-Required: `workspace_id`, `farm_id`
+Required: `workspace_id`, `farm_id`, `miner_ids`
 
 ## Purpose
 
 Create Reboot Task Batch
 
-Dispatch a reboot task to the specified miners in the farm.
+Restart the specified miners, for example to recover miners that are stuck or underperforming. Miners stop hashing until they are back up. Tasks run asynchronously on the agents in the farm; track them with GetTaskBatch.
 
 ## Code
 
@@ -31,6 +31,19 @@ const result = await nonce.createRebootTaskBatch(input, {
 export interface CreateRebootTaskBatchInput {
   workspace_id: string
   farm_id: string
+  /**
+   * Miner IDs to target
+   */
+  miner_ids: string[]
+  /**
+   * Reboot parameters.
+   */
+  params?: {
+    /**
+     * Force reboot
+     */
+    force?: boolean
+  }
 }
 ```
 
@@ -83,12 +96,17 @@ export interface CreateTaskBatchResult {
      */
     id: string
     /**
-     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
+     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`, `agent.pause`, `agent.resume`, `agent.ip_report.start`, `agent.ip_report.stop`, `agent.miner.refresh`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
      */
     task_name:
       | "agent.scan.create"
       | "agent.ip_diagnosis.create"
       | "agent.self.update"
+      | "agent.pause"
+      | "agent.resume"
+      | "agent.ip_report.start"
+      | "agent.ip_report.stop"
+      | "agent.miner.refresh"
       | "miner.system.reboot"
       | "miner.log.get"
       | "miner.light.update"
@@ -96,6 +114,7 @@ export interface CreateTaskBatchResult {
       | "miner.pool.update"
       | "miner.pool.lock"
       | "miner.firmware.update"
+      | "miner.network.update"
       | "miner.tags.update"
       | "miner.record.delete"
       | "miner.rack_location.update"

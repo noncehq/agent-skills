@@ -2,13 +2,13 @@
 
 createLogGetTaskBatch — destructive
 
-Required: `workspace_id`, `farm_id`
+Required: `workspace_id`, `farm_id`, `miner_ids`
 
 ## Purpose
 
 Create Log Collection Task Batch
 
-Collect diagnostic logs from the specified miners in the farm.
+Collect the current log of the specified miners to troubleshoot them. Download the logs from ListTaskBatchTasks. Tasks run asynchronously on the agents in the farm; track them with GetTaskBatch.
 
 ## Code
 
@@ -31,6 +31,10 @@ const result = await nonce.createLogGetTaskBatch(input, {
 export interface CreateLogGetTaskBatchInput {
   workspace_id: string
   farm_id: string
+  /**
+   * Miner IDs to target
+   */
+  miner_ids: string[]
 }
 ```
 
@@ -83,12 +87,17 @@ export interface CreateTaskBatchResult {
      */
     id: string
     /**
-     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
+     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`, `agent.pause`, `agent.resume`, `agent.ip_report.start`, `agent.ip_report.stop`, `agent.miner.refresh`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
      */
     task_name:
       | "agent.scan.create"
       | "agent.ip_diagnosis.create"
       | "agent.self.update"
+      | "agent.pause"
+      | "agent.resume"
+      | "agent.ip_report.start"
+      | "agent.ip_report.stop"
+      | "agent.miner.refresh"
       | "miner.system.reboot"
       | "miner.log.get"
       | "miner.light.update"
@@ -96,6 +105,7 @@ export interface CreateTaskBatchResult {
       | "miner.pool.update"
       | "miner.pool.lock"
       | "miner.firmware.update"
+      | "miner.network.update"
       | "miner.tags.update"
       | "miner.record.delete"
       | "miner.rack_location.update"

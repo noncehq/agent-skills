@@ -86,7 +86,7 @@ export interface MinerSummary {
    */
   mac: string | null
   /**
-   * Primary pool worker name
+   * Worker name of the first pool connection, which is not necessarily the pool receiving hashrate
    */
   worker_name: string | null
   /**
@@ -94,9 +94,17 @@ export interface MinerSummary {
    */
   rack: string | null
   /**
-   * Position within the rack
+   * Deprecated: use `rack_row` and `rack_column`. Returns the stored slot value unchanged.
    */
   position: number | null
+  /**
+   * Rack row, from 1 at the top
+   */
+  rack_row: number | null
+  /**
+   * Rack column, from 1 at the left
+   */
+  rack_column: number | null
   /**
    * Whether the miner is actively hashing
    */
@@ -119,7 +127,7 @@ export interface MinerSummary {
    */
   hashrate: number | null
   /**
-   * Expected hashrate in H/s
+   * Device-reported expected hashrate in H/s, retained as observation data only; not the product baseline or a substitute for missing theoretical hashrate. Historical values may include legacy specification backfill.
    */
   expected_hashrate: number | null
   /**
@@ -146,5 +154,55 @@ export interface MinerSummary {
    * Last heartbeat time
    */
   last_updated_at: string | null
+  /**
+   * Mining pool connections reported by the miner
+   */
+  pools: MinerPool[]
+}
+export interface MinerPool {
+  /**
+   * Mining pool Stratum URL
+   */
+  url: string | null
+  /**
+   * Worker identity sent to the pool (Stratum user field)
+   */
+  worker_name: string | null
+  /**
+   * Whether the miner has a connection to this pool. Several pools can be connected at once; the pool receiving hashrate is the one with the latest last_share_at.
+   */
+  active: boolean | null
+  /**
+   * Number of accepted shares
+   */
+  accepted_shares: number | null
+  /**
+   * Number of rejected shares
+   */
+  rejected_shares: number | null
+  /**
+   * Share rejection rate (percentage)
+   */
+  rejected_percent: number | null
+  /**
+   * Share stale rate (percentage)
+   */
+  stale_percent: number | null
+  /**
+   * Time of the last accepted share
+   */
+  last_share_at: string | null
+  /**
+   * Cumulative accepted share difficulty
+   */
+  accepted_difficulty: number | null
+  /**
+   * Cumulative rejected share difficulty
+   */
+  rejected_difficulty: number | null
+  /**
+   * Cumulative stale share difficulty
+   */
+  stale_difficulty: number | null
 }
 ```

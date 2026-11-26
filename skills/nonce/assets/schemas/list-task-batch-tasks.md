@@ -8,6 +8,8 @@ Required: `workspace_id`, `farm_id`, `task_batch_id`
 
 List Task Batch Tasks
 
+List the tasks of one task batch, one per miner or agent, with the result or error of each. Filter by status, for example failed, to find the miners that need attention, or use it to download collected logs. Keep queries small: filter as precisely as you can, use a small page_size, and fetch more pages only when needed.
+
 ## Code
 
 ```js

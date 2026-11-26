@@ -2,13 +2,13 @@
 
 createAgentScanTaskBatch — destructive
 
-Required: `workspace_id`, `farm_id`
+Required: `workspace_id`, `farm_id`, `params`
 
 ## Purpose
 
 Create Agent Scan Task Batch
 
-Trigger a miner discovery scan on the agents in the farm.
+Make the agents in the farm scan for miners in ip_ranges, or in the configured ranges of the farm when ip_ranges is omitted, to discover new or moved miners. Miners outside the scanned ranges stop being monitored, so pass every range unless you mean to drop the rest. Tasks run asynchronously on the agents in the farm; track them with GetTaskBatch.
 
 ## Code
 
@@ -31,6 +31,28 @@ const result = await nonce.createAgentScanTaskBatch(input, {
 export interface CreateAgentScanTaskBatchInput {
   workspace_id: string
   farm_id: string
+  /**
+   * Agent scan parameters.
+   */
+  params: {
+    /**
+     * IP ranges to scan. If omitted, agent scans all configured ranges.
+     */
+    ip_ranges?: {
+      /**
+       * IP range record ID
+       */
+      id: string
+      /**
+       * IP range in CIDR notation
+       */
+      range: string
+      /**
+       * Legacy field, kept for compatibility
+       */
+      auto_scan?: boolean
+    }[]
+  }
 }
 ```
 
@@ -83,12 +105,17 @@ export interface CreateTaskBatchResult {
      */
     id: string
     /**
-     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
+     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`, `agent.pause`, `agent.resume`, `agent.ip_report.start`, `agent.ip_report.stop`, `agent.miner.refresh`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
      */
     task_name:
       | "agent.scan.create"
       | "agent.ip_diagnosis.create"
       | "agent.self.update"
+      | "agent.pause"
+      | "agent.resume"
+      | "agent.ip_report.start"
+      | "agent.ip_report.stop"
+      | "agent.miner.refresh"
       | "miner.system.reboot"
       | "miner.log.get"
       | "miner.light.update"
@@ -96,6 +123,7 @@ export interface CreateTaskBatchResult {
       | "miner.pool.update"
       | "miner.pool.lock"
       | "miner.firmware.update"
+      | "miner.network.update"
       | "miner.tags.update"
       | "miner.record.delete"
       | "miner.rack_location.update"
