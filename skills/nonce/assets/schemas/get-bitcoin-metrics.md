@@ -23,7 +23,7 @@ const result = await nonce.getBitcoinMetrics(input)
 ## Input
 
 ```ts
-export type GetBitcoinMetricsInput = {} & object
+export interface GetBitcoinMetricsInput {}
 ```
 
 ## Output

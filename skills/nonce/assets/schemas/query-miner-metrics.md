@@ -2,7 +2,7 @@
 
 queryMinerMetrics — read-only
 
-Required: `workspace_id`, `farm_id`, `miner_id`
+Required: `workspace_id`, `farm_id`, `miner_id`, `from_time`, `to_time`
 
 ## Purpose
 
@@ -29,6 +29,18 @@ export interface QueryMinerMetricsInput {
   workspace_id: string
   farm_id: string
   miner_id: string
+  /**
+   * Inclusive start of the query range in ISO 8601 format
+   */
+  from_time: string
+  /**
+   * Exclusive end of the query range in ISO 8601 format
+   */
+  to_time: string
+  /**
+   * Time resolution of the returned metric snapshots. Range limits: 1 day for 10min, 7 days for hour, 90 days for day, 365 days for week. All buckets in the range are always present; buckets without data contain null metric values.
+   */
+  granularity?: "10min" | "hour" | "day" | "week"
 }
 ```
 

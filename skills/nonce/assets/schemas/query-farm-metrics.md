@@ -2,7 +2,7 @@
 
 queryFarmMetrics — read-only
 
-Required: `workspace_id`, `farm_id`
+Required: `workspace_id`, `farm_id`, `from_time`, `to_time`
 
 ## Purpose
 
@@ -28,6 +28,18 @@ const result = await nonce.queryFarmMetrics(input)
 export interface QueryFarmMetricsInput {
   workspace_id: string
   farm_id: string
+  /**
+   * Inclusive start of the query range in ISO 8601 format
+   */
+  from_time: string
+  /**
+   * Exclusive end of the query range in ISO 8601 format
+   */
+  to_time: string
+  /**
+   * Time resolution of the returned metric snapshots. Range limits: 1 day for 10min, 7 days for hour, 90 days for day, 365 days for week. All buckets in the range are always present; buckets without data contain null metric values.
+   */
+  granularity?: "10min" | "hour" | "day" | "week"
 }
 ```
 
@@ -60,6 +72,9 @@ export interface FarmMetricSnapshot {
    * Start of the metric bucket
    */
   period: string
+  /**
+   * Data reported by mining pool APIs, as opposed to Agent-reported data
+   */
   pool: {
     /**
      * Average pool hashrate in H/s
@@ -104,11 +119,11 @@ export interface FarmMetricSnapshot {
      */
     agent_electricity_cost: number | null
     /**
-     * Estimated pool energy during the bucket in kWh
+     * Energy during the bucket in kWh, estimated from pool-reported hashrate and theoretical efficiency
      */
     pool_energy: number | null
     /**
-     * Estimated pool energy cost during the bucket in USD
+     * Cost of pool_energy during the bucket in USD
      */
     pool_electricity_cost: number | null
     /**

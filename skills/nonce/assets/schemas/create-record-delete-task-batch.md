@@ -2,13 +2,13 @@
 
 createRecordDeleteTaskBatch — destructive
 
-Required: `workspace_id`, `farm_id`
+Required: `workspace_id`, `farm_id`, `miner_ids`
 
 ## Purpose
 
 Create Record Delete Task Batch
 
-Delete miner records from the farm. This action is irreversible.
+Remove the specified miners from the miner list of the farm, for example after they are retired or moved. A miner still on the network comes back with the next agent report unless its address is removed from the scan ranges.
 
 ## Code
 
@@ -31,6 +31,19 @@ const result = await nonce.createRecordDeleteTaskBatch(input, {
 export interface CreateRecordDeleteTaskBatchInput {
   workspace_id: string
   farm_id: string
+  /**
+   * Miner IDs to target
+   */
+  miner_ids: string[]
+  /**
+   * Record delete parameters.
+   */
+  params?: {
+    /**
+     * Deletion comment
+     */
+    comment?: string
+  }
 }
 ```
 
@@ -83,12 +96,17 @@ export interface CreateTaskBatchResult {
      */
     id: string
     /**
-     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
+     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`, `agent.pause`, `agent.resume`, `agent.ip_report.start`, `agent.ip_report.stop`, `agent.miner.refresh`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
      */
     task_name:
       | "agent.scan.create"
       | "agent.ip_diagnosis.create"
       | "agent.self.update"
+      | "agent.pause"
+      | "agent.resume"
+      | "agent.ip_report.start"
+      | "agent.ip_report.stop"
+      | "agent.miner.refresh"
       | "miner.system.reboot"
       | "miner.log.get"
       | "miner.light.update"
@@ -96,6 +114,7 @@ export interface CreateTaskBatchResult {
       | "miner.pool.update"
       | "miner.pool.lock"
       | "miner.firmware.update"
+      | "miner.network.update"
       | "miner.tags.update"
       | "miner.record.delete"
       | "miner.rack_location.update"

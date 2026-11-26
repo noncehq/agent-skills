@@ -1,19 +1,19 @@
-# CreateRackUpdateTaskBatch
+# CreateAgentPauseTaskBatch
 
-createRackUpdateTaskBatch — destructive
+createAgentPauseTaskBatch — destructive
 
 Required: `workspace_id`, `farm_id`
 
 ## Purpose
 
-Create Rack Update Task Batch
+Create Agent Pause Task Batch
 
-Update rack and position metadata for the specified miners in the farm.
+Stop the agents in the farm from reporting miner data, for example during maintenance. While paused, the miners of the farm show as stale and miner tasks are rejected. Undo with CreateAgentResumeTaskBatch. Tasks run asynchronously on the agents in the farm; track them with GetTaskBatch.
 
 ## Code
 
 ```js
-const result = await nonce.createRackUpdateTaskBatch(input, {
+const result = await nonce.createAgentPauseTaskBatch(input, {
   confirmDestructive: true,
   confirmation: "<confirmed target and effect>",
 })
@@ -22,13 +22,13 @@ const result = await nonce.createRackUpdateTaskBatch(input, {
 ## CLI
 
 ```bash
-"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createRackUpdateTaskBatch --input-file ".nonce/requests/create-rack-update-task-batch.json" --allow-destructive --confirmation "<confirmed target and effect>"
+"$NONCE_NODE" "$NONCE_SKILL_HOME/scripts/nonce.mjs" call createAgentPauseTaskBatch --input-file ".nonce/requests/create-agent-pause-task-batch.json" --allow-destructive --confirmation "<confirmed target and effect>"
 ```
 
 ## Input
 
 ```ts
-export interface CreateRackUpdateTaskBatchInput {
+export interface CreateAgentPauseTaskBatchInput {
   workspace_id: string
   farm_id: string
 }
@@ -65,7 +65,7 @@ export type Actor = {
   }
 } | null
 
-export interface CreateRackUpdateTaskBatchOutput {
+export interface CreateAgentPauseTaskBatchOutput {
   success: true
   data: CreateTaskBatchResult
   error: null
@@ -83,12 +83,17 @@ export interface CreateTaskBatchResult {
      */
     id: string
     /**
-     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
+     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`, `agent.pause`, `agent.resume`, `agent.ip_report.start`, `agent.ip_report.stop`, `agent.miner.refresh`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
      */
     task_name:
       | "agent.scan.create"
       | "agent.ip_diagnosis.create"
       | "agent.self.update"
+      | "agent.pause"
+      | "agent.resume"
+      | "agent.ip_report.start"
+      | "agent.ip_report.stop"
+      | "agent.miner.refresh"
       | "miner.system.reboot"
       | "miner.log.get"
       | "miner.light.update"
@@ -96,6 +101,7 @@ export interface CreateTaskBatchResult {
       | "miner.pool.update"
       | "miner.pool.lock"
       | "miner.firmware.update"
+      | "miner.network.update"
       | "miner.tags.update"
       | "miner.record.delete"
       | "miner.rack_location.update"

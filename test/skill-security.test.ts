@@ -101,9 +101,9 @@ describe("packaged Nonce security boundary", () => {
       tools: Array<{ destructive: boolean; methodName: string; name: string; readOnly: boolean }>;
     };
 
-    expect(manifest.tools).toHaveLength(35);
-    expect(manifest.tools.filter((tool) => tool.readOnly)).toHaveLength(23);
-    expect(manifest.tools.filter((tool) => tool.destructive)).toHaveLength(12);
+    expect(manifest.tools).toHaveLength(57);
+    expect(manifest.tools.filter((tool) => tool.readOnly)).toHaveLength(35);
+    expect(manifest.tools.filter((tool) => tool.destructive)).toHaveLength(22);
     expect(manifest.tools).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -126,8 +126,8 @@ describe("packaged Nonce security boundary", () => {
         }),
         expect.objectContaining({
           destructive: true,
-          methodName: "createRackUpdateTaskBatch",
-          name: "CreateRackUpdateTaskBatch",
+          methodName: "updateRackGroups",
+          name: "UpdateRackGroups",
           readOnly: false,
         }),
       ]),
@@ -135,6 +135,7 @@ describe("packaged Nonce security boundary", () => {
     const methodNames = manifest.tools.map((tool) => tool.methodName);
     expect(methodNames).not.toContain("createPowerModeUpdateTaskBatch");
     expect(methodNames).not.toContain("createRackLocationUpdateTaskBatch");
+    expect(methodNames).not.toContain("createRackUpdateTaskBatch");
     expect(manifest.tools.every((tool) => tool.readOnly !== tool.destructive)).toBe(true);
   });
 

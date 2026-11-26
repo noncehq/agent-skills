@@ -138,8 +138,10 @@ const generatedToolFromMcpTool = (
         : "unknown";
 
   const destructive =
-    tool.annotations?.destructiveHint === true || tool.name.startsWith("CreateTaskBatch_");
-  const readOnly = tool.annotations?.readOnlyHint === true && !destructive;
+    tool.annotations?.destructiveHint === true ||
+    tool.annotations?.readOnlyHint !== true ||
+    tool.name.startsWith("CreateTaskBatch_");
+  const readOnly = !destructive;
 
   return {
     annotations: tool.annotations,

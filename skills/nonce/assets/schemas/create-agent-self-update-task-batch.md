@@ -2,13 +2,13 @@
 
 createAgentSelfUpdateTaskBatch — destructive
 
-Required: `workspace_id`, `farm_id`
+Required: `workspace_id`, `farm_id`, `params`
 
 ## Purpose
 
 Create Agent Self Update Task Batch
 
-Trigger a self-update on the agents in the farm.
+Update the agents in the farm to the signed agent build at binary_url. Agents restart and stop reporting miner data until they are back. Tasks run asynchronously on the agents in the farm; track them with GetTaskBatch.
 
 ## Code
 
@@ -31,6 +31,27 @@ const result = await nonce.createAgentSelfUpdateTaskBatch(input, {
 export interface CreateAgentSelfUpdateTaskBatchInput {
   workspace_id: string
   farm_id: string
+  /**
+   * Agent self-update parameters.
+   */
+  params: {
+    /**
+     * Agent binary download URL. Defaults to a signed build.
+     */
+    binary_url?: string
+    /**
+     * Legacy MD5 checksum
+     */
+    md5?: string
+    /**
+     * Ed25519 detached signature of the agent binary
+     */
+    signature?: string
+    /**
+     * Target agent version
+     */
+    target_version?: string
+  }
 }
 ```
 
@@ -83,12 +104,17 @@ export interface CreateTaskBatchResult {
      */
     id: string
     /**
-     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
+     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`, `agent.pause`, `agent.resume`, `agent.ip_report.start`, `agent.ip_report.stop`, `agent.miner.refresh`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
      */
     task_name:
       | "agent.scan.create"
       | "agent.ip_diagnosis.create"
       | "agent.self.update"
+      | "agent.pause"
+      | "agent.resume"
+      | "agent.ip_report.start"
+      | "agent.ip_report.stop"
+      | "agent.miner.refresh"
       | "miner.system.reboot"
       | "miner.log.get"
       | "miner.light.update"
@@ -96,6 +122,7 @@ export interface CreateTaskBatchResult {
       | "miner.pool.update"
       | "miner.pool.lock"
       | "miner.firmware.update"
+      | "miner.network.update"
       | "miner.tags.update"
       | "miner.record.delete"
       | "miner.rack_location.update"

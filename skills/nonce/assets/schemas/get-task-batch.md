@@ -8,6 +8,8 @@ Required: `workspace_id`, `farm_id`, `task_batch_id`
 
 Get Task Batch
 
+Get the progress of one task batch: its parameters and how many of its tasks succeeded, failed or are still running. Use ListTaskBatchTasks to see which miners or agents failed and why.
+
 ## Code
 
 ```js
@@ -75,22 +77,9 @@ export interface TaskBatch {
    */
   id: string
   /**
-   * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
+   * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`, `agent.pause`, `agent.resume`, `agent.ip_report.start`, `agent.ip_report.stop`, `agent.miner.refresh`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`. Other values may appear for task types added after this list.
    */
-  task_name:
-    | "agent.scan.create"
-    | "agent.ip_diagnosis.create"
-    | "agent.self.update"
-    | "miner.system.reboot"
-    | "miner.log.get"
-    | "miner.light.update"
-    | "miner.power_mode.update"
-    | "miner.pool.update"
-    | "miner.pool.lock"
-    | "miner.firmware.update"
-    | "miner.tags.update"
-    | "miner.record.delete"
-    | "miner.rack_location.update"
+  task_name: string
   /**
    * Aggregate status of a task batch. `pending` = at least one task is still running; `succeed` = all tasks succeeded; `failed` = all tasks failed, timed out, or were cancelled; `partial_succeed` = finished with a mix of success and failure.
    */

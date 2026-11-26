@@ -2,13 +2,13 @@
 
 createMiningModeUpdateTaskBatch — destructive
 
-Required: `workspace_id`, `farm_id`
+Required: `workspace_id`, `farm_id`, `miner_ids`, `params`
 
 ## Purpose
 
 Create Mining Mode Update Task Batch
 
-Update the mining mode for the specified miners in the farm.
+Set the mining mode of the specified miners: sleep, low, normal or high, or a firmware preset name. Sleep stops hashing until another mode is set. Tasks run asynchronously on the agents in the farm; track them with GetTaskBatch.
 
 ## Code
 
@@ -31,6 +31,39 @@ const result = await nonce.createMiningModeUpdateTaskBatch(input, {
 export interface CreateMiningModeUpdateTaskBatchInput {
   workspace_id: string
   farm_id: string
+  /**
+   * Miner IDs to target
+   */
+  miner_ids: string[]
+  /**
+   * Mining mode parameters.
+   */
+  params: {
+    /**
+     * Target mining performance mode
+     */
+    mining_mode:
+      | (
+          | "low"
+          | "normal"
+          | "high"
+          | "sleep"
+          | "J/T 19.0, Hashrate ~125TH/s"
+          | "J/T 20.0, Hashrate ~135TH/s"
+          | "J/T 21.0, Hashrate ~145TH/s"
+          | "J/T 21.5, Hashrate ~155TH/s"
+          | "J/T 22.0, Hashrate ~165TH/s"
+          | "J/T 22.5, Hashrate ~170TH/s"
+          | "J/T 23.0, Hashrate ~175TH/s"
+          | "5600W"
+          | "5800W"
+          | "6000W"
+          | "6200W"
+          | "6400W"
+          | "6600W"
+        )
+      | string
+  }
 }
 ```
 
@@ -83,12 +116,17 @@ export interface CreateTaskBatchResult {
      */
     id: string
     /**
-     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
+     * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`, `agent.pause`, `agent.resume`, `agent.ip_report.start`, `agent.ip_report.stop`, `agent.miner.refresh`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
      */
     task_name:
       | "agent.scan.create"
       | "agent.ip_diagnosis.create"
       | "agent.self.update"
+      | "agent.pause"
+      | "agent.resume"
+      | "agent.ip_report.start"
+      | "agent.ip_report.stop"
+      | "agent.miner.refresh"
       | "miner.system.reboot"
       | "miner.log.get"
       | "miner.light.update"
@@ -96,6 +134,7 @@ export interface CreateTaskBatchResult {
       | "miner.pool.update"
       | "miner.pool.lock"
       | "miner.firmware.update"
+      | "miner.network.update"
       | "miner.tags.update"
       | "miner.record.delete"
       | "miner.rack_location.update"

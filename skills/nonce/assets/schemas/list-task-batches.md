@@ -8,6 +8,8 @@ Required: `workspace_id`, `farm_id`
 
 List Task Batches
 
+List the task batches of a farm, newest first, to review the operations run on its miners and agents and whether they succeeded. Use SearchTaskBatches to filter by status, task type, creator or time. Keep queries small: filter as precisely as you can, use a small page_size, and fetch more pages only when needed.
+
 ## Code
 
 ```js
@@ -35,6 +37,11 @@ export interface ListTaskBatchesInput {
     | "agent.scan.create"
     | "agent.ip_diagnosis.create"
     | "agent.self.update"
+    | "agent.pause"
+    | "agent.resume"
+    | "agent.ip_report.start"
+    | "agent.ip_report.stop"
+    | "agent.miner.refresh"
     | "miner.system.reboot"
     | "miner.log.get"
     | "miner.light.update"
@@ -42,6 +49,7 @@ export interface ListTaskBatchesInput {
     | "miner.pool.update"
     | "miner.pool.lock"
     | "miner.firmware.update"
+    | "miner.network.update"
     | "miner.tags.update"
     | "miner.record.delete"
     | "miner.rack_location.update"
@@ -96,22 +104,9 @@ export interface TaskBatchSummary {
    */
   id: string
   /**
-   * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`.
+   * Task or event type dispatched to miners or agents. Execution types: `miner.system.reboot`, `miner.log.get`, `miner.light.update`, `miner.power_mode.update`, `miner.pool.update`, `miner.pool.lock`, `miner.firmware.update`, `agent.scan.create`, `agent.ip_diagnosis.create`, `agent.self.update`, `agent.pause`, `agent.resume`, `agent.ip_report.start`, `agent.ip_report.stop`, `agent.miner.refresh`. Event types: `miner.tags.update`, `miner.record.delete`, `miner.rack_location.update`. Other values may appear for task types added after this list.
    */
-  task_name:
-    | "agent.scan.create"
-    | "agent.ip_diagnosis.create"
-    | "agent.self.update"
-    | "miner.system.reboot"
-    | "miner.log.get"
-    | "miner.light.update"
-    | "miner.power_mode.update"
-    | "miner.pool.update"
-    | "miner.pool.lock"
-    | "miner.firmware.update"
-    | "miner.tags.update"
-    | "miner.record.delete"
-    | "miner.rack_location.update"
+  task_name: string
   /**
    * Aggregate status of a task batch. `pending` = at least one task is still running; `succeed` = all tasks succeeded; `failed` = all tasks failed, timed out, or were cancelled; `partial_succeed` = finished with a mix of success and failure.
    */
